@@ -7,13 +7,19 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 /**
- * Owns the render surface, the game loop thread and the touch input.
- * The loop runs at a fixed 60 Hz pace and feeds a capped delta time to the engine.
+ * Owns the render surface, the simulation thread and the touch input.
+ *
+ * <p>The simulation runs on a fixed 1/60s step fed by an accumulator (with the incoming
+ * frame time clamped and a hard cap on steps per frame), so gameplay speed is identical on
+ * 60, 90 and 120 Hz devices and a slow frame can never spiral into a longer one. The
+ * renderer simply draws the latest simulated state.</p>
  */
 public class GameView extends SurfaceView implements SurfaceHolder.Callback, Runnable {
 
+    private static final double STEP_SECONDS = 1.0 / 60.0;
+    private static final double MAX_FRAME_SECONDS = 0.25;
+    private static final int MAX_STEPS_PER_FRAME = 5;
     private static final long FRAME_NANOS = 16_666_667L;
-    private static final double MAX_STEP_SECONDS = 1.0 / 20.0;
 
     private final SurfaceHolder surfaceHolder;
     private final GameEngine engine = new GameEngine();
@@ -21,9 +27,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private Thread loopThread;
     private volatile boolean running;
+    private volatile boolean restartRequested;
     private volatile float fps;
 
     private Runnable firstTouchListener;
+    private GameOverListener gameOverListener;
+
+    public interface GameOverListener {
+        void onGameOver(int score, int rowsCleared);
+    }
 
     public GameView(Context context) {
         super(context);
@@ -36,6 +48,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     public void setOnFirstTouchListener(Runnable listener) {
         this.firstTouchListener = listener;
+    }
+
+    public void setGameOverListener(GameOverListener listener) {
+        this.gameOverListener = listener;
+    }
+
+    public GameEngine engine() {
+        return engine;
     }
 
     @Override
@@ -75,6 +95,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         }
     }
 
+    /** Asks the loop thread to reset the run on its next iteration. */
+    public void restart() {
+        restartRequested = true;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
@@ -105,20 +130,52 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     @Override
     public void run() {
         long lastFrame = System.nanoTime();
+        long nextDeadline = lastFrame;
         long fpsWindowStart = lastFrame;
-        int frames = 0;
+        int framesInWindow = 0;
+        double accumulator = 0.0;
 
         while (running) {
             long frameStart = System.nanoTime();
-            double dt = (frameStart - lastFrame) / 1_000_000_000.0;
+            double frameSeconds = (frameStart - lastFrame) / 1_000_000_000.0;
             lastFrame = frameStart;
-            if (dt < 0) {
-                dt = 0;
-            } else if (dt > MAX_STEP_SECONDS) {
-                dt = MAX_STEP_SECONDS;
+            if (frameSeconds < 0.0) {
+                frameSeconds = 0.0;
+            } else if (frameSeconds > MAX_FRAME_SECONDS) {
+                frameSeconds = MAX_FRAME_SECONDS;
+            }
+            accumulator += frameSeconds;
+
+            if (restartRequested) {
+                restartRequested = false;
+                engine.restart();
+                accumulator = 0.0;
             }
 
-            engine.update(dt);
+            int steps = 0;
+            while (accumulator >= STEP_SECONDS && steps < MAX_STEPS_PER_FRAME) {
+                engine.update(STEP_SECONDS);
+                accumulator -= STEP_SECONDS;
+                steps++;
+            }
+            if (steps == MAX_STEPS_PER_FRAME) {
+                // Dropped behind (e.g. after a hiccup): drop the backlog instead of spiralling.
+                accumulator = 0.0;
+            }
+
+            if (engine.consumeJustDied()) {
+                final int score = engine.score();
+                final int cleared = engine.rowsCleared();
+                post(new Runnable() {
+                    @Override
+                    public void run() {
+                        GameOverListener listener = gameOverListener;
+                        if (listener != null) {
+                            listener.onGameOver(score, cleared);
+                        }
+                    }
+                });
+            }
 
             Canvas canvas = null;
             try {
@@ -127,33 +184,38 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                     renderer.draw(canvas, engine, fps, BuildConfig.DEBUG);
                 }
             } catch (Exception ignored) {
-                // Surface went away mid-frame; the next loop iteration retries.
+                // Surface went away mid frame; retry on the next iteration.
             } finally {
                 if (canvas != null) {
                     try {
                         surfaceHolder.unlockCanvasAndPost(canvas);
                     } catch (Exception ignored) {
-                        // Ignore: surface already destroyed.
+                        // Surface already destroyed.
                     }
                 }
             }
 
-            frames++;
+            framesInWindow++;
             long windowLength = System.nanoTime() - fpsWindowStart;
             if (windowLength >= 500_000_000L) {
-                fps = frames * 1_000_000_000f / windowLength;
+                fps = framesInWindow * 1_000_000_000f / windowLength;
                 fpsWindowStart = System.nanoTime();
-                frames = 0;
+                framesInWindow = 0;
             }
 
-            long remaining = FRAME_NANOS - (System.nanoTime() - frameStart);
-            if (remaining > 0) {
+            // Pace to a 60 Hz deadline grid so timing errors do not accumulate.
+            nextDeadline += FRAME_NANOS;
+            long now = System.nanoTime();
+            long remaining = nextDeadline - now;
+            if (remaining > 0L) {
                 try {
                     Thread.sleep(remaining / 1_000_000L, (int) (remaining % 1_000_000L));
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     return;
                 }
+            } else if (-remaining > FRAME_NANOS) {
+                nextDeadline = now;
             }
         }
     }

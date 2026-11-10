@@ -2,4 +2,10 @@
 <resources>
     <string name="game_name">آینه</string>
     <string name="hint">برای حرکت، انگشت را بکشید</string>
+    <string name="game_over">بازی تمام شد</string>
+    <string name="new_record">رکورد جدید!</string>
+    <string name="score_line">امتیاز  %1$d</string>
+    <string name="best_line">رکورد  %1$d</string>
+    <string name="rows_line">ردیف عبورشده  %1$d</string>
+    <string name="play_again">دوباره</string>
 </resources>

@@ -8,34 +8,50 @@ import android.graphics.Paint;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.graphics.Typeface;
+
+import java.util.List;
 
 /**
- * All drawing happens here. Paints, shaders and glow sprites are created once so
- * the game loop never allocates per frame.
+ * All drawing happens here. Paints, shaders, glow sprites and the score string are
+ * created or updated only when they change, so the game loop never allocates per frame.
  */
 public class Renderer {
 
     private static final int COLOR_BG = Color.parseColor("#0B0F1A");
     private static final int COLOR_GRID = Color.parseColor("#141C2B");
     private static final int COLOR_AXIS = Color.parseColor("#2B3A55");
-    private static final int COLOR_TEXT = Color.parseColor("#6E7681");
+    private static final int COLOR_ROW_FILL = Color.parseColor("#16233C");
+    private static final int COLOR_ROW_EDGE = Color.parseColor("#2F81F7");
+    private static final int COLOR_SCORE = Color.parseColor("#E6EDF3");
+    private static final int COLOR_DEBUG = Color.parseColor("#6E7681");
 
     private static final float GRID_STEP_DP = 48f;
     private static final int GLOW_SIZE_PX = 160;
 
     private final Paint gridPaint = new Paint();
     private final Paint axisPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint rowFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint rowEdgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint corePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint trailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glowPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
-    private final Paint fpsPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint debugPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    private final RectF rowRect = new RectF();
     private final RectF glowBounds = new RectF();
 
     private Bitmap cyanGlow;
     private Bitmap pinkGlow;
     private float density = 1f;
     private boolean ready;
+
+    private int displayedScore = -1;
+    private String scoreText = "0";
+    private int displayedFps = -1;
+    private String fpsText = "";
 
     public void setDensity(float density) {
         this.density = density > 0f ? density : 1f;
@@ -53,6 +69,13 @@ public class Renderer {
         float dash = 7f * density;
         axisPaint.setPathEffect(new DashPathEffect(new float[] {dash, dash * 1.6f}, 0f));
 
+        rowFillPaint.setStyle(Paint.Style.FILL);
+        rowFillPaint.setColor(COLOR_ROW_FILL);
+
+        rowEdgePaint.setStyle(Paint.Style.STROKE);
+        rowEdgePaint.setColor(withAlpha(COLOR_ROW_EDGE, 130));
+        rowEdgePaint.setStrokeWidth(1.6f * density);
+
         corePaint.setStyle(Paint.Style.FILL);
 
         rimPaint.setStyle(Paint.Style.STROKE);
@@ -60,13 +83,16 @@ public class Renderer {
         rimPaint.setStrokeWidth(1.4f * density);
 
         trailPaint.setStyle(Paint.Style.FILL);
-
-        fpsPaint.setColor(COLOR_TEXT);
-        fpsPaint.setTextSize(11f * density);
-        fpsPaint.setTypeface(android.graphics.Typeface.MONOSPACE);
-        fpsPaint.setAntiAlias(true);
-
         glowPaint.setAntiAlias(true);
+
+        scorePaint.setColor(COLOR_SCORE);
+        scorePaint.setTextSize(34f * density);
+        scorePaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        scorePaint.setTextAlign(Paint.Align.CENTER);
+
+        debugPaint.setColor(COLOR_DEBUG);
+        debugPaint.setTextSize(11f * density);
+        debugPaint.setTypeface(Typeface.MONOSPACE);
 
         cyanGlow = makeGlow(Color.parseColor("#22D3EE"));
         pinkGlow = makeGlow(Color.parseColor("#F472B6"));
@@ -82,7 +108,6 @@ public class Renderer {
 
         canvas.drawColor(COLOR_BG);
 
-        // Background grid.
         float step = GRID_STEP_DP * density;
         for (float x = step; x < width; x += step) {
             canvas.drawLine(x, 0f, x, height, gridPaint);
@@ -90,22 +115,59 @@ public class Renderer {
         for (float y = step; y < height; y += step) {
             canvas.drawLine(0f, y, width, y, gridPaint);
         }
-
-        // Mirror axis.
         canvas.drawLine(width * 0.5f, 0f, width * 0.5f, height, axisPaint);
+
+        drawRows(canvas, engine.rows(), width);
 
         Player left = engine.leftPlayer();
         Player right = engine.rightPlayer();
-
         drawTrail(canvas, left);
         drawTrail(canvas, right);
         drawBody(canvas, left, cyanGlow);
         drawBody(canvas, right, pinkGlow);
 
+        drawScore(canvas, engine.score(), width);
+
         if (showDebug) {
-            canvas.drawText(String.format(java.util.Locale.US, "%.0f fps", fps),
-                    12f * density, height - 14f * density, fpsPaint);
+            int roundedFps = Math.round(fps);
+            if (roundedFps != displayedFps) {
+                displayedFps = roundedFps;
+                fpsText = roundedFps + " fps";
+            }
+            canvas.drawText(fpsText, 12f * density, height - 14f * density, debugPaint);
         }
+    }
+
+    private void drawRows(Canvas canvas, List<ObstacleRow> rows, int width) {
+        float radius = 10f * density;
+        for (int i = 0; i < rows.size(); i++) {
+            ObstacleRow row = rows.get(i);
+            float top = row.y;
+            float bottom = row.y + row.height;
+            if (bottom < 0f || top > canvas.getHeight()) {
+                continue;
+            }
+            float corner = Math.min(radius, row.height * 0.5f);
+            int segments = row.segments(width);
+            for (int s = 0; s < segments; s++) {
+                float left = row.segmentEdges[s * 2];
+                float right = row.segmentEdges[s * 2 + 1];
+                if (right - left < 0.5f) {
+                    continue;
+                }
+                rowRect.set(left, top, right, bottom);
+                canvas.drawRoundRect(rowRect, corner, corner, rowFillPaint);
+                canvas.drawRoundRect(rowRect, corner, corner, rowEdgePaint);
+            }
+        }
+    }
+
+    private void drawScore(Canvas canvas, int score, int width) {
+        if (score != displayedScore) {
+            displayedScore = score;
+            scoreText = Integer.toString(score);
+        }
+        canvas.drawText(scoreText, width * 0.5f, 68f * density, scorePaint);
     }
 
     private void drawTrail(Canvas canvas, Player player) {
