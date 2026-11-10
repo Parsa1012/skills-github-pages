@@ -7,7 +7,7 @@ import android.content.SharedPreferences;
 public final class GamePrefs {
 
     private static final String PREFS_NAME = "mirror_dash";
-    /** Record from versions 1.0-1.2, kept only to be migrated into the Normal record. */
+    /** Legacy record from versions 1.0-1.2 remains untouched: its tier is unknown. */
     private static final String KEY_BEST_LEGACY = "best_score";
     private static final String KEY_BEST_PREFIX = "best_";
     private static final String KEY_MIGRATED = "records_split";

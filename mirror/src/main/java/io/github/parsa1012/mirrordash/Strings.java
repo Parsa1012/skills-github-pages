@@ -83,7 +83,7 @@ public final class Strings {
 
     private static Strings persian() {
         Strings s = new Strings();
-        s.appName = "توپ‌های هم‌زاد";
+        s.appName = "توپهای همزاد";
         s.tagline = "یک انگشت، دو نیمه";
 
         s.start = "شروع بازی";

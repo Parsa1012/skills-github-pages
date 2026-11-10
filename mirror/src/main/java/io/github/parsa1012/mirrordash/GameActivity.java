@@ -289,13 +289,13 @@ public class GameActivity extends Activity {
     }
 
     private void showTextDialog(String title, String body) {
-        TextView message = label(body, 15, false, theme.textPrimary);
+        TextView message = label(body, 15, false, android.graphics.Color.rgb(30, 35, 45));
         message.setGravity(Gravity.START);
         message.setTextDirection(lang.rtl() ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
         message.setPadding(dp(22), dp(12), dp(22), dp(12));
         ScrollView scroller = new ScrollView(this);
         scroller.addView(message);
-        android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
+        android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this, android.app.AlertDialog.THEME_DEVICE_DEFAULT_LIGHT)
                 .setTitle(title).setView(scroller).setPositiveButton(strings.close, (d, which) -> {}).create();
         dialog.setOnShowListener(d -> dialog.getWindow().getDecorView().setLayoutDirection(lang.rtl() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR));
         dialog.show();
@@ -305,7 +305,7 @@ public class GameActivity extends Activity {
         Lang[] languages = Lang.values();
         String[] names = new String[languages.length];
         for (int i = 0; i < languages.length; i++) names[i] = languages[i].nativeName();
-        new android.app.AlertDialog.Builder(this).setTitle(strings.languageTitle)
+        new android.app.AlertDialog.Builder(this, android.app.AlertDialog.THEME_DEVICE_DEFAULT_LIGHT).setTitle(strings.languageTitle)
                 .setSingleChoiceItems(names, lang.ordinal(), (dialog, which) -> {
                     GamePrefs.setLang(this, languages[which]);
                     dialog.dismiss();
