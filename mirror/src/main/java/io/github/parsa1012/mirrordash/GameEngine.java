@@ -7,15 +7,22 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Game rules.
+ * Game rules and state machine.
  *
- * <p>Two bodies are mirrored around the vertical centre line: the left one follows the
- * touch input with a short smoothing lag, the right one is always {@code width - left}.
- * Rows of hazards scroll down; a row only allows the pair to survive inside a narrow
- * x-window, and every row is generated so that window exists and is reachable from the
- * previous row's window. That is what makes the difficulty fair instead of random.</p>
+ * <p>Two bodies are mirrored around the vertical centre line: the left one follows the touch
+ * input with a short smoothing lag, the right one is always {@code width - left}. Rows of
+ * hazards scroll down; a row only allows the pair to survive inside a narrow x-window, and
+ * every row is generated so that window exists and is reachable from the previous row's
+ * window. That is what makes the difficulty fair instead of random.</p>
+ *
+ * <p>States: {@code ATTRACT} (menu background) → {@code COUNTDOWN} → {@code PLAYING} →
+ * {@code DYING} (short hit-stop with particles and shake) → {@code GAME_OVER}.</p>
  */
 public class GameEngine {
+
+    public enum State {
+        ATTRACT, COUNTDOWN, PLAYING, DYING, GAME_OVER
+    }
 
     /** Time constant of the position smoothing, in seconds. */
     private static final float SMOOTH_TIME = 0.08f;
@@ -27,7 +34,7 @@ public class GameEngine {
     /** Collision radius is a little smaller than the drawn one so deaths feel fair. */
     private static final float COLLISION_FORGIVENESS = 0.85f;
 
-    private static final float FIRST_ROW_DELAY_SECONDS = 0.6f;
+    private static final float FIRST_ROW_DELAY_SECONDS = 0.25f;
     private static final int MAX_ROWS = 10;
     private static final int MAX_SPAWN_ATTEMPTS = 48;
     private static final int BREATHER_EVERY_ROWS = 7;
@@ -35,11 +42,43 @@ public class GameEngine {
     private static final int POINTS_PER_SECOND = 10;
     private static final int POINTS_PER_ROW = 5;
 
+    private static final float COUNTDOWN_SECONDS = 1.05f;
+    private static final float DYING_SECONDS = 0.45f;
+
+    static final int MAX_PARTICLES = 240;
+    static final int MAX_FLOATERS = 14;
+
+    private static final float PARTICLE_DRAG = 1.7f;
+    private static final float SHAKE_DECAY = 5.5f;
+    private static final float FLASH_DECAY = 4.0f;
+
     private final Player leftPlayer = new Player(Color.parseColor("#22D3EE"));
     private final Player rightPlayer = new Player(Color.parseColor("#F472B6"));
 
     private final List<ObstacleRow> rows = new ArrayList<>(MAX_ROWS);
     private final Random random = new Random();
+
+    // Particles (pooled arrays: no allocation while playing).
+    final float[] particleX = new float[MAX_PARTICLES];
+    final float[] particleY = new float[MAX_PARTICLES];
+    final float[] particleVx = new float[MAX_PARTICLES];
+    final float[] particleVy = new float[MAX_PARTICLES];
+    final float[] particleLife = new float[MAX_PARTICLES];
+    final float[] particleMaxLife = new float[MAX_PARTICLES];
+    final float[] particleRadius = new float[MAX_PARTICLES];
+    final int[] particleColor = new int[MAX_PARTICLES];
+    int particleCount;
+
+    // Floating "+5" labels.
+    final float[] floaterX = new float[MAX_FLOATERS];
+    final float[] floaterY = new float[MAX_FLOATERS];
+    final float[] floaterLife = new float[MAX_FLOATERS];
+    final float[] floaterMaxLife = new float[MAX_FLOATERS];
+    final int[] floaterColor = new int[MAX_FLOATERS];
+    int floaterCount;
+
+    private volatile State state = State.ATTRACT;
+    private volatile boolean paused;
 
     private int width;
     private int height;
@@ -56,9 +95,17 @@ public class GameEngine {
     private float lastWindowCenter = -1f;
 
     private int score;
-    private boolean gameOver;
+    private float countdown = COUNTDOWN_SECONDS;
+    private float dyingTimer;
     private boolean justDied;
+    private boolean impactEvent;
+    private int rowPassEvents;
     private boolean initialised;
+
+    private float shakeMagnitude;
+    private float shakeX;
+    private float shakeY;
+    private float flash;
 
     public Player leftPlayer() {
         return leftPlayer;
@@ -72,29 +119,95 @@ public class GameEngine {
         return rows;
     }
 
+    public State state() {
+        return state;
+    }
+
     public int score() {
         return score;
-    }
-
-    public boolean isGameOver() {
-        return gameOver;
-    }
-
-    public float level() {
-        return LevelConfig.levelOf(rowsCleared);
     }
 
     public int rowsCleared() {
         return rowsCleared;
     }
 
-    /** Returns true exactly once after the run ended, so the UI can show its overlay. */
-    public boolean consumeJustDied() {
-        if (!justDied) {
-            return false;
+    public float level() {
+        return LevelConfig.levelOf(rowsCleared);
+    }
+
+    public float countdown() {
+        return countdown;
+    }
+
+    public float shakeX() {
+        return shakeX;
+    }
+
+    public float shakeY() {
+        return shakeY;
+    }
+
+    public float flash() {
+        return flash;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public void setPaused(boolean paused) {
+        this.paused = paused;
+    }
+
+    /** Idle "attract" scene used behind the menu: drifting bodies, no hazards. */
+    public void enterAttract() {
+        state = State.ATTRACT;
+        paused = false;
+        rows.clear();
+        resetRunData();
+    }
+
+    /** Starts a real run: countdown, then hazards. */
+    public void startRun() {
+        rows.clear();
+        resetRunData();
+        random.setSeed(System.nanoTime());
+        paused = false;
+        state = State.COUNTDOWN;
+        countdown = COUNTDOWN_SECONDS;
+
+        if (width > 0) {
+            float radius = leftPlayer.radius > 0 ? leftPlayer.radius : PLAYER_RADIUS_DP * density;
+            leftPlayer.x = clamp(width * START_PROGRESS, radius, width - radius);
+            rightPlayer.x = width - leftPlayer.x;
         }
+        leftPlayer.resetTrail();
+        rightPlayer.resetTrail();
+
+        float speed = LevelConfig.rowSpeed(density, 1f);
+        float spacing = LevelConfig.rowSpacing(density, 1f);
+        distanceSinceSpawn = spacing - speed * FIRST_ROW_DELAY_SECONDS;
+    }
+
+    private void resetRunData() {
+        rowsCleared = 0;
+        rowsSinceBreather = 0;
+        runSeconds = 0.0;
+        score = 0;
+        lastWindowCenter = -1f;
+        touchActive = false;
+        countdown = COUNTDOWN_SECONDS;
+        dyingTimer = 0f;
         justDied = false;
-        return true;
+        impactEvent = false;
+        rowPassEvents = 0;
+        particleCount = 0;
+        floaterCount = 0;
+        shakeMagnitude = 0f;
+        shakeX = 0f;
+        shakeY = 0f;
+        flash = 0f;
+        distanceSinceSpawn = 0f;
     }
 
     /** Called on every surface size change and once at startup. */
@@ -112,37 +225,16 @@ public class GameEngine {
 
         if (!initialised) {
             initialised = true;
-            restart();
+            float start = clamp(width * 0.32f, radius, width - radius);
+            leftPlayer.x = start;
+            rightPlayer.x = width - start;
+            leftPlayer.resetTrail();
+            rightPlayer.resetTrail();
+            enterAttract();
         } else {
             leftPlayer.x = clamp(leftPlayer.x, radius, width - radius);
             rightPlayer.x = width - leftPlayer.x;
         }
-    }
-
-    /** Resets the run and generates a fresh seed. */
-    public void restart() {
-        random.setSeed(System.nanoTime());
-        rows.clear();
-        rowsCleared = 0;
-        rowsSinceBreather = 0;
-        runSeconds = 0.0;
-        score = 0;
-        gameOver = false;
-        justDied = false;
-        lastWindowCenter = -1f;
-        touchActive = false;
-
-        if (width > 0) {
-            float radius = leftPlayer.radius > 0 ? leftPlayer.radius : PLAYER_RADIUS_DP * density;
-            leftPlayer.x = clamp(width * START_PROGRESS, radius, width - radius);
-            rightPlayer.x = width - leftPlayer.x;
-        }
-        leftPlayer.resetTrail();
-        rightPlayer.resetTrail();
-
-        float speed = LevelConfig.rowSpeed(density, 1f);
-        float spacing = LevelConfig.rowSpacing(density, 1f);
-        distanceSinceSpawn = spacing - speed * FIRST_ROW_DELAY_SECONDS;
     }
 
     /** Touch x in pixels. */
@@ -154,39 +246,89 @@ public class GameEngine {
         targetX = x;
     }
 
-    public void update(double dt) {
-        if (width <= 0 || height <= 0) {
-            return;
+    /** True exactly once, when the run ends (after the dying hit-stop). */
+    public boolean consumeJustDied() {
+        if (!justDied) {
+            return false;
         }
-        elapsedSeconds += dt;
-        if (gameOver) {
-            return;
-        }
-
-        runSeconds += dt;
-        float level = level();
-        float speed = LevelConfig.rowSpeed(density, level);
-        float spacing = LevelConfig.rowSpacing(density, level);
-
-        updatePlayers(dt);
-        moveRows(dt, speed);
-        maybeSpawn(dt, speed, spacing, level);
-
-        if (collides()) {
-            gameOver = true;
-            justDied = true;
-        }
-        score = computeScore();
+        justDied = false;
+        return true;
     }
 
-    private void updatePlayers(double dt) {
+    /** True exactly once, on the frame of the fatal impact. */
+    public boolean consumeImpact() {
+        if (!impactEvent) {
+            return false;
+        }
+        impactEvent = false;
+        return true;
+    }
+
+    /** Number of rows cleared since the last call (used for the tick sound). */
+    public int consumeRowPasses() {
+        int passes = rowPassEvents;
+        rowPassEvents = 0;
+        return passes;
+    }
+
+    public void update(double dtValue) {
+        if (width <= 0 || height <= 0 || paused) {
+            return;
+        }
+        final float dt = (float) dtValue;
+        elapsedSeconds += dtValue;
+
+        updateEffects(dt);
+
+        switch (state) {
+            case ATTRACT:
+                updateAttract(dt);
+                break;
+            case COUNTDOWN:
+                countdown -= dt;
+                updatePlayers(dt);
+                updateWorld(dt, false);
+                if (countdown <= 0f) {
+                    countdown = 0f;
+                    state = State.PLAYING;
+                }
+                break;
+            case PLAYING:
+                runSeconds += dtValue;
+                updatePlayers(dt);
+                updateWorld(dt, true);
+                break;
+            case DYING:
+                dyingTimer -= dt;
+                if (dyingTimer <= 0f) {
+                    state = State.GAME_OVER;
+                    justDied = true;
+                }
+                break;
+            case GAME_OVER:
+            default:
+                break;
+        }
+    }
+
+    private void updateAttract(float dt) {
+        float target = width * 0.5f + (float) Math.sin(elapsedSeconds * 0.55) * width * 0.26f;
+        followTarget(target, dt);
+    }
+
+    private void updatePlayers(float dt) {
+        float goal = touchActive ? targetX : leftPlayer.x;
+        followTarget(goal, dt);
+    }
+
+    private void followTarget(float goal, float dt) {
         float radius = leftPlayer.radius;
         float minX = radius;
         float maxX = width - radius;
-        float goal = touchActive ? clamp(targetX, minX, maxX) : leftPlayer.x;
+        goal = clamp(goal, minX, maxX);
 
         // Frame-rate independent exponential smoothing.
-        float t = (float) (1.0 - Math.exp(-dt / SMOOTH_TIME));
+        float t = 1f - (float) Math.exp(-dt / SMOOTH_TIME);
         leftPlayer.x = clamp(leftPlayer.x + (goal - leftPlayer.x) * t, minX, maxX);
         rightPlayer.x = width - leftPlayer.x;
 
@@ -194,7 +336,12 @@ public class GameEngine {
         rightPlayer.pushTrail();
     }
 
-    private void moveRows(double dt, float speed) {
+    /** Moves and spawns rows, and (when {@code lethal}) resolves collisions. */
+    private void updateWorld(float dt, boolean lethal) {
+        float level = level();
+        float speed = LevelConfig.rowSpeed(density, level);
+        float spacing = LevelConfig.rowSpacing(density, level);
+
         for (int i = rows.size() - 1; i >= 0; i--) {
             ObstacleRow row = rows.get(i);
             row.y += speed * dt;
@@ -202,21 +349,135 @@ public class GameEngine {
 
             if (!row.scored && row.y > leftPlayer.y + leftPlayer.radius) {
                 row.scored = true;
-                rowsCleared++;
+                if (lethal) {
+                    rowsCleared++;
+                    rowPassEvents++;
+                    spawnFloater(leftPlayer.x + leftPlayer.radius * 1.6f, leftPlayer.y - leftPlayer.radius * 2.2f,
+                            leftPlayer.color);
+                    spawnFloater(rightPlayer.x - rightPlayer.radius * 1.6f, rightPlayer.y - rightPlayer.radius * 2.2f,
+                            rightPlayer.color);
+                }
             }
             if (row.y > height + row.height) {
                 rows.remove(i);
             }
         }
+
+        distanceSinceSpawn += speed * dt;
+        if (rows.size() < MAX_ROWS && distanceSinceSpawn >= spacing) {
+            distanceSinceSpawn = 0f;
+            spawnRow(level);
+        }
+
+        if (lethal && collides()) {
+            die();
+        }
+        if (lethal) {
+            score = computeScore();
+        }
     }
 
-    private void maybeSpawn(double dt, float speed, float spacing, float level) {
-        distanceSinceSpawn += speed * dt;
-        if (rows.size() >= MAX_ROWS || distanceSinceSpawn < spacing) {
+    private void die() {
+        state = State.DYING;
+        dyingTimer = DYING_SECONDS;
+        impactEvent = true;
+        score = computeScore();
+        shakeMagnitude = 16f * density;
+        flash = 1f;
+        burstDeath(leftPlayer);
+        burstDeath(rightPlayer);
+    }
+
+    // ------------------------------------------------------------------- effects
+
+    private void updateEffects(float dt) {
+        for (int i = particleCount - 1; i >= 0; i--) {
+            particleLife[i] -= dt;
+            if (particleLife[i] <= 0f) {
+                particleCount--;
+                moveParticle(particleCount, i);
+                continue;
+            }
+            float drag = 1f - PARTICLE_DRAG * dt;
+            if (drag < 0f) {
+                drag = 0f;
+            }
+            particleVx[i] *= drag;
+            particleVy[i] *= drag;
+            particleX[i] += particleVx[i] * dt;
+            particleY[i] += particleVy[i] * dt;
+        }
+
+        for (int i = floaterCount - 1; i >= 0; i--) {
+            floaterLife[i] -= dt;
+            if (floaterLife[i] <= 0f) {
+                floaterCount--;
+                floaterX[i] = floaterX[floaterCount];
+                floaterY[i] = floaterY[floaterCount];
+                floaterLife[i] = floaterLife[floaterCount];
+                floaterMaxLife[i] = floaterMaxLife[floaterCount];
+                floaterColor[i] = floaterColor[floaterCount];
+                continue;
+            }
+            floaterY[i] -= 46f * density * dt;
+        }
+
+        if (shakeMagnitude > 0.4f) {
+            shakeMagnitude *= (float) Math.exp(-SHAKE_DECAY * dt);
+            shakeX = (random.nextFloat() * 2f - 1f) * shakeMagnitude;
+            shakeY = (random.nextFloat() * 2f - 1f) * shakeMagnitude;
+        } else {
+            shakeMagnitude = 0f;
+            shakeX = 0f;
+            shakeY = 0f;
+        }
+
+        if (flash > 0f) {
+            flash *= (float) Math.exp(-FLASH_DECAY * dt);
+            if (flash < 0.01f) {
+                flash = 0f;
+            }
+        }
+    }
+
+    private void burstDeath(Player player) {
+        for (int i = 0; i < 44 && particleCount < MAX_PARTICLES; i++) {
+            float angle = random.nextFloat() * 6.2831855f;
+            float speed = (90f + random.nextFloat() * 430f) * density;
+            float life = 0.35f + random.nextFloat() * 0.5f;
+            int index = particleCount++;
+            particleX[index] = player.x;
+            particleY[index] = player.y;
+            particleVx[index] = (float) Math.cos(angle) * speed;
+            particleVy[index] = (float) Math.sin(angle) * speed;
+            particleLife[index] = life;
+            particleMaxLife[index] = life;
+            particleRadius[index] = (1.6f + random.nextFloat() * 3.4f) * density;
+            particleColor[index] = player.color;
+        }
+    }
+
+    private void spawnFloater(float x, float y, int color) {
+        if (floaterCount >= MAX_FLOATERS) {
             return;
         }
-        distanceSinceSpawn = 0f;
-        spawnRow(level);
+        int index = floaterCount++;
+        floaterX[index] = x;
+        floaterY[index] = y;
+        floaterLife[index] = 0.65f;
+        floaterMaxLife[index] = 0.65f;
+        floaterColor[index] = color;
+    }
+
+    private void moveParticle(int from, int to) {
+        particleX[to] = particleX[from];
+        particleY[to] = particleY[from];
+        particleVx[to] = particleVx[from];
+        particleVy[to] = particleVy[from];
+        particleLife[to] = particleLife[from];
+        particleMaxLife[to] = particleMaxLife[from];
+        particleRadius[to] = particleRadius[from];
+        particleColor[to] = particleColor[from];
     }
 
     // ---------------------------------------------------------------- generation

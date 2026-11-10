@@ -14,8 +14,8 @@ import android.graphics.Typeface;
 import java.util.List;
 
 /**
- * All drawing happens here. Paints, shaders, glow sprites and the score string are
- * created or updated only when they change, so the game loop never allocates per frame.
+ * All drawing happens here. Paints, shaders, glow sprites and the score string are created
+ * or updated only when they change, so the game loop never allocates per frame.
  */
 public class Renderer {
 
@@ -26,9 +26,11 @@ public class Renderer {
     private static final int COLOR_ROW_EDGE = Color.parseColor("#2F81F7");
     private static final int COLOR_SCORE = Color.parseColor("#E6EDF3");
     private static final int COLOR_DEBUG = Color.parseColor("#6E7681");
+    private static final int COLOR_FLASH = Color.parseColor("#F472B6");
 
     private static final float GRID_STEP_DP = 48f;
     private static final int GLOW_SIZE_PX = 160;
+    private static final float COUNTDOWN_RADIUS_DP = 84f;
 
     private final Paint gridPaint = new Paint();
     private final Paint axisPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -37,14 +39,18 @@ public class Renderer {
     private final Paint corePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint trailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint particlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glowPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
     private final Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint floaterPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint countdownPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint flashPaint = new Paint();
     private final Paint debugPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final RectF rowRect = new RectF();
     private final RectF gapRect = new RectF();
-    private final Path rowPath = new Path();
     private final RectF glowBounds = new RectF();
+    private final Path rowPath = new Path();
 
     private Bitmap cyanGlow;
     private Bitmap pinkGlow;
@@ -53,6 +59,8 @@ public class Renderer {
 
     private int displayedScore = -1;
     private String scoreText = "0";
+    private float easedScore;
+    private long lastDrawNanos;
     private int displayedFps = -1;
     private String fpsText = "";
 
@@ -86,12 +94,24 @@ public class Renderer {
         rimPaint.setStrokeWidth(1.4f * density);
 
         trailPaint.setStyle(Paint.Style.FILL);
+        particlePaint.setStyle(Paint.Style.FILL);
         glowPaint.setAntiAlias(true);
+        flashPaint.setStyle(Paint.Style.FILL);
 
         scorePaint.setColor(COLOR_SCORE);
         scorePaint.setTextSize(34f * density);
         scorePaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         scorePaint.setTextAlign(Paint.Align.CENTER);
+
+        floaterPaint.setTextSize(15f * density);
+        floaterPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        floaterPaint.setTextAlign(Paint.Align.CENTER);
+
+        countdownPaint.setColor(COLOR_SCORE);
+        countdownPaint.setTextSize(COUNTDOWN_RADIUS_DP * density);
+        countdownPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        countdownPaint.setTextAlign(Paint.Align.CENTER);
+        countdownPaint.setAntiAlias(true);
 
         debugPaint.setColor(COLOR_DEBUG);
         debugPaint.setTextSize(11f * density);
@@ -109,18 +129,21 @@ public class Renderer {
         final int width = canvas.getWidth();
         final int height = canvas.getHeight();
 
+        long now = System.nanoTime();
+        float dt = lastDrawNanos == 0L ? 0.016f : (now - lastDrawNanos) / 1_000_000_000f;
+        lastDrawNanos = now;
+        if (dt < 0f || dt > 0.1f) {
+            dt = 0.016f;
+        }
+
         canvas.drawColor(COLOR_BG);
 
-        float step = GRID_STEP_DP * density;
-        for (float x = step; x < width; x += step) {
-            canvas.drawLine(x, 0f, x, height, gridPaint);
-        }
-        for (float y = step; y < height; y += step) {
-            canvas.drawLine(0f, y, width, y, gridPaint);
-        }
-        canvas.drawLine(width * 0.5f, 0f, width * 0.5f, height, axisPaint);
+        canvas.save();
+        canvas.translate(engine.shakeX(), engine.shakeY());
 
+        drawGrid(canvas, width, height);
         drawRows(canvas, engine.rows(), width);
+        drawParticles(canvas, engine);
 
         Player left = engine.leftPlayer();
         Player right = engine.rightPlayer();
@@ -129,7 +152,14 @@ public class Renderer {
         drawBody(canvas, left, cyanGlow);
         drawBody(canvas, right, pinkGlow);
 
-        drawScore(canvas, engine.score(), width);
+        drawFloaters(canvas, engine);
+        canvas.restore();
+
+        drawFlash(canvas, engine.flash(), width, height);
+        if (engine.state() != GameEngine.State.ATTRACT) {
+            drawScore(canvas, engine.score(), width, dt);
+        }
+        drawCountdown(canvas, engine, width, height);
 
         if (showDebug) {
             int roundedFps = Math.round(fps);
@@ -139,6 +169,18 @@ public class Renderer {
             }
             canvas.drawText(fpsText, 12f * density, height - 14f * density, debugPaint);
         }
+    }
+
+    private void drawGrid(Canvas canvas, int width, int height) {
+        float step = GRID_STEP_DP * density;
+        // Draw one extra ring so the screen shake never reveals an empty edge.
+        for (float x = step - 2f * step; x < width + 2f * step; x += step) {
+            canvas.drawLine(x, -2f * step, x, height + 2f * step, gridPaint);
+        }
+        for (float y = step - 2f * step; y < height + 2f * step; y += step) {
+            canvas.drawLine(-2f * step, y, width + 2f * step, y, gridPaint);
+        }
+        canvas.drawLine(width * 0.5f, -2f * step, width * 0.5f, height + 2f * step, axisPaint);
     }
 
     /**
@@ -152,7 +194,7 @@ public class Renderer {
             ObstacleRow row = rows.get(i);
             float top = row.y;
             float bottom = row.y + row.height;
-            if (bottom < 0f || top > canvas.getHeight()) {
+            if (bottom < -20f * density || top > canvas.getHeight() + 20f * density) {
                 continue;
             }
 
@@ -174,12 +216,65 @@ public class Renderer {
         }
     }
 
-    private void drawScore(Canvas canvas, int score, int width) {
-        if (score != displayedScore) {
-            displayedScore = score;
-            scoreText = Integer.toString(score);
+    private void drawParticles(Canvas canvas, GameEngine engine) {
+        for (int i = 0; i < engine.particleCount; i++) {
+            float life = engine.particleLife[i];
+            float maxLife = engine.particleMaxLife[i];
+            float fraction = maxLife > 0f ? life / maxLife : 0f;
+            int alpha = (int) (255f * fraction * fraction);
+            if (alpha <= 4) {
+                continue;
+            }
+            particlePaint.setColor(withAlpha(engine.particleColor[i], alpha));
+            canvas.drawCircle(engine.particleX[i], engine.particleY[i],
+                    engine.particleRadius[i] * (0.4f + 0.6f * fraction), particlePaint);
+        }
+    }
+
+    private void drawFloaters(Canvas canvas, GameEngine engine) {
+        for (int i = 0; i < engine.floaterCount; i++) {
+            float fraction = engine.floaterLife[i] / engine.floaterMaxLife[i];
+            int alpha = (int) (255f * Math.min(1f, fraction * 1.6f));
+            floaterPaint.setColor(withAlpha(engine.floaterColor[i], alpha));
+            canvas.drawText("+5", engine.floaterX[i], engine.floaterY[i], floaterPaint);
+        }
+    }
+
+    private void drawFlash(Canvas canvas, float flash, int width, int height) {
+        if (flash <= 0.01f) {
+            return;
+        }
+        flashPaint.setColor(withAlpha(COLOR_FLASH, (int) (90f * flash)));
+        canvas.drawRect(0f, 0f, width, height, flashPaint);
+    }
+
+    private void drawScore(Canvas canvas, int score, int width, float dt) {
+        if (score < easedScore) {
+            easedScore = score;
+        }
+        easedScore += (score - easedScore) * Math.min(1f, dt * 9f);
+        int shown = Math.round(easedScore);
+        if (shown != displayedScore) {
+            displayedScore = shown;
+            scoreText = Integer.toString(shown);
         }
         canvas.drawText(scoreText, width * 0.5f, 68f * density, scorePaint);
+    }
+
+    private void drawCountdown(Canvas canvas, GameEngine engine, int width, int height) {
+        if (engine.state() != GameEngine.State.COUNTDOWN) {
+            return;
+        }
+        float remaining = engine.countdown();
+        if (remaining <= 0f) {
+            return;
+        }
+        int value = (int) Math.ceil(remaining / 0.35f);
+        float fraction = remaining - (value - 1) * 0.35f;
+        fraction = Math.max(0f, Math.min(1f, fraction / 0.35f));
+        countdownPaint.setAlpha((int) (90f + 165f * fraction));
+        canvas.drawText(Integer.toString(value), width * 0.5f, height * 0.42f, countdownPaint);
+        countdownPaint.setAlpha(255);
     }
 
     private void drawTrail(Canvas canvas, Player player) {

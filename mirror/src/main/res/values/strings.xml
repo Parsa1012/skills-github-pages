@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="game_name">آینه</string>
+    <string name="tagline">یک انگشت، دو نیمه</string>
     <string name="hint">برای حرکت، انگشت را بکشید</string>
+    <string name="how_to">انگشت را بکشید تا هر دو دایره با هم حرکت کنند.\nاگر یکی از آن‌ها بمیرد، بازی تمام است.</string>
+    <string name="start_game">شروع</string>
+    <string name="sound_on">صدا: روشن</string>
+    <string name="sound_off">صدا: خاموش</string>
+    <string name="paused_title">توقف</string>
+    <string name="resume">ادامه</string>
+    <string name="restart">شروع دوباره</string>
+    <string name="menu">منو</string>
     <string name="game_over">بازی تمام شد</string>
     <string name="new_record">رکورد جدید!</string>
     <string name="score_line">امتیاز  %1$d</string>

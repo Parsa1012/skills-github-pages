@@ -2,17 +2,20 @@ package io.github.parsa1012.mirrordash;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 /**
- * Owns the render surface, the simulation thread and the touch input.
+ * Owns the render surface, the simulation thread, touch input and the audio/haptic feedback.
  *
- * <p>The simulation runs on a fixed 1/60s step fed by an accumulator (with the incoming
- * frame time clamped and a hard cap on steps per frame), so gameplay speed is identical on
- * 60, 90 and 120 Hz devices and a slow frame can never spiral into a longer one. The
- * renderer simply draws the latest simulated state.</p>
+ * <p>The simulation runs on a fixed 1/60s step fed by an accumulator (with the incoming frame
+ * time clamped and a hard cap on steps per frame), so gameplay speed is identical on 60, 90
+ * and 120 Hz devices and a slow frame can never spiral into a longer one.</p>
+ *
+ * <p>State changes requested by the UI thread are queued as flags and applied on the loop
+ * thread, so the engine is only ever mutated from one thread.</p>
  */
 public class GameView extends SurfaceView implements SurfaceHolder.Callback, Runnable {
 
@@ -24,10 +27,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private final SurfaceHolder surfaceHolder;
     private final GameEngine engine = new GameEngine();
     private final Renderer renderer = new Renderer();
+    private final SoundPlayer sound;
 
     private Thread loopThread;
     private volatile boolean running;
-    private volatile boolean restartRequested;
+    private volatile boolean startRequested;
+    private volatile boolean attractRequested;
+    private volatile int pauseRequest;
     private volatile float fps;
 
     private Runnable firstTouchListener;
@@ -44,6 +50,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         setFocusable(true);
         setKeepScreenOn(true);
         renderer.setDensity(getResources().getDisplayMetrics().density);
+        sound = new SoundPlayer(context);
     }
 
     public void setOnFirstTouchListener(Runnable listener) {
@@ -56,6 +63,28 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     public GameEngine engine() {
         return engine;
+    }
+
+    public void setSoundEnabled(boolean enabled) {
+        sound.setEnabled(enabled);
+    }
+
+    /** Starts a real run (countdown, then hazards). Safe to call from the UI thread. */
+    public void startRun() {
+        startRequested = true;
+    }
+
+    /** Returns to the idle menu scene. Safe to call from the UI thread. */
+    public void showAttract() {
+        attractRequested = true;
+    }
+
+    public void pauseGame() {
+        pauseRequest = 1;
+    }
+
+    public void resumeGame() {
+        pauseRequest = 2;
     }
 
     @Override
@@ -95,9 +124,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         }
     }
 
-    /** Asks the loop thread to reset the run on its next iteration. */
-    public void restart() {
-        restartRequested = true;
+    /** Frees the SoundPool; the view cannot be reused afterwards. */
+    public void release() {
+        stop();
+        sound.release();
     }
 
     @Override
@@ -127,6 +157,38 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         }
     }
 
+    private void applyPendingCommands() {
+        if (attractRequested) {
+            attractRequested = false;
+            engine.enterAttract();
+        }
+        if (startRequested) {
+            startRequested = false;
+            engine.startRun();
+        }
+        int request = pauseRequest;
+        if (request != 0) {
+            pauseRequest = 0;
+            engine.setPaused(request == 1);
+        }
+    }
+
+    private void pumpFeedback() {
+        if (engine.consumeImpact()) {
+            sound.playCrash();
+            post(new Runnable() {
+                @Override
+                public void run() {
+                    performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                }
+            });
+        }
+        int passes = engine.consumeRowPasses();
+        for (int i = 0; i < passes && i < 3; i++) {
+            sound.playTick();
+        }
+    }
+
     @Override
     public void run() {
         long lastFrame = System.nanoTime();
@@ -146,11 +208,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             }
             accumulator += frameSeconds;
 
-            if (restartRequested) {
-                restartRequested = false;
-                engine.restart();
-                accumulator = 0.0;
-            }
+            applyPendingCommands();
 
             int steps = 0;
             while (accumulator >= STEP_SECONDS && steps < MAX_STEPS_PER_FRAME) {
@@ -162,6 +220,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                 // Dropped behind (e.g. after a hiccup): drop the backlog instead of spiralling.
                 accumulator = 0.0;
             }
+
+            pumpFeedback();
 
             if (engine.consumeJustDied()) {
                 final int score = engine.score();

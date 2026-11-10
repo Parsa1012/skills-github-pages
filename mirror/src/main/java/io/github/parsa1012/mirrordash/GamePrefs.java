@@ -3,13 +3,14 @@ package io.github.parsa1012.mirrordash;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-/** Stores the single persistent number the game needs: the best score. */
-public final class ScoreStore {
+/** The two things worth persisting: the best score and the sound preference. */
+public final class GamePrefs {
 
     private static final String PREFS_NAME = "mirror_dash";
     private static final String KEY_BEST = "best_score";
+    private static final String KEY_SOUND = "sound_enabled";
 
-    private ScoreStore() {
+    private GamePrefs() {
     }
 
     public static int best(Context context) {
@@ -24,6 +25,14 @@ public final class ScoreStore {
         }
         prefs(context).edit().putInt(KEY_BEST, score).apply();
         return true;
+    }
+
+    public static boolean soundEnabled(Context context) {
+        return prefs(context).getBoolean(KEY_SOUND, true);
+    }
+
+    public static void setSoundEnabled(Context context, boolean enabled) {
+        prefs(context).edit().putBoolean(KEY_SOUND, enabled).apply();
     }
 
     private static SharedPreferences prefs(Context context) {
