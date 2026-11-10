@@ -15,7 +15,9 @@ on:
       - '.github/workflows/build-apk.yml'
 
 permissions:
-  contents: read
+  # `contents: write` lets the build publish the APK back onto this branch
+  # so it can be fetched without the Actions artifact download flow.
+  contents: write
 
 jobs:
   build:
@@ -68,3 +70,19 @@ jobs:
           name: demo-app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Publish APK onto the branch
+        run: |
+          set -eu
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/*.apk dist/demo-app-debug.apk
+          ls -l dist/demo-app-debug.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f dist/demo-app-debug.apk
+          if git diff --cached --quiet; then
+            echo "APK unchanged, nothing to publish"
+          else
+            git commit -m "CI: publish demo-app-debug.apk [skip ci]"
+            git push
+          fi
