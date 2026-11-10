@@ -30,8 +30,8 @@ SINGLE_GAP_EXTRA = 46.0
 MIN_SLIVER = 14.0
 BREATHER_EVERY_ROWS = 7
 
-SPEED_TABLE = [150, 190, 230, 270, 310]
-SPACING_TABLE = [320, 300, 280, 260, 240]
+SPEED_TABLE = [190, 240, 290, 340, 390]
+SPACING_TABLE = [300, 280, 260, 240, 220]
 GAP_TABLE = [96, 92, 88, 84, 80]
 
 # A quick swipe, used to keep the required between-row travel honest (GameEngine).
@@ -81,7 +81,7 @@ def sample(table, level, per_level, bound, cap):
 
 
 def speed(level):
-    return sample(SPEED_TABLE, level, 40, 520, True) * ACTIVE["speed"]
+    return sample(SPEED_TABLE, level, 50, 600, True) * ACTIVE["speed"]
 
 
 def spacing(level):
@@ -352,7 +352,7 @@ def simulate(seed, skill, max_seconds=600.0, log=False,
 
     while elapsed < max_seconds:
         elapsed += dt
-        level = 1 + rows_cleared / 8.0
+        level = 1 + rows_cleared / 6.0
         sp = speed(level)
         spc = spacing(level)
 
@@ -413,7 +413,7 @@ def check_playability():
     print("[perfect player] should never die (no impossible rows)")
     for seed in range(1, 6):
         cleared, t = simulate(seed, "perfect", max_seconds=120.0)
-        reached_level = 1 + cleared / 8.0
+        reached_level = 1 + cleared / 6.0
         print(f"  seed={seed} rows={cleared} level={reached_level:.1f} time={t:.1f}s")
         if t < 119.9:
             ok = False
@@ -426,7 +426,7 @@ def check_playability():
     median_rows = results[len(results) // 2][0]
     print(f"  runs={len(results)} rows min/median/max = "
           f"{results[0][0]}/{median_rows}/{results[-1][0]}")
-    print(f"  median level reached = {1 + median_rows / 8.0:.2f}")
+    print(f"  median level reached = {1 + median_rows / 6.0:.2f}")
     return ok
 
 

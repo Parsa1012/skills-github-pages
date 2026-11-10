@@ -109,7 +109,7 @@ jobs:
             unzip -l "dist/$name" | tail -n 4 >> "$STATUS" || true
           }
 
-          publish "mirror/build/outputs/apk/release/mirror-release.apk" "mirror-dash-1.2.apk"
+          publish "mirror/build/outputs/apk/release/mirror-release.apk" "mirror-dash-1.3.apk"
           publish "mirror/build/outputs/apk/debug/mirror-debug.apk" "mirror-dash-debug.apk"
 
           echo "--- dist ---" >> "$STATUS"
@@ -126,27 +126,27 @@ jobs:
           if-no-files-found: warn
 
       - name: Publish GitHub release
-        if: always()
+        if: success() && steps.release.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          FILES="dist/mirror-dash-1.2.apk dist/mirror-dash-debug.apk"
+          FILES="dist/mirror-dash-1.3.apk dist/mirror-dash-debug.apk"
           for f in $FILES; do
             if [ ! -f "$f" ]; then
               echo "missing $f, skipping release"
               exit 0
             fi
           done
-          TAG="v1.2"
+          TAG="v1.3"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             gh release upload "$TAG" $FILES --clobber --repo "$GITHUB_REPOSITORY"
           else
             gh release create "$TAG" $FILES \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "هم‌زاد ۱٫۲ — Mirror Dash" \
-              --notes $'بازی «هم‌زاد» نسخه ۱٫۲\n\nاین نسخه روی نسخه‌های ۱٫۰ و ۱٫۱ نصب می‌شود؛ نیازی به حذف بازی قبلی نیست (همان بسته، همان امضای دیجیتال، versionCode بالاتر).\n\nتازه‌ها: الگوی جدید ردیف‌ها (گوی‌ها یک ردیف نزدیک هم، ردیف بعد دور از هم)، دو گوی آبی و قرمز، لوگو و آیکون دقیقاً قرینه، بازنویسی صفحه تنظیمات، بهبود روانی و نرخ فریم، رفع باگ‌ها.\n\nنصب: فایل mirror-dash-1.2.apk را دانلود کنید و روی گوشی باز کنید،\nیا با adb: adb install -r mirror-dash-1.2.apk\n\nاندروید ۵ و بالاتر · بدون هیچ مجوز · بدون اینترنت'
+              --title "توپهای همزاد ۱٫۳ — Twin Balls" \
+              --notes "نسخه ۱٫۳: چهار زبان، رکورد جداگانه برای هر درجه، راهنما، اطلاعات سازنده و چالش سریع‌تر. فایل نسخهٔ انتشار را بدون حذف نسخهٔ قبلی نصب کنید."
           fi
 
       - name: Commit published files

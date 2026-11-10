@@ -12,17 +12,17 @@ package io.github.parsa1012.mirrordash;
 public final class LevelConfig {
 
     /** Rows cleared per difficulty level. */
-    public static final int ROWS_PER_LEVEL = 8;
+    public static final int ROWS_PER_LEVEL = 6;
 
-    private static final float[] SPEED_DP = {150f, 190f, 230f, 270f, 310f};
-    private static final float[] SPACING_DP = {320f, 300f, 280f, 260f, 240f};
+    private static final float[] SPEED_DP = {190f, 240f, 290f, 340f, 390f};
+    private static final float[] SPACING_DP = {300f, 280f, 260f, 240f, 220f};
     private static final float[] GAP_DP = {96f, 92f, 88f, 84f, 80f};
 
-    private static final float SPEED_PER_LEVEL_DP = 40f;
+    private static final float SPEED_PER_LEVEL_DP = 50f;
     private static final float SPACING_PER_LEVEL_DP = -15f;
     private static final float GAP_PER_LEVEL_DP = -3f;
 
-    private static final float SPEED_CAP_DP = 520f;
+    private static final float SPEED_CAP_DP = 600f;
     private static final float SPACING_FLOOR_DP = 170f;
     private static final float GAP_FLOOR_DP = 78f;
 

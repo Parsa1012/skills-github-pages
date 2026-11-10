@@ -52,6 +52,8 @@ public class Renderer {
     private Theme theme = Theme.of(true);
     private Bitmap blueGlow;
     private Bitmap redGlow;
+    private Bitmap blueSphere;
+    private Bitmap redSphere;
     /**
      * The grid, the centre axis and the flat background never change between frames, so they
      * are painted once into this bitmap and blitted in one call: that is the difference
@@ -152,6 +154,8 @@ public class Renderer {
 
         blueGlow = makeGlow(theme.playerBlue);
         redGlow = makeGlow(theme.playerRed);
+        blueSphere = makeSphere(theme.playerBlue, false);
+        redSphere = makeSphere(theme.playerRed, true);
         backgroundPaint.setFilterBitmap(false);
         backgroundPaint.setDither(false);
         // Dropped, not recycled: the render thread may still be painting with the old bitmap.
@@ -347,9 +351,22 @@ public class Renderer {
                 player.x + glowRadius, player.y + glowRadius);
         canvas.drawBitmap(glow, null, glowBounds, glowPaint);
 
-        corePaint.setColor(player.color);
-        canvas.drawCircle(player.x, player.y, player.radius, corePaint);
+        glowBounds.set(player.x - player.radius, player.y - player.radius, player.x + player.radius, player.y + player.radius);
+        canvas.drawBitmap(player.color == theme.playerBlue ? blueSphere : redSphere, null, glowBounds, glowPaint);
         canvas.drawCircle(player.x, player.y, player.radius, rimPaint);
+    }
+
+    private Bitmap makeSphere(int color, boolean mirror) {
+        int size = 128;
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        float x = mirror ? 80f : 48f;
+        paint.setShader(new RadialGradient(x, 43f, 82f,
+                new int[] {Color.WHITE, color, Color.rgb(Color.red(color) / 4, Color.green(color) / 4, Color.blue(color) / 4)},
+                new float[] {0f, 0.34f, 1f}, Shader.TileMode.CLAMP));
+        canvas.drawCircle(64f, 64f, 63f, paint);
+        return bitmap;
     }
 
     private Bitmap makeGlow(int color) {

@@ -39,6 +39,9 @@ public class GameActivity extends Activity {
     private FrameLayout root;
     private GameView gameView;
 
+    private Lang lang;
+    private Strings strings;
+    private TextView recordsText;
     private Theme theme;
     private Typeface typeRegular;
     private Typeface typeBold;
@@ -82,7 +85,10 @@ public class GameActivity extends Activity {
         super.onCreate(savedInstanceState);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        GamePrefs.migrate(this);
+        lang = GamePrefs.lang(this);
+        strings = Strings.of(lang);
+        getWindow().getDecorView().setLayoutDirection(lang.rtl() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
 
         nightMode = GamePrefs.nightMode(this);
         soundEnabled = GamePrefs.soundEnabled(this);
@@ -148,7 +154,7 @@ public class GameActivity extends Activity {
         pauseButton.setBackground(buttonBackground(theme.chipBackground, theme.panelStroke));
         pauseButton.setClickable(true);
         pauseButton.setFocusable(true);
-        pauseButton.setContentDescription(getString(R.string.pause_description));
+        pauseButton.setContentDescription(strings.pauseDescription);
         pauseButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -174,7 +180,7 @@ public class GameActivity extends Activity {
 
     private void buildHint() {
         hint = new TextView(this);
-        hint.setText(R.string.hint);
+        hint.setText(strings.hint);
         hint.setTextColor(theme.textSecondary);
         hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         hint.setTypeface(typeRegular);
@@ -211,22 +217,22 @@ public class GameActivity extends Activity {
         ImageView logo = new ImageView(this);
         logo.setImageResource(R.drawable.logo);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        logo.setContentDescription(getString(R.string.logo_description));
+        logo.setContentDescription(strings.logoDescription);
         content.addView(logo, new LinearLayout.LayoutParams(dp(104), dp(104)));
 
-        TextView title = label(R.string.app_name, 34, true, theme.textPrimary);
+        TextView title = label(strings.appName, 34, true, theme.textPrimary);
         content.addView(title, wrapWithTopMargin(10));
 
-        TextView tagline = label(R.string.tagline, 14, false, theme.playerBlue);
+        TextView tagline = label(strings.tagline, 14, false, theme.playerBlue);
         content.addView(tagline, wrapWithTopMargin(6));
 
-        menuBest = label(R.string.best_line, 14, true, theme.playerRed);
+        menuBest = label(strings.bestLine, 14, true, theme.playerRed);
         content.addView(menuBest, wrapWithTopMargin(16));
 
-        menuDifficulty = label(R.string.difficulty_line, 12, false, theme.textMuted);
+        menuDifficulty = label(strings.difficultyLine, 12, false, theme.textMuted);
         content.addView(menuDifficulty, wrapWithTopMargin(6));
 
-        TextView start = primaryAction(R.string.start_game);
+        TextView start = primaryAction(strings.start);
         LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(54));
         startParams.topMargin = dp(20);
@@ -238,7 +244,7 @@ public class GameActivity extends Activity {
             }
         });
 
-        TextView settings = secondaryAction(R.string.settings);
+        TextView settings = secondaryAction(strings.settings);
         LinearLayout.LayoutParams settingsParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(50));
         settingsParams.topMargin = dp(10);
@@ -250,16 +256,65 @@ public class GameActivity extends Activity {
             }
         });
 
-        TextView howTo = label(R.string.how_to, 12, false, theme.textMuted);
-        howTo.setLineSpacing(dp(5), 1f);
-        content.addView(howTo, wrapWithTopMargin(20));
-
         FrameLayout.LayoutParams contentParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         contentParams.gravity = Gravity.CENTER;
         overlay.addView(content, contentParams);
 
+        addMenuTools(overlay);
         root.addView(overlay, matchParent());
+    }
+
+    private void addMenuTools(FrameLayout overlay) {
+        LinearLayout tools = new LinearLayout(this);
+        tools.setOrientation(LinearLayout.HORIZONTAL);
+        tools.setPadding(dp(12), dp(12), dp(12), 0);
+        addTool(tools, "i", strings.infoDescription, () -> showTextDialog(strings.helpTitle, strings.helpBody));
+        addTool(tools, "A", strings.languageDescription, () -> showLanguageDialog());
+        addTool(tools, "@", strings.aboutDescription, () -> showTextDialog(strings.aboutTitle,
+                strings.creatorLabel + ": " + strings.creatorName + "\n" + strings.emailLabel + ":\n" + strings.creatorEmail + "\n\n" + strings.aboutBody + "\n\n" + strings.versionLabel + ": 1.3"));
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END);
+        overlay.addView(tools, lp);
+    }
+
+    private void addTool(LinearLayout row, String text, String description, Runnable action) {
+        TextView b = actionBase(text, 16, true);
+        b.setContentDescription(description);
+        b.setTextColor(theme.textPrimary);
+        b.setBackground(buttonBackground(theme.chipBackground, theme.panelStroke));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(48), dp(48));
+        lp.setMarginStart(dp(6));
+        row.addView(b, lp);
+        b.setOnClickListener(v -> action.run());
+    }
+
+    private void showTextDialog(String title, String body) {
+        TextView message = label(body, 15, false, theme.textPrimary);
+        message.setGravity(Gravity.START);
+        message.setTextDirection(lang.rtl() ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
+        message.setPadding(dp(22), dp(12), dp(22), dp(12));
+        ScrollView scroller = new ScrollView(this);
+        scroller.addView(message);
+        android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
+                .setTitle(title).setView(scroller).setPositiveButton(strings.close, (d, which) -> {}).create();
+        dialog.setOnShowListener(d -> dialog.getWindow().getDecorView().setLayoutDirection(lang.rtl() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR));
+        dialog.show();
+    }
+
+    private void showLanguageDialog() {
+        Lang[] languages = Lang.values();
+        String[] names = new String[languages.length];
+        for (int i = 0; i < languages.length; i++) names[i] = languages[i].nativeName();
+        new android.app.AlertDialog.Builder(this).setTitle(strings.languageTitle)
+                .setSingleChoiceItems(names, lang.ordinal(), (dialog, which) -> {
+                    GamePrefs.setLang(this, languages[which]);
+                    dialog.dismiss();
+                    recreate();
+                }).setNegativeButton(strings.close, (d, which) -> {}).show();
+    }
+
+    private String difficultyName(Difficulty d) {
+        return d == Difficulty.EASY ? strings.easy : d == Difficulty.HARD ? strings.hard : strings.normal;
     }
 
     // ------------------------------------------------------------------- settings
@@ -292,26 +347,29 @@ public class GameActivity extends Activity {
                 Math.min(dp(340), screenWidth - dp(40)),
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        TextView title = label(R.string.settings, 20, true, theme.textPrimary);
+        TextView title = label(strings.settings, 20, true, theme.textPrimary);
         card.addView(title);
 
-        chipEasy = chipLabel(R.string.difficulty_easy);
-        chipNormal = chipLabel(R.string.difficulty_normal);
-        chipHard = chipLabel(R.string.difficulty_hard);
-        card.addView(sectionLabel(R.string.difficulty), wrapWithTopMargin(16));
+        chipEasy = chipLabel(strings.easy);
+        chipNormal = chipLabel(strings.normal);
+        chipHard = chipLabel(strings.hard);
+        card.addView(sectionLabel(strings.difficulty), wrapWithTopMargin(16));
         card.addView(chipRow(chipEasy, chipNormal, chipHard), wrapWithTopMargin(8));
 
-        chipNight = chipLabel(R.string.theme_night);
-        chipDay = chipLabel(R.string.theme_day);
-        card.addView(sectionLabel(R.string.appearance), wrapWithTopMargin(16));
+        chipNight = chipLabel(strings.night);
+        chipDay = chipLabel(strings.day);
+        card.addView(sectionLabel(strings.appearance), wrapWithTopMargin(16));
         card.addView(chipRow(chipNight, chipDay), wrapWithTopMargin(8));
 
-        chipSoundOn = chipLabel(R.string.on);
-        chipSoundOff = chipLabel(R.string.off);
-        card.addView(sectionLabel(R.string.sound), wrapWithTopMargin(16));
+        chipSoundOn = chipLabel(strings.on);
+        chipSoundOff = chipLabel(strings.off);
+        card.addView(sectionLabel(strings.sound), wrapWithTopMargin(16));
         card.addView(chipRow(chipSoundOn, chipSoundOff), wrapWithTopMargin(8));
 
-        TextView back = primaryAction(R.string.back);
+        card.addView(sectionLabel(strings.records), wrapWithTopMargin(16));
+        recordsText = label("", 13, false, theme.textSecondary);
+        card.addView(recordsText, wrapWithTopMargin(8));
+        TextView back = primaryAction(strings.back);
         LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(50));
         backParams.topMargin = dp(22);
@@ -322,10 +380,6 @@ public class GameActivity extends Activity {
                 hideSettings();
             }
         });
-
-        TextView footer = label(R.string.settings_footer, 11, false, theme.textMuted);
-        footer.setGravity(Gravity.CENTER);
-        card.addView(footer, wrapWithTopMargin(14));
 
         chipEasy.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -374,13 +428,13 @@ public class GameActivity extends Activity {
         root.addView(overlay, matchParent());
     }
 
-    private TextView sectionLabel(int textRes) {
+    private TextView sectionLabel(String textRes) {
         TextView label = label(textRes, 12, false, theme.textMuted);
         label.setGravity(Gravity.CENTER);
         return label;
     }
 
-    private TextView chipLabel(int textRes) {
+    private TextView chipLabel(String textRes) {
         TextView chip = new TextView(this);
         chip.setText(textRes);
         chip.setGravity(Gravity.CENTER);
@@ -474,10 +528,10 @@ public class GameActivity extends Activity {
     private void buildPausePanel() {
         LinearLayout panel = card(theme, dp(320));
 
-        TextView title = label(R.string.paused_title, 22, true, theme.textPrimary);
+        TextView title = label(strings.pausedTitle, 22, true, theme.textPrimary);
         panel.addView(title);
 
-        TextView resume = primaryAction(R.string.resume);
+        TextView resume = primaryAction(strings.resume);
         panel.addView(resume, fullWidthButtonParams(20));
         resume.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -486,7 +540,7 @@ public class GameActivity extends Activity {
             }
         });
 
-        TextView restart = secondaryAction(R.string.restart);
+        TextView restart = secondaryAction(strings.restart);
         panel.addView(restart, fullWidthButtonParams(10));
         restart.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -496,7 +550,7 @@ public class GameActivity extends Activity {
             }
         });
 
-        TextView menu = secondaryAction(R.string.menu);
+        TextView menu = secondaryAction(strings.menu);
         panel.addView(menu, fullWidthButtonParams(10));
         menu.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -513,19 +567,19 @@ public class GameActivity extends Activity {
     private void buildGameOverPanel() {
         LinearLayout panel = card(theme, dp(320));
 
-        gameOverTitle = label(R.string.game_over, 22, true, theme.textPrimary);
+        gameOverTitle = label(strings.gameOver, 22, true, theme.textPrimary);
         panel.addView(gameOverTitle);
 
-        gameOverScore = label(R.string.score_line, 24, true, theme.playerBlue);
+        gameOverScore = label(strings.scoreLine, 24, true, theme.playerBlue);
         panel.addView(gameOverScore, wrapWithTopMargin(12));
 
-        gameOverRows = label(R.string.rows_line, 13, false, theme.textSecondary);
+        gameOverRows = label(strings.rowsLine, 13, false, theme.textSecondary);
         panel.addView(gameOverRows, wrapWithTopMargin(6));
 
-        gameOverBest = label(R.string.best_line, 13, true, theme.playerRed);
+        gameOverBest = label(strings.bestLine, 13, true, theme.playerRed);
         panel.addView(gameOverBest, wrapWithTopMargin(6));
 
-        TextView again = primaryAction(R.string.play_again);
+        TextView again = primaryAction(strings.playAgain);
         panel.addView(again, fullWidthButtonParams(18));
         again.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -535,7 +589,7 @@ public class GameActivity extends Activity {
             }
         });
 
-        TextView menu = secondaryAction(R.string.menu);
+        TextView menu = secondaryAction(strings.menu);
         panel.addView(menu, fullWidthButtonParams(10));
         menu.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -551,7 +605,7 @@ public class GameActivity extends Activity {
 
     // ---------------------------------------------------------------- shared views
 
-    private TextView label(int textRes, float sizeSp, boolean bold, int color) {
+    private TextView label(String textRes, float sizeSp, boolean bold, int color) {
         TextView view = new TextView(this);
         view.setText(textRes);
         view.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp);
@@ -584,7 +638,7 @@ public class GameActivity extends Activity {
         return panel;
     }
 
-    private TextView primaryAction(int textRes) {
+    private TextView primaryAction(String textRes) {
         TextView button = actionBase(textRes, 16, true);
         button.setTextColor(theme.primaryButtonText);
         button.setBackground(buttonBackground(theme.primaryButtonBackground,
@@ -592,7 +646,7 @@ public class GameActivity extends Activity {
         return button;
     }
 
-    private TextView secondaryAction(int textRes) {
+    private TextView secondaryAction(String textRes) {
         TextView button = actionBase(textRes, 15, false);
         button.setTextColor(theme.secondaryButtonText);
         button.setBackground(buttonBackground(theme.secondaryButtonBackground,
@@ -600,7 +654,7 @@ public class GameActivity extends Activity {
         return button;
     }
 
-    private TextView actionBase(int textRes, float sizeSp, boolean bold) {
+    private TextView actionBase(String textRes, float sizeSp, boolean bold) {
         TextView button = new TextView(this);
         button.setText(textRes);
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp);
@@ -726,11 +780,11 @@ public class GameActivity extends Activity {
     }
 
     private void showGameOver(int score, int rowsCleared) {
-        boolean record = GamePrefs.submitBest(this, score);
-        gameOverTitle.setText(record ? R.string.new_record : R.string.game_over);
-        gameOverScore.setText(getString(R.string.score_line, score));
-        gameOverRows.setText(getString(R.string.rows_line, rowsCleared));
-        gameOverBest.setText(getString(R.string.best_line, GamePrefs.best(this)));
+        boolean record = GamePrefs.submitBest(this, difficulty, score);
+        gameOverTitle.setText(record ? strings.newRecord : strings.gameOver);
+        gameOverScore.setText(String.format(java.util.Locale.ROOT, strings.scoreLine, score));
+        gameOverRows.setText(String.format(java.util.Locale.ROOT, strings.rowsLine, rowsCleared));
+        gameOverBest.setText(String.format(java.util.Locale.ROOT, strings.bestLine, GamePrefs.best(this, difficulty)));
 
         hud.setVisibility(View.GONE);
         hideHint();
@@ -762,16 +816,23 @@ public class GameActivity extends Activity {
     }
 
     private void refreshLabels() {
-        int best = GamePrefs.best(this);
+        if (recordsText != null) {
+            StringBuilder records = new StringBuilder();
+            for (Difficulty d : Difficulty.values()) {
+                if (records.length() > 0) records.append("\n");
+                records.append(String.format(java.util.Locale.ROOT, strings.recordFor, difficultyName(d), GamePrefs.best(this, d)));
+            }
+            recordsText.setText(records.toString());
+        }
+        int best = GamePrefs.best(this, difficulty);
         if (menuBest != null) {
-            menuBest.setText(getString(R.string.best_line, best));
+            menuBest.setText(String.format(java.util.Locale.ROOT, strings.bestLine, best));
         }
         if (hudBest != null) {
-            hudBest.setText(getString(R.string.best_line, best));
+            hudBest.setText(String.format(java.util.Locale.ROOT, strings.bestLine, best));
         }
         if (menuDifficulty != null) {
-            menuDifficulty.setText(getString(R.string.difficulty_line,
-                    getString(difficulty.labelRes())));
+            menuDifficulty.setText(String.format(java.util.Locale.ROOT, strings.difficultyLine, difficultyName(difficulty)));
         }
     }
 
