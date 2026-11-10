@@ -38,6 +38,7 @@ public class GameActivity extends Activity {
 
     private FrameLayout root;
     private GameView gameView;
+    private MusicPlayer music;
 
     private Lang lang;
     private Strings strings;
@@ -92,6 +93,8 @@ public class GameActivity extends Activity {
 
         nightMode = GamePrefs.nightMode(this);
         soundEnabled = GamePrefs.soundEnabled(this);
+        music = new MusicPlayer(this, soundEnabled);
+        music.setScene(MusicPlayer.Scene.MENU);
         difficulty = GamePrefs.difficulty(this);
         theme = Theme.of(nightMode);
         // Same colour as the canvas, so rotation/recreate never flashes the platform grey.
@@ -494,6 +497,7 @@ public class GameActivity extends Activity {
         soundEnabled = enabled;
         GamePrefs.setSoundEnabled(this, enabled);
         gameView.setSoundEnabled(enabled);
+        music.setEnabled(enabled);
         refreshSettingChips();
     }
 
@@ -726,6 +730,8 @@ public class GameActivity extends Activity {
     // ------------------------------------------------------------------------ flow
 
     private void startGame() {
+        music.setScene(MusicPlayer.Scene.GAME);
+        music.setPaused(false);
         menuOverlay.setVisibility(View.GONE);
         if (settingsOverlay.getVisibility() == View.VISIBLE) {
             hideSettings();
@@ -749,6 +755,7 @@ public class GameActivity extends Activity {
     }
 
     private void goToMenu() {
+        music.setScene(MusicPlayer.Scene.MENU);
         hud.setVisibility(View.GONE);
         hint.setVisibility(View.GONE);
         menuOverlay.setVisibility(View.VISIBLE);
@@ -767,6 +774,7 @@ public class GameActivity extends Activity {
             return;
         }
         gameView.pauseGame();
+        music.setPaused(true);
         hud.setVisibility(View.GONE);
         scrim.setVisibility(View.VISIBLE);
         fadeIn(scrim);
@@ -774,12 +782,14 @@ public class GameActivity extends Activity {
     }
 
     private void hidePause() {
+        music.setPaused(false);
         hideCard(pausePanel);
         hud.setVisibility(View.VISIBLE);
         gameView.resumeGame();
     }
 
     private void showGameOver(int score, int rowsCleared) {
+        music.setScene(MusicPlayer.Scene.NONE);
         boolean record = GamePrefs.submitBest(this, difficulty, score);
         gameOverTitle.setText(record ? strings.newRecord : strings.gameOver);
         gameOverScore.setText(String.format(java.util.Locale.ROOT, strings.scoreLine, score));
@@ -876,10 +886,12 @@ public class GameActivity extends Activity {
             pauseOnResume = false;
             showPause();
         }
+        if (music != null) music.setForeground(true);
     }
 
     @Override
     protected void onPause() {
+        if (music != null) music.setForeground(false);
         if (gameView != null) {
             GameEngine.State state = gameView.engine().state();
             if (state == GameEngine.State.PLAYING || state == GameEngine.State.COUNTDOWN) {
@@ -893,6 +905,7 @@ public class GameActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (music != null) music.release();
         if (gameView != null) {
             gameView.release();
         }
