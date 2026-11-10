@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
@@ -41,6 +42,8 @@ public class Renderer {
     private final Paint debugPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final RectF rowRect = new RectF();
+    private final RectF gapRect = new RectF();
+    private final Path rowPath = new Path();
     private final RectF glowBounds = new RectF();
 
     private Bitmap cyanGlow;
@@ -138,8 +141,13 @@ public class Renderer {
         }
     }
 
+    /**
+     * Draws each row as one continuous wall with its openings punched out, using an
+     * even-odd path. Drawing the solid pieces separately made the row read as a series of
+     * floating pills instead of a wall, which hurt readability badly.
+     */
     private void drawRows(Canvas canvas, List<ObstacleRow> rows, int width) {
-        float radius = 10f * density;
+        float outerCorner = 6f * density;
         for (int i = 0; i < rows.size(); i++) {
             ObstacleRow row = rows.get(i);
             float top = row.y;
@@ -147,18 +155,22 @@ public class Renderer {
             if (bottom < 0f || top > canvas.getHeight()) {
                 continue;
             }
-            float corner = Math.min(radius, row.height * 0.5f);
-            int segments = row.segments(width);
-            for (int s = 0; s < segments; s++) {
-                float left = row.segmentEdges[s * 2];
-                float right = row.segmentEdges[s * 2 + 1];
-                if (right - left < 0.5f) {
-                    continue;
-                }
-                rowRect.set(left, top, right, bottom);
-                canvas.drawRoundRect(rowRect, corner, corner, rowFillPaint);
-                canvas.drawRoundRect(rowRect, corner, corner, rowEdgePaint);
+
+            rowPath.reset();
+            rowPath.setFillType(Path.FillType.EVEN_ODD);
+            rowRect.set(0f, top, width, bottom);
+            rowPath.addRoundRect(rowRect, outerCorner, outerCorner, Path.Direction.CW);
+
+            float gapCorner = row.height * 0.5f;
+            for (int g = 0; g < row.gapCount; g++) {
+                float center = row.currentGapCenter(g);
+                float half = row.gapWidth[g] * 0.5f;
+                gapRect.set(center - half, top, center + half, bottom);
+                rowPath.addRoundRect(gapRect, gapCorner, gapCorner, Path.Direction.CW);
             }
+
+            canvas.drawPath(rowPath, rowFillPaint);
+            canvas.drawPath(rowPath, rowEdgePaint);
         }
     }
 

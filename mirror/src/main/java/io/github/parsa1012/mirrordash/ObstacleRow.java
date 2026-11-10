@@ -73,9 +73,9 @@ public class ObstacleRow {
         waveOffset = (float) (Math.sin(phase) * waveAmplitude);
     }
 
-    /** Left edge of the row's first gap in screen space (includes the wave offset). */
-    float firstGapCenter() {
-        return gapCenter[0] + waveOffset;
+    /** Gap centre in screen space, including the wave offset. */
+    float currentGapCenter(int index) {
+        return gapCenter[index] + waveOffset;
     }
 
     /**

@@ -36,6 +36,8 @@ public final class LevelConfig {
     public static final float WAVE_AMPLITUDE_DP = 22f;
     public static final float WAVE_PERIOD_SECONDS = 2.4f;
     public static final float EDGE_MARGIN_DP = 6f;
+    /** Solid pieces thinner than this look like rendering noise, so the generator avoids them. */
+    public static final float MIN_SLIVER_DP = 14f;
 
     private LevelConfig() {
     }
@@ -71,6 +73,10 @@ public final class LevelConfig {
 
     public static float minWindow(float density) {
         return MIN_WINDOW_DP * density;
+    }
+
+    public static float minSliver(float density) {
+        return MIN_SLIVER_DP * density;
     }
 
     public static float movingMinWindow(float density) {

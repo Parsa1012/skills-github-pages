@@ -24,6 +24,7 @@ MOVING_MIN_WINDOW = 44.0
 WAVE_AMPLITUDE = 22.0
 WAVE_PERIOD = 2.4
 SINGLE_GAP_EXTRA = 46.0
+MIN_SLIVER = 14.0
 BREATHER_EVERY_ROWS = 7
 
 SPEED_TABLE = [150, 190, 230, 270, 310]
@@ -122,6 +123,7 @@ class Generator:
         if gw >= WIDTH - 2 * EDGE_MARGIN:
             return False
         max_offset = max(0.0, (gw - MIN_WINDOW) / 2)
+        max_offset = min(max_offset, max(0.0, WIDTH / 2 - gw / 2 - MIN_SLIVER))
         window_center = WIDTH / 2
         anchor = window_center if self.last_window_center < 0 else self.last_window_center
         if abs(window_center - anchor) > max_jump(level):
@@ -149,6 +151,8 @@ class Generator:
             second = WIDTH - first + error
             if not (inset <= second <= WIDTH - inset):
                 continue
+            if abs(first - second) - gw < MIN_SLIVER:
+                continue
             window_width = gw - abs(error)
             if window_width < MIN_WINDOW:
                 continue
@@ -168,7 +172,7 @@ class Generator:
 
     def try_easy_mirror(self, row, level):
         gw = gap_width(level)
-        half = gw / 2 + EDGE_MARGIN
+        half = gw / 2 + EDGE_MARGIN + MIN_SLIVER
         if half * 2 >= WIDTH:
             return False
         anchor = WIDTH / 2 if self.last_window_center < 0 else self.last_window_center
@@ -180,7 +184,7 @@ class Generator:
 
     def build_fallback(self, row, level):
         gw = gap_width(level) + SINGLE_GAP_EXTRA
-        half = min(gw / 2, WIDTH / 2)
+        half = min(gw / 2 + MIN_SLIVER, WIDTH / 2)
         anchor = WIDTH / 2 if self.last_window_center < 0 else self.last_window_center
         center = clamp(anchor, half, WIDTH - half)
         row.gaps = [(center, gw), (WIDTH - center, gw)]

@@ -260,7 +260,10 @@ public class GameEngine {
         if (gapWidth >= width - 2f * margin) {
             return false;
         }
+        float sliver = LevelConfig.minSliver(density);
         float maxOffset = Math.max(0f, (gapWidth - minWindow) * 0.5f);
+        float centreLimit = Math.max(0f, width * 0.5f - gapWidth * 0.5f - sliver);
+        maxOffset = Math.min(maxOffset, centreLimit);
         float maxJump = LevelConfig.maxJump(width, level);
         float windowCenter = width * 0.5f;
         float anchor = lastWindowCenter < 0f ? windowCenter : lastWindowCenter;
@@ -297,6 +300,7 @@ public class GameEngine {
             return false;
         }
         float maxMismatch = Math.min(LevelConfig.maxMismatch(density, level), gapWidth - minWindow);
+        float minSliver = LevelConfig.minSliver(density);
         float maxJump = LevelConfig.maxJump(width, level);
         float movingMinWindow = LevelConfig.movingMinWindow(density);
         float movingChance = LevelConfig.movingChance(level);
@@ -306,6 +310,10 @@ public class GameEngine {
             float error = (random.nextFloat() * 2f - 1f) * maxMismatch;
             float second = width - first + error;
             if (second < inset || second > width - inset) {
+                continue;
+            }
+            // Keep the solid piece between the two openings thick enough to read as a wall.
+            if (Math.abs(first - second) - gapWidth < minSliver) {
                 continue;
             }
             float windowWidth = gapWidth - Math.abs(error);
@@ -335,7 +343,7 @@ public class GameEngine {
     /** Perfectly mirrored gaps: the widest possible safe window, always fair. */
     private boolean tryEasyMirror(ObstacleRow row, float level) {
         float gapWidth = LevelConfig.gapWidth(density, level);
-        float margin = LevelConfig.EDGE_MARGIN_DP * density;
+        float margin = LevelConfig.EDGE_MARGIN_DP * density + LevelConfig.minSliver(density);
         float half = gapWidth * 0.5f + margin;
         if (half * 2f >= width) {
             return false;
@@ -353,7 +361,7 @@ public class GameEngine {
 
     private void buildFallback(ObstacleRow row, float level) {
         float gapWidth = LevelConfig.singleGapWidth(density, level);
-        float half = Math.min(gapWidth * 0.5f, width * 0.5f);
+        float half = Math.min(gapWidth * 0.5f + LevelConfig.minSliver(density), width * 0.5f);
         float anchor = lastWindowCenter < 0f ? width * 0.5f : lastWindowCenter;
         float center = clamp(anchor, half, width - half);
 
