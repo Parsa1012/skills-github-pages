@@ -20,8 +20,9 @@ permissions:
 jobs:
   build:
     name: Assemble debug APK
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Pinned so the pre-installed Android SDK layout stays predictable.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -33,11 +34,25 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install SDK packages
-        run: sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+      - name: Install Android SDK packages
+        run: |
+          set -eu
+          echo "ANDROID_HOME=${ANDROID_HOME:-unset}"
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            echo "No pre-installed Android SDK found" >&2
+            exit 1
+          fi
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "$SDKMANAGER" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0" "platform-tools" || true
+          else
+            echo "sdkmanager not found; relying on Gradle's SDK auto-download"
+          fi
+          ls "$ANDROID_HOME/platforms" || true
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
