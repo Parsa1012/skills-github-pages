@@ -1,7 +1,9 @@
 name: Build Mirror APK
 
-# Builds the "Mirror" game module and publishes the debug APK back onto the
-# branch (artifact + dist/mirror-dash-debug.apk).
+# Builds the "Mirror" game (debug + signed release) and publishes the APKs back onto the
+# branch, together with a small status file that records what happened and how the APKs
+# were verified. The release build is allowed to fail without blocking the debug build, so
+# a signing problem never leaves the branch without an installable APK.
 on:
   workflow_dispatch:
   push:
@@ -19,9 +21,9 @@ permissions:
 
 jobs:
   build:
-    name: Assemble mirror debug APK
+    name: Assemble mirror APKs
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -57,28 +59,82 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Build mirror debug APK
+      - name: Build debug APK
         run: gradle :mirror:assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK artifact
+      - name: Build release APK
+        id: release
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          gradle :mirror:assembleRelease --no-daemon --console=plain 2>&1 | tee /tmp/release.log
+
+      - name: Collect, verify and publish APKs
+        if: always()
+        run: |
+          set -u
+          mkdir -p dist
+          STATUS=dist/build-status.txt
+          BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* 2>/dev/null | sort -V | tail -1 || true)"
+          SIGNER="$BUILD_TOOLS/apksigner"
+
+          {
+            echo "run=$GITHUB_RUN_ID"
+            echo "commit=$GITHUB_SHA"
+            echo "release_step_outcome=${{ steps.release.outcome }}"
+            echo "build_tools=$BUILD_TOOLS"
+            date -u
+          } > "$STATUS"
+
+          if [ -f /tmp/release.log ]; then
+            echo "--- release build log (tail) ---" >> "$STATUS"
+            tail -n 40 /tmp/release.log >> "$STATUS" || true
+          fi
+
+          publish() {
+            src="$1"
+            name="$2"
+            if [ ! -f "$src" ]; then
+              echo "missing: $src" >> "$STATUS"
+              return 0
+            fi
+            cp "$src" "dist/$name"
+            echo "--- $name ---" >> "$STATUS"
+            if [ -x "$SIGNER" ]; then
+              "$SIGNER" verify --print-certs "dist/$name" >> "$STATUS" 2>&1 \
+                || echo "apksigner verify FAILED" >> "$STATUS"
+            else
+              echo "apksigner not found at $SIGNER" >> "$STATUS"
+            fi
+            unzip -l "dist/$name" | tail -n 4 >> "$STATUS" || true
+          }
+
+          publish "mirror/build/outputs/apk/release/mirror-release.apk" "mirror-dash-1.0.apk"
+          publish "mirror/build/outputs/apk/debug/mirror-debug.apk" "mirror-dash-debug.apk"
+
+          echo "--- dist ---" >> "$STATUS"
+          ls -l dist >> "$STATUS"
+
+      - name: Upload APK artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mirror-dash-debug-apk
-          path: mirror/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          name: mirror-apks
+          path: |
+            mirror/build/outputs/apk/release/*.apk
+            mirror/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
 
-      - name: Publish APK onto the branch
+      - name: Commit published files
+        if: always()
         run: |
           set -eu
-          mkdir -p dist
-          cp mirror/build/outputs/apk/debug/*.apk dist/mirror-dash-debug.apk
-          ls -l dist/mirror-dash-debug.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f dist/mirror-dash-debug.apk
+          git add -A dist
           if git diff --cached --quiet; then
-            echo "APK unchanged, nothing to publish"
+            echo "Nothing to publish"
           else
-            git commit -m "CI: publish mirror-dash-debug.apk [skip ci]"
+            git commit -m "CI: publish mirror APKs [skip ci]"
             git push
           fi
