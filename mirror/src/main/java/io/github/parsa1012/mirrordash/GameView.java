@@ -26,7 +26,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private final SurfaceHolder surfaceHolder;
     private final GameEngine engine = new GameEngine();
-    private final Renderer renderer = new Renderer();
+    private final Renderer renderer;
     private final SoundPlayer sound;
 
     private Thread loopThread;
@@ -49,6 +49,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         surfaceHolder.addCallback(this);
         setFocusable(true);
         setKeepScreenOn(true);
+        renderer = new Renderer(context);
         renderer.setDensity(getResources().getDisplayMetrics().density);
         sound = new SoundPlayer(context);
     }
@@ -67,6 +68,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     public void setSoundEnabled(boolean enabled) {
         sound.setEnabled(enabled);
+    }
+
+    /** Switches the palette used by both the canvas and the bodies. */
+    public void setTheme(Theme theme) {
+        renderer.setTheme(theme);
+        engine.applyTheme(theme);
+    }
+
+    public void setDifficulty(Difficulty difficulty) {
+        engine.setDifficulty(difficulty);
     }
 
     /** Starts a real run (countdown, then hazards). Safe to call from the UI thread. */
@@ -132,6 +143,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        // While the pause menu is up (or once the run is over) the finger must not drag the
+        // bodies around, otherwise the pair teleports when play resumes.
+        if (engine.isPaused() || engine.state() == GameEngine.State.GAME_OVER
+                || engine.state() == GameEngine.State.DYING) {
+            return true;
+        }
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 if (getParent() != null) {

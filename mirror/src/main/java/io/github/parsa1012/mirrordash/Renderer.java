@@ -1,5 +1,6 @@
 package io.github.parsa1012.mirrordash;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -14,23 +15,18 @@ import android.graphics.Typeface;
 import java.util.List;
 
 /**
- * All drawing happens here. Paints, shaders, glow sprites and the score string are created
- * or updated only when they change, so the game loop never allocates per frame.
+ * All canvas drawing. Paints, shaders, glow sprites and the typefaces are built once per
+ * theme, so nothing is allocated per frame. Colours come from {@link Theme} and the Persian
+ * font (Vazirmatn, subsetted to the glyphs the game needs) is bundled in assets.
  */
 public class Renderer {
 
-    private static final int COLOR_BG = Color.parseColor("#0B0F1A");
-    private static final int COLOR_GRID = Color.parseColor("#141C2B");
-    private static final int COLOR_AXIS = Color.parseColor("#2B3A55");
-    private static final int COLOR_ROW_FILL = Color.parseColor("#16233C");
-    private static final int COLOR_ROW_EDGE = Color.parseColor("#2F81F7");
-    private static final int COLOR_SCORE = Color.parseColor("#E6EDF3");
-    private static final int COLOR_DEBUG = Color.parseColor("#6E7681");
-    private static final int COLOR_FLASH = Color.parseColor("#F472B6");
-
     private static final float GRID_STEP_DP = 48f;
     private static final int GLOW_SIZE_PX = 160;
-    private static final float COUNTDOWN_RADIUS_DP = 84f;
+    private static final float COUNTDOWN_SIZE_DP = 84f;
+
+    private final Typeface typeBold;
+    private final Typeface typeRegular;
 
     private final Paint gridPaint = new Paint();
     private final Paint axisPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -52,6 +48,7 @@ public class Renderer {
     private final RectF glowBounds = new RectF();
     private final Path rowPath = new Path();
 
+    private Theme theme = Theme.of(true);
     private Bitmap cyanGlow;
     private Bitmap pinkGlow;
     private float density = 1f;
@@ -64,6 +61,32 @@ public class Renderer {
     private int displayedFps = -1;
     private String fpsText = "";
 
+    public Renderer(Context context) {
+        typeBold = load(context, "fonts/Vazirmatn-Bold.ttf", Typeface.BOLD);
+        typeRegular = load(context, "fonts/Vazirmatn-Regular.ttf", Typeface.NORMAL);
+    }
+
+    /** Never let a missing/corrupt font asset take the game down. */
+    static Typeface load(Context context, String asset, int style) {
+        try {
+            return Typeface.createFromAsset(context.getAssets(), asset);
+        } catch (RuntimeException e) {
+            return Typeface.create(Typeface.SANS_SERIF, style);
+        }
+    }
+
+    public void setTheme(Theme theme) {
+        this.theme = theme == null ? Theme.of(true) : theme;
+        ready = false;
+        if (density > 0f) {
+            init();
+        }
+    }
+
+    public Theme theme() {
+        return theme;
+    }
+
     public void setDensity(float density) {
         this.density = density > 0f ? density : 1f;
         init();
@@ -71,26 +94,26 @@ public class Renderer {
 
     private void init() {
         gridPaint.setStyle(Paint.Style.STROKE);
-        gridPaint.setColor(COLOR_GRID);
+        gridPaint.setColor(theme.grid);
         gridPaint.setStrokeWidth(Math.max(1f, density));
 
         axisPaint.setStyle(Paint.Style.STROKE);
-        axisPaint.setColor(COLOR_AXIS);
+        axisPaint.setColor(theme.axis);
         axisPaint.setStrokeWidth(Math.max(1f, density));
         float dash = 7f * density;
         axisPaint.setPathEffect(new DashPathEffect(new float[] {dash, dash * 1.6f}, 0f));
 
         rowFillPaint.setStyle(Paint.Style.FILL);
-        rowFillPaint.setColor(COLOR_ROW_FILL);
+        rowFillPaint.setColor(theme.rowFill);
 
         rowEdgePaint.setStyle(Paint.Style.STROKE);
-        rowEdgePaint.setColor(withAlpha(COLOR_ROW_EDGE, 130));
+        rowEdgePaint.setColor(withAlpha(theme.rowEdge, 140));
         rowEdgePaint.setStrokeWidth(1.6f * density);
 
         corePaint.setStyle(Paint.Style.FILL);
 
         rimPaint.setStyle(Paint.Style.STROKE);
-        rimPaint.setColor(Color.argb(110, 255, 255, 255));
+        rimPaint.setColor(Color.argb(120, 255, 255, 255));
         rimPaint.setStrokeWidth(1.4f * density);
 
         trailPaint.setStyle(Paint.Style.FILL);
@@ -98,27 +121,27 @@ public class Renderer {
         glowPaint.setAntiAlias(true);
         flashPaint.setStyle(Paint.Style.FILL);
 
-        scorePaint.setColor(COLOR_SCORE);
-        scorePaint.setTextSize(34f * density);
-        scorePaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        scorePaint.setColor(theme.scoreText);
+        scorePaint.setTextSize(36f * density);
+        scorePaint.setTypeface(typeBold);
         scorePaint.setTextAlign(Paint.Align.CENTER);
 
-        floaterPaint.setTextSize(15f * density);
-        floaterPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        floaterPaint.setTextSize(16f * density);
+        floaterPaint.setTypeface(typeBold);
         floaterPaint.setTextAlign(Paint.Align.CENTER);
 
-        countdownPaint.setColor(COLOR_SCORE);
-        countdownPaint.setTextSize(COUNTDOWN_RADIUS_DP * density);
-        countdownPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        countdownPaint.setColor(theme.scoreText);
+        countdownPaint.setTextSize(COUNTDOWN_SIZE_DP * density);
+        countdownPaint.setTypeface(typeBold);
         countdownPaint.setTextAlign(Paint.Align.CENTER);
         countdownPaint.setAntiAlias(true);
 
-        debugPaint.setColor(COLOR_DEBUG);
+        debugPaint.setColor(theme.textMuted);
         debugPaint.setTextSize(11f * density);
-        debugPaint.setTypeface(Typeface.MONOSPACE);
+        debugPaint.setTypeface(typeRegular);
 
-        cyanGlow = makeGlow(Color.parseColor("#22D3EE"));
-        pinkGlow = makeGlow(Color.parseColor("#F472B6"));
+        cyanGlow = makeGlow(theme.playerCyan);
+        pinkGlow = makeGlow(theme.playerPink);
         ready = true;
     }
 
@@ -136,7 +159,7 @@ public class Renderer {
             dt = 0.016f;
         }
 
-        canvas.drawColor(COLOR_BG);
+        canvas.drawColor(theme.background);
 
         canvas.save();
         canvas.translate(engine.shakeX(), engine.shakeY());
@@ -173,7 +196,6 @@ public class Renderer {
 
     private void drawGrid(Canvas canvas, int width, int height) {
         float step = GRID_STEP_DP * density;
-        // Draw one extra ring so the screen shake never reveals an empty edge.
         for (float x = step - 2f * step; x < width + 2f * step; x += step) {
             canvas.drawLine(x, -2f * step, x, height + 2f * step, gridPaint);
         }
@@ -184,9 +206,8 @@ public class Renderer {
     }
 
     /**
-     * Draws each row as one continuous wall with its openings punched out, using an
-     * even-odd path. Drawing the solid pieces separately made the row read as a series of
-     * floating pills instead of a wall, which hurt readability badly.
+     * Each row is one continuous wall with its openings punched out (even-odd path).
+     * Drawing the solid pieces separately made the row read as floating pills.
      */
     private void drawRows(Canvas canvas, List<ObstacleRow> rows, int width) {
         float outerCorner = 6f * density;
@@ -244,7 +265,7 @@ public class Renderer {
         if (flash <= 0.01f) {
             return;
         }
-        flashPaint.setColor(withAlpha(COLOR_FLASH, (int) (90f * flash)));
+        flashPaint.setColor(withAlpha(theme.playerPink, (int) (90f * flash)));
         canvas.drawRect(0f, 0f, width, height, flashPaint);
     }
 
@@ -258,7 +279,7 @@ public class Renderer {
             displayedScore = shown;
             scoreText = Integer.toString(shown);
         }
-        canvas.drawText(scoreText, width * 0.5f, 68f * density, scorePaint);
+        canvas.drawText(scoreText, width * 0.5f, 74f * density, scorePaint);
     }
 
     private void drawCountdown(Canvas canvas, GameEngine engine, int width, int height) {

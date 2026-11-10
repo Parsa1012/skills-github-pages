@@ -55,6 +55,8 @@ public class GameEngine {
     private final Player leftPlayer = new Player(Color.parseColor("#22D3EE"));
     private final Player rightPlayer = new Player(Color.parseColor("#F472B6"));
 
+    private Difficulty difficulty = Difficulty.NORMAL;
+
     private final List<ObstacleRow> rows = new ArrayList<>(MAX_ROWS);
     private final Random random = new Random();
 
@@ -155,6 +157,21 @@ public class GameEngine {
         return paused;
     }
 
+    public Difficulty difficulty() {
+        return difficulty;
+    }
+
+    /** Applies immediately: rows that are already on screen keep their geometry. */
+    public void setDifficulty(Difficulty difficulty) {
+        this.difficulty = difficulty == null ? Difficulty.NORMAL : difficulty;
+    }
+
+    /** Recolours the two bodies to match the active theme. */
+    public void applyTheme(Theme theme) {
+        leftPlayer.color = theme.playerCyan;
+        rightPlayer.color = theme.playerPink;
+    }
+
     public void setPaused(boolean paused) {
         this.paused = paused;
     }
@@ -184,8 +201,8 @@ public class GameEngine {
         leftPlayer.resetTrail();
         rightPlayer.resetTrail();
 
-        float speed = LevelConfig.rowSpeed(density, 1f);
-        float spacing = LevelConfig.rowSpacing(density, 1f);
+        float speed = speedFor(1f);
+        float spacing = spacingFor(1f);
         distanceSinceSpawn = spacing - speed * FIRST_ROW_DELAY_SECONDS;
     }
 
@@ -339,8 +356,8 @@ public class GameEngine {
     /** Moves and spawns rows, and (when {@code lethal}) resolves collisions. */
     private void updateWorld(float dt, boolean lethal) {
         float level = level();
-        float speed = LevelConfig.rowSpeed(density, level);
-        float spacing = LevelConfig.rowSpacing(density, level);
+        float speed = speedFor(level);
+        float spacing = spacingFor(level);
 
         for (int i = rows.size() - 1; i >= 0; i--) {
             ObstacleRow row = rows.get(i);
@@ -480,6 +497,51 @@ public class GameEngine {
         particleColor[to] = particleColor[from];
     }
 
+    // ------------------------------------------------------------ tuning helpers
+
+    private float speedFor(float level) {
+        return LevelConfig.rowSpeed(density, level) * difficulty.speedScale();
+    }
+
+    private float spacingFor(float level) {
+        return LevelConfig.rowSpacing(density, level) * difficulty.spacingScale();
+    }
+
+    private float gapFor(float level) {
+        return Math.max(24f * density, LevelConfig.gapWidth(density, level)
+                + difficulty.gapBonus(density));
+    }
+
+    private float singleGapFor(float level) {
+        return Math.max(40f * density, LevelConfig.singleGapWidth(density, level)
+                + difficulty.gapBonus(density));
+    }
+
+    private float minWindowFor() {
+        return Math.max(20f * density, LevelConfig.minWindow(density)
+                + difficulty.minWindowBonus(density));
+    }
+
+    private float mismatchFor(float level, float gapWidth) {
+        float budget = Math.max(0f, gapWidth - minWindowFor());
+        float scaled = LevelConfig.maxMismatch(density, level) * difficulty.mismatchScale();
+        return Math.min(budget, scaled);
+    }
+
+    private float twoGapChanceFor(float level) {
+        float chance = LevelConfig.twoGapChance(level) * difficulty.twoGapScale();
+        return Math.max(0f, Math.min(0.85f, chance));
+    }
+
+    private float movingChanceFor(float level) {
+        float chance = LevelConfig.movingChance(level) * difficulty.movingScale();
+        return Math.max(0f, Math.min(0.50f, chance));
+    }
+
+    private float maxJumpFor(float level) {
+        return LevelConfig.maxJump(width, level) * difficulty.jumpScale();
+    }
+
     // ---------------------------------------------------------------- generation
 
     private void spawnRow(float level) {
@@ -487,7 +549,7 @@ public class GameEngine {
         row.begin(-LevelConfig.rowHeight(density), LevelConfig.rowHeight(density));
 
         boolean breather = rowsSinceBreather >= BREATHER_EVERY_ROWS || lastWindowCenter < 0f;
-        boolean wantsTwoGaps = !breather && random.nextFloat() < LevelConfig.twoGapChance(level);
+        boolean wantsTwoGaps = !breather && random.nextFloat() < twoGapChanceFor(level);
 
         boolean built;
         if (breather) {
@@ -515,8 +577,8 @@ public class GameEngine {
      * is the screen centre. That makes it the natural "breather" row.
      */
     private boolean trySingleGap(ObstacleRow row, float level) {
-        float gapWidth = LevelConfig.singleGapWidth(density, level);
-        float minWindow = LevelConfig.minWindow(density);
+        float gapWidth = singleGapFor(level);
+        float minWindow = minWindowFor();
         float margin = LevelConfig.EDGE_MARGIN_DP * density;
         if (gapWidth >= width - 2f * margin) {
             return false;
@@ -525,7 +587,7 @@ public class GameEngine {
         float maxOffset = Math.max(0f, (gapWidth - minWindow) * 0.5f);
         float centreLimit = Math.max(0f, width * 0.5f - gapWidth * 0.5f - sliver);
         maxOffset = Math.min(maxOffset, centreLimit);
-        float maxJump = LevelConfig.maxJump(width, level);
+        float maxJump = maxJumpFor(level);
         float windowCenter = width * 0.5f;
         float anchor = lastWindowCenter < 0f ? windowCenter : lastWindowCenter;
 
@@ -552,19 +614,19 @@ public class GameEngine {
      * the "almost" is the mistake budget the player has to split between the two bodies.
      */
     private boolean tryTwoGaps(ObstacleRow row, float level) {
-        float gapWidth = LevelConfig.gapWidth(density, level);
-        float minWindow = LevelConfig.minWindow(density);
+        float gapWidth = gapFor(level);
+        float minWindow = minWindowFor();
         float margin = LevelConfig.EDGE_MARGIN_DP * density;
         float amplitude = LevelConfig.waveAmplitude(density);
         float inset = gapWidth * 0.5f + margin + amplitude;
         if (inset * 2f >= width) {
             return false;
         }
-        float maxMismatch = Math.min(LevelConfig.maxMismatch(density, level), gapWidth - minWindow);
+        float maxMismatch = mismatchFor(level, gapWidth);
         float minSliver = LevelConfig.minSliver(density);
-        float maxJump = LevelConfig.maxJump(width, level);
+        float maxJump = maxJumpFor(level);
         float movingMinWindow = LevelConfig.movingMinWindow(density);
-        float movingChance = LevelConfig.movingChance(level);
+        float movingChance = movingChanceFor(level);
 
         for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++) {
             float first = inset + random.nextFloat() * (width - 2f * inset);
@@ -603,7 +665,7 @@ public class GameEngine {
 
     /** Perfectly mirrored gaps: the widest possible safe window, always fair. */
     private boolean tryEasyMirror(ObstacleRow row, float level) {
-        float gapWidth = LevelConfig.gapWidth(density, level);
+        float gapWidth = gapFor(level);
         float margin = LevelConfig.EDGE_MARGIN_DP * density + LevelConfig.minSliver(density);
         float half = gapWidth * 0.5f + margin;
         if (half * 2f >= width) {
@@ -621,7 +683,7 @@ public class GameEngine {
     }
 
     private void buildFallback(ObstacleRow row, float level) {
-        float gapWidth = LevelConfig.singleGapWidth(density, level);
+        float gapWidth = singleGapFor(level);
         float half = Math.min(gapWidth * 0.5f + LevelConfig.minSliver(density), width * 0.5f);
         float anchor = lastWindowCenter < 0f ? width * 0.5f : lastWindowCenter;
         float center = clamp(anchor, half, width - half);

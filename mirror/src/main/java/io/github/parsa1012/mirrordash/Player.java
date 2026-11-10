@@ -17,7 +17,8 @@ public class Player {
     float y;
     float radius;
 
-    final int color;
+    /** Set from the active {@link Theme}, so day and night use different accents. */
+    int color;
 
     Player(int color) {
         this.color = color;

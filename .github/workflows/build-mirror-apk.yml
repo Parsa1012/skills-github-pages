@@ -109,7 +109,7 @@ jobs:
             unzip -l "dist/$name" | tail -n 4 >> "$STATUS" || true
           }
 
-          publish "mirror/build/outputs/apk/release/mirror-release.apk" "mirror-dash-1.0.apk"
+          publish "mirror/build/outputs/apk/release/mirror-release.apk" "mirror-dash-1.1.apk"
           publish "mirror/build/outputs/apk/debug/mirror-debug.apk" "mirror-dash-debug.apk"
 
           echo "--- dist ---" >> "$STATUS"
@@ -131,22 +131,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          FILES="dist/mirror-dash-1.0.apk dist/mirror-dash-debug.apk"
+          FILES="dist/mirror-dash-1.1.apk dist/mirror-dash-debug.apk"
           for f in $FILES; do
             if [ ! -f "$f" ]; then
               echo "missing $f, skipping release"
               exit 0
             fi
           done
-          TAG="v1.0"
+          TAG="v1.1"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             gh release upload "$TAG" $FILES --clobber --repo "$GITHUB_REPOSITORY"
           else
             gh release create "$TAG" $FILES \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "آینه ۱٫۰ — Mirror Dash" \
-              --notes $'بازی «آینه» نسخه ۱٫۰\n\nنصب: فایل mirror-dash-1.0.apk را دانلود کنید و روی گوشی باز کنید (اجازه‌ی نصب از منابع ناشناس لازم است)،\nیا با adb: adb install -r mirror-dash-1.0.apk\n\nاندروید ۵ و بالاتر · بدون هیچ مجوز · بدون اینترنت'
+              --title "هم‌زاد ۱٫۱ — Mirror Dash" \
+              --notes $'بازی «هم‌زاد» نسخه ۱٫۱\n\nاین نسخه روی نسخه ۱٫۰ نصب می‌شود؛ نیازی به حذف بازی قبلی نیست (همان بسته، همان امضای دیجیتال، versionCode بالاتر).\n\nتازه‌ها: نام و لوگوی جدید، فونت وزیرمتن، صفحه تنظیمات، سه درجه سختی، حالت شب و روز، رفع باگ‌ها.\n\nنصب: فایل mirror-dash-1.1.apk را دانلود کنید و روی گوشی باز کنید،\nیا با adb: adb install -r mirror-dash-1.1.apk\n\nاندروید ۵ و بالاتر · بدون هیچ مجوز · بدون اینترنت'
           fi
 
       - name: Commit published files

@@ -3,12 +3,14 @@ package io.github.parsa1012.mirrordash;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-/** The two things worth persisting: the best score and the sound preference. */
+/** Everything the game remembers between launches. */
 public final class GamePrefs {
 
     private static final String PREFS_NAME = "mirror_dash";
     private static final String KEY_BEST = "best_score";
     private static final String KEY_SOUND = "sound_enabled";
+    private static final String KEY_NIGHT = "night_mode";
+    private static final String KEY_DIFFICULTY = "difficulty";
 
     private GamePrefs() {
     }
@@ -33,6 +35,22 @@ public final class GamePrefs {
 
     public static void setSoundEnabled(Context context, boolean enabled) {
         prefs(context).edit().putBoolean(KEY_SOUND, enabled).apply();
+    }
+
+    public static boolean nightMode(Context context) {
+        return prefs(context).getBoolean(KEY_NIGHT, true);
+    }
+
+    public static void setNightMode(Context context, boolean night) {
+        prefs(context).edit().putBoolean(KEY_NIGHT, night).apply();
+    }
+
+    public static Difficulty difficulty(Context context) {
+        return Difficulty.fromName(prefs(context).getString(KEY_DIFFICULTY, null));
+    }
+
+    public static void setDifficulty(Context context, Difficulty difficulty) {
+        prefs(context).edit().putString(KEY_DIFFICULTY, difficulty.name()).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

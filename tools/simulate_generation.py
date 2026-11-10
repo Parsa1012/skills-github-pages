@@ -5,11 +5,13 @@ This is a faithful port of the fairness maths in GameEngine/LevelConfig. It runs
 generator and two virtual players (a perfect one and a reaction-limited one) so the
 "is every row clearable?" question is answered by simulation instead of guesswork.
 
-Run: python3 tools/simulate_generation.py
+Run: python3 tools/simulate_generation.py            # all three presets
+     python3 tools/simulate_generation.py --difficulty hard
 """
 
 import math
 import random
+import sys
 
 # --- geometry (dp) -----------------------------------------------------------
 WIDTH = 360.0
@@ -31,6 +33,30 @@ SPEED_TABLE = [150, 190, 230, 270, 310]
 SPACING_TABLE = [320, 300, 280, 260, 240]
 GAP_TABLE = [96, 92, 88, 84, 80]
 TWO_GAP_TABLE = [0.0, 0.10, 0.20, 0.35, 0.50]
+
+# Mirrors Difficulty.java. Every knob is a multiplier or a dp offset on the curves above.
+DIFFICULTIES = {
+    "easy": dict(speed=0.85, spacing=1.15, gap_bonus=8.0, mismatch=0.55,
+                 two_gap=0.65, moving=0.50, min_window_bonus=6.0, jump=1.10),
+    "normal": dict(speed=1.00, spacing=1.00, gap_bonus=0.0, mismatch=1.00,
+                   two_gap=1.00, moving=1.00, min_window_bonus=0.0, jump=1.00),
+    "hard": dict(speed=1.15, spacing=0.88, gap_bonus=-6.0, mismatch=1.25,
+                 two_gap=1.35, moving=1.15, min_window_bonus=-4.0, jump=0.86),
+}
+ACTIVE_NAME = "normal"
+ACTIVE = DIFFICULTIES[ACTIVE_NAME]
+
+
+def use(name):
+    """Switches the simulated preset (see Difficulty.java)."""
+    global ACTIVE_NAME, ACTIVE
+    ACTIVE_NAME = name
+    ACTIVE = DIFFICULTIES[name]
+
+
+def min_window():
+    """Engine: max(20dp, minWindow + difficulty bonus)."""
+    return max(20.0, MIN_WINDOW + ACTIVE["min_window_bonus"])
 
 
 def clamp(v, lo, hi):
@@ -54,32 +80,38 @@ def sample(table, level, per_level, bound, cap):
 
 
 def speed(level):
-    return sample(SPEED_TABLE, level, 40, 520, True)
+    return sample(SPEED_TABLE, level, 40, 520, True) * ACTIVE["speed"]
 
 
 def spacing(level):
-    return sample(SPACING_TABLE, level, -15, 170, False)
+    return sample(SPACING_TABLE, level, -15, 170, False) * ACTIVE["spacing"]
 
 
 def gap_width(level):
-    return sample(GAP_TABLE, level, -3, 78, False)
+    return max(24.0, sample(GAP_TABLE, level, -3, 78, False) + ACTIVE["gap_bonus"])
+
+
+def single_gap_width(level):
+    return max(40.0, gap_width(level) + SINGLE_GAP_EXTRA)
 
 
 def two_gap_chance(level):
-    return sample(TWO_GAP_TABLE, level, 0.05, 0.70, True)
+    return clamp(sample(TWO_GAP_TABLE, level, 0.05, 0.70, True) * ACTIVE["two_gap"], 0.0, 0.85)
 
 
 def max_mismatch(level):
-    budget = gap_width(level) - MIN_WINDOW
-    return 0.0 if budget <= 0 else budget * (0.35 + 0.65 * clamp01((level - 1) / 5.0))
+    budget = gap_width(level) - min_window()
+    raw = 0.0 if budget <= 0 else budget * (0.35 + 0.65 * clamp01((level - 1) / 5.0))
+    return min(budget, raw * ACTIVE["mismatch"])
 
 
 def max_jump(level):
-    return WIDTH * (0.34 + 0.28 * clamp01((level - 1) / 5.0))
+    return WIDTH * (0.34 + 0.28 * clamp01((level - 1) / 5.0)) * ACTIVE["jump"]
 
 
 def moving_chance(level):
-    return 0.0 if level < 4 else min(0.28, 0.12 * (level - 3))
+    raw = 0.0 if level < 4 else min(0.28, 0.12 * (level - 3))
+    return clamp(raw * ACTIVE["moving"], 0.0, 0.50)
 
 
 class Row:
@@ -119,10 +151,10 @@ class Generator:
 
     # -- helpers ------------------------------------------------------------
     def try_single_gap(self, row, level):
-        gw = gap_width(level) + SINGLE_GAP_EXTRA
+        gw = single_gap_width(level)
         if gw >= WIDTH - 2 * EDGE_MARGIN:
             return False
-        max_offset = max(0.0, (gw - MIN_WINDOW) / 2)
+        max_offset = max(0.0, (gw - min_window()) / 2)
         max_offset = min(max_offset, max(0.0, WIDTH / 2 - gw / 2 - MIN_SLIVER))
         window_center = WIDTH / 2
         anchor = window_center if self.last_window_center < 0 else self.last_window_center
@@ -131,7 +163,7 @@ class Generator:
         for _ in range(48):
             center = window_center + self.rng.uniform(-1, 1) * max_offset
             window_width = gw - abs(2 * center - WIDTH)
-            if window_width < MIN_WINDOW:
+            if window_width < min_window():
                 continue
             row.gaps = [(center, gw)]
             row.window_center = window_center
@@ -144,7 +176,7 @@ class Generator:
         inset = gw / 2 + EDGE_MARGIN + WAVE_AMPLITUDE
         if inset * 2 >= WIDTH:
             return False
-        mismatch = min(max_mismatch(level), gw - MIN_WINDOW)
+        mismatch = min(max_mismatch(level), gw - min_window())
         for _ in range(48):
             first = inset + self.rng.random() * (WIDTH - 2 * inset)
             error = self.rng.uniform(-1, 1) * mismatch
@@ -154,7 +186,7 @@ class Generator:
             if abs(first - second) - gw < MIN_SLIVER:
                 continue
             window_width = gw - abs(error)
-            if window_width < MIN_WINDOW:
+            if window_width < min_window():
                 continue
             window_center = first - error / 2
             anchor = WIDTH / 2 if self.last_window_center < 0 else self.last_window_center
@@ -183,7 +215,7 @@ class Generator:
         return True
 
     def build_fallback(self, row, level):
-        gw = gap_width(level) + SINGLE_GAP_EXTRA
+        gw = single_gap_width(level)
         half = min(gw / 2 + MIN_SLIVER, WIDTH / 2)
         anchor = WIDTH / 2 if self.last_window_center < 0 else self.last_window_center
         center = clamp(anchor, half, WIDTH - half)
@@ -234,7 +266,7 @@ def check_generator(rows_per_level=400, levels=range(1, 13)):
     for level in levels:
         for _ in range(rows_per_level):
             row = gen.spawn(float(level))
-            if row.window_width + 1e-6 < MIN_WINDOW:
+            if row.window_width + 1e-6 < min_window():
                 bad_window += 1
             if not window_is_inside_screen(row.window_center, row.window_width):
                 bad_window += 1
@@ -346,7 +378,27 @@ def check_playability():
     return ok
 
 
-if __name__ == "__main__":
+def run_preset(name):
+    use(name)
+    print(f"===== difficulty: {name} =====")
     generator_ok = check_generator()
     playable_ok = check_playability()
-    print("RESULT:", "PASS" if generator_ok and playable_ok else "FAIL")
+    print(f"RESULT[{name}]:", "PASS" if generator_ok and playable_ok else "FAIL")
+    return generator_ok and playable_ok
+
+
+if __name__ == "__main__":
+    requested = None
+    for i, arg in enumerate(sys.argv[1:]):
+        if arg == "--difficulty" and i + 2 <= len(sys.argv) - 1:
+            requested = sys.argv[i + 2]
+        elif arg.startswith("--difficulty="):
+            requested = arg.split("=", 1)[1]
+    presets = [requested] if requested else ["easy", "normal", "hard"]
+    for preset in presets:
+        if preset not in DIFFICULTIES:
+            raise SystemExit(f"unknown difficulty: {preset}")
+    ok = True
+    for preset in presets:
+        ok = run_preset(preset) and ok
+    print("RESULT:", "PASS" if ok else "FAIL")
