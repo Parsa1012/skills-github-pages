@@ -1,0 +1,73 @@
+run=42876676724
+commit=a56d52925ef2af051b53e2656260d910a44fc26e
+release_step_outcome=success
+build_tools=/usr/local/lib/android/sdk/build-tools/37.0.0
+Tue Nov 10 18:36:34 UTC 2026
+--- release build log (tail) ---
+> Task :mirror:stripReleaseDebugSymbols NO-SOURCE
+> Task :mirror:extractReleaseNativeSymbolTables NO-SOURCE
+> Task :mirror:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :mirror:checkReleaseDuplicateClasses
+> Task :mirror:desugarReleaseFileDependencies
+> Task :mirror:mergeReleaseStartupProfile
+> Task :mirror:mergeExtDexRelease
+> Task :mirror:mergeReleaseArtProfile
+> Task :mirror:mergeReleaseShaders
+> Task :mirror:compileReleaseShaders NO-SOURCE
+> Task :mirror:generateReleaseAssets UP-TO-DATE
+> Task :mirror:processReleaseManifestForPackage
+> Task :mirror:mergeReleaseAssets
+> Task :mirror:compressReleaseAssets
+> Task :mirror:extractReleaseVersionControlInfo
+> Task :mirror:processReleaseJavaRes NO-SOURCE
+> Task :mirror:collectReleaseDependencies
+> Task :mirror:mergeReleaseJavaResource
+> Task :mirror:processReleaseResources
+> Task :mirror:sdkReleaseDependencyData
+> Task :mirror:compileReleaseJavaWithJavac
+> Task :mirror:generateReleaseLintVitalReportModel
+> Task :mirror:dexBuilderRelease
+> Task :mirror:mergeReleaseGlobalSynthetics
+> Task :mirror:validateSigningRelease
+> Task :mirror:writeReleaseAppMetadata
+> Task :mirror:writeReleaseSigningConfigVersions
+> Task :mirror:optimizeReleaseResources
+> Task :mirror:mergeDexRelease
+> Task :mirror:compileReleaseArtProfile
+> Task :mirror:packageRelease
+> Task :mirror:createReleaseApkListingFileRedirect
+> Task :mirror:lintVitalAnalyzeRelease
+> Task :mirror:lintVitalReportRelease
+> Task :mirror:lintVitalRelease
+> Task :mirror:assembleRelease
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/release-1794335777660.json
+
+BUILD SUCCESSFUL in 18s
+44 actionable tasks: 44 executed
+--- mirror-dash-1.0.apk ---
+V2 Signer: certificate DN: C=DE, OU=Development, O=Parsa1012, CN=Mirror Dash Dev Key
+V2 Signer: certificate SHA-256 digest: 09228d155ddceb4fbe9897406cf4576db9dfe0a449f4ef391c1aeaaf1227664c
+V2 Signer: certificate SHA-1 digest: 2c66c499112d62d00ce978701522d2a47b0aa545
+V2 Signer: certificate MD5 digest: 657b5b3f6b1d0eeca53b303f7338dacf
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+WARNING: META-INF/version-control-info.textproto not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+     1385  1981-01-01 01:01   META-INF/CERT.RSA
+      746  1981-01-01 01:01   META-INF/MANIFEST.MF
+---------                     -------
+    77031                     10 files
+--- mirror-dash-debug.apk ---
+V2 Signer: certificate DN: C=DE, OU=Development, O=Parsa1012, CN=Mirror Dash Dev Key
+V2 Signer: certificate SHA-256 digest: 09228d155ddceb4fbe9897406cf4576db9dfe0a449f4ef391c1aeaaf1227664c
+V2 Signer: certificate SHA-1 digest: 2c66c499112d62d00ce978701522d2a47b0aa545
+V2 Signer: certificate MD5 digest: 657b5b3f6b1d0eeca53b303f7338dacf
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+     1385  1981-01-01 01:01   META-INF/CERT.RSA
+      732  1981-01-01 01:01   META-INF/MANIFEST.MF
+---------                     -------
+    84611                     10 files
+--- dist ---
+total 136
+-rw-r--r-- 1 runner runner  3598 Nov 10 18:36 build-status.txt
+-rw-r--r-- 1 runner runner 11987 Nov 10 18:35 demo-app-debug.apk
+-rw-r--r-- 1 runner runner 56788 Nov 10 18:36 mirror-dash-1.0.apk
+-rw-r--r-- 1 runner runner 61504 Nov 10 18:36 mirror-dash-debug.apk
