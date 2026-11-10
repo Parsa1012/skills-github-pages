@@ -3,27 +3,33 @@ package io.github.parsa1012.mirrordash;
 import android.app.Activity;
 import android.content.pm.ActivityInfo;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 /**
  * Hosts the game surface and every overlay: main menu (with the logo), settings
  * (difficulty / day-night / sound), in-game HUD, pause panel and game-over panel.
  *
- * <p>Persian copy lives in TextViews so Android handles shaping and RTL, and the whole UI
- * is drawn with the bundled Vazirmatn font. All colours come from {@link Theme}, which is
- * read from preferences in {@link #onCreate}; switching the theme recreates the activity so
- * no view keeps a stale colour.</p>
+ * <p>Everything is built in code on purpose — there are no layout XML files, so the theme can
+ * be swapped at runtime without a resource qualifier. Persian copy lives in TextViews so
+ * Android handles shaping and bidi, and the whole UI is drawn with the bundled Vazirmatn
+ * font. Buttons are plain TextViews with a state-list background: the platform Button style
+ * applies its own insets and padding that misalign Persian glyphs.</p>
+ *
+ * <p>The layout direction is pinned to RTL because the interface is Persian only; on a phone
+ * set to English the rows would otherwise be laid out left-to-right and read backwards.</p>
  */
 public class GameActivity extends Activity {
 
@@ -76,11 +82,16 @@ public class GameActivity extends Activity {
         super.onCreate(savedInstanceState);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
 
         nightMode = GamePrefs.nightMode(this);
         soundEnabled = GamePrefs.soundEnabled(this);
         difficulty = GamePrefs.difficulty(this);
         theme = Theme.of(nightMode);
+        // Same colour as the canvas, so rotation/recreate never flashes the platform grey.
+        getWindow().setBackgroundDrawable(new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[] {theme.background, theme.background}));
         typeBold = Renderer.load(this, "fonts/Vazirmatn-Bold.ttf", Typeface.BOLD);
         typeRegular = Renderer.load(this, "fonts/Vazirmatn-Regular.ttf", Typeface.NORMAL);
 
@@ -123,16 +134,20 @@ public class GameActivity extends Activity {
         hud = new LinearLayout(this);
         hud.setOrientation(LinearLayout.HORIZONTAL);
         hud.setGravity(Gravity.CENTER_VERTICAL);
-        hud.setPadding(dp(14), dp(24), dp(18), 0);
+        hud.setPadding(dp(14), dp(22), dp(14), 0);
         hud.setVisibility(View.GONE);
 
         pauseButton = new TextView(this);
         pauseButton.setText("II");
-        pauseButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        pauseButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         pauseButton.setTypeface(typeBold);
         pauseButton.setTextColor(theme.textSecondary);
         pauseButton.setGravity(Gravity.CENTER);
-        pauseButton.setPadding(dp(12), dp(8), dp(12), dp(8));
+        pauseButton.setIncludeFontPadding(false);
+        pauseButton.setPadding(dp(14), dp(9), dp(14), dp(9));
+        pauseButton.setBackground(buttonBackground(theme.chipBackground, theme.panelStroke));
+        pauseButton.setClickable(true);
+        pauseButton.setFocusable(true);
         pauseButton.setContentDescription(getString(R.string.pause_description));
         pauseButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -147,6 +162,7 @@ public class GameActivity extends Activity {
         hudBest.setTypeface(typeRegular);
         hudBest.setTextColor(theme.textMuted);
         hudBest.setGravity(Gravity.END);
+        hudBest.setIncludeFontPadding(false);
         hud.addView(hudBest, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
@@ -162,13 +178,14 @@ public class GameActivity extends Activity {
         hint.setTextColor(theme.textSecondary);
         hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         hint.setTypeface(typeRegular);
+        hint.setIncludeFontPadding(false);
         hint.setGravity(Gravity.CENTER);
         hint.setVisibility(View.GONE);
 
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        params.topMargin = dp(112);
+        params.topMargin = dp(110);
         root.addView(hint, params);
     }
 
@@ -182,15 +199,14 @@ public class GameActivity extends Activity {
 
     private void buildMenu() {
         FrameLayout overlay = new FrameLayout(this);
-        overlay.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[] {theme.menuOverlayTop, theme.menuOverlayBottom}));
+        overlay.setBackground(menuBackground());
         overlay.setClickable(true);
         menuOverlay = overlay;
 
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setGravity(Gravity.CENTER_HORIZONTAL);
-        content.setPadding(dp(28), dp(18), dp(28), dp(18));
+        content.setPadding(dp(28), dp(16), dp(28), dp(16));
 
         ImageView logo = new ImageView(this);
         logo.setImageResource(R.drawable.logo);
@@ -198,40 +214,22 @@ public class GameActivity extends Activity {
         logo.setContentDescription(getString(R.string.logo_description));
         content.addView(logo, new LinearLayout.LayoutParams(dp(104), dp(104)));
 
-        TextView title = new TextView(this);
-        title.setText(R.string.app_name);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34);
-        title.setTypeface(typeBold);
-        title.setTextColor(theme.textPrimary);
-        title.setGravity(Gravity.CENTER);
+        TextView title = label(R.string.app_name, 34, true, theme.textPrimary);
         content.addView(title, wrapWithTopMargin(10));
 
-        TextView tagline = new TextView(this);
-        tagline.setText(R.string.tagline);
-        tagline.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        tagline.setTypeface(typeRegular);
-        tagline.setTextColor(theme.primaryButtonBackground);
-        tagline.setGravity(Gravity.CENTER);
+        TextView tagline = label(R.string.tagline, 14, false, theme.playerBlue);
         content.addView(tagline, wrapWithTopMargin(6));
 
-        menuBest = new TextView(this);
-        menuBest.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        menuBest.setTypeface(typeBold);
-        menuBest.setTextColor(theme.playerPink);
-        menuBest.setGravity(Gravity.CENTER);
+        menuBest = label(R.string.best_line, 14, true, theme.playerRed);
         content.addView(menuBest, wrapWithTopMargin(16));
 
-        menuDifficulty = new TextView(this);
-        menuDifficulty.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        menuDifficulty.setTypeface(typeRegular);
-        menuDifficulty.setTextColor(theme.textMuted);
-        menuDifficulty.setGravity(Gravity.CENTER);
+        menuDifficulty = label(R.string.difficulty_line, 12, false, theme.textMuted);
         content.addView(menuDifficulty, wrapWithTopMargin(6));
 
-        Button start = primaryButton(R.string.start_game);
+        TextView start = primaryAction(R.string.start_game);
         LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(54));
-        startParams.topMargin = dp(22);
+        startParams.topMargin = dp(20);
         content.addView(start, startParams);
         start.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -240,9 +238,9 @@ public class GameActivity extends Activity {
             }
         });
 
-        Button settings = secondaryButton(R.string.settings);
+        TextView settings = secondaryAction(R.string.settings);
         LinearLayout.LayoutParams settingsParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(50));
         settingsParams.topMargin = dp(10);
         content.addView(settings, settingsParams);
         settings.setOnClickListener(new View.OnClickListener() {
@@ -252,13 +250,8 @@ public class GameActivity extends Activity {
             }
         });
 
-        TextView howTo = new TextView(this);
-        howTo.setText(R.string.how_to);
-        howTo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        howTo.setTypeface(typeRegular);
-        howTo.setTextColor(theme.textMuted);
-        howTo.setGravity(Gravity.CENTER);
-        howTo.setLineSpacing(dp(4), 1f);
+        TextView howTo = label(R.string.how_to, 12, false, theme.textMuted);
+        howTo.setLineSpacing(dp(5), 1f);
         content.addView(howTo, wrapWithTopMargin(20));
 
         FrameLayout.LayoutParams contentParams = new FrameLayout.LayoutParams(
@@ -273,44 +266,54 @@ public class GameActivity extends Activity {
 
     private void buildSettings() {
         FrameLayout overlay = new FrameLayout(this);
-        overlay.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[] {theme.menuOverlayTop, theme.menuOverlayBottom}));
+        overlay.setBackground(menuBackground());
         overlay.setClickable(true);
         overlay.setVisibility(View.GONE);
         settingsOverlay = overlay;
 
-        LinearLayout card = buildCard();
+        ScrollView scroller = new ScrollView(this);
+        scroller.setFillViewport(true);
+        scroller.setClipToPadding(false);
+
+        LinearLayout centring = new LinearLayout(this);
+        centring.setOrientation(LinearLayout.VERTICAL);
+        centring.setGravity(Gravity.CENTER);
+        centring.setPadding(dp(20), dp(20), dp(20), dp(20));
+        scroller.addView(centring, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout card = card(theme, dp(340));
         card.setVisibility(View.VISIBLE);
         card.setAlpha(1f);
-        card.setPadding(dp(22), dp(20), dp(22), dp(20));
+        card.setGravity(Gravity.CENTER_HORIZONTAL);
+        card.setPadding(dp(20), dp(18), dp(20), dp(18));
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        centring.addView(card, new LinearLayout.LayoutParams(
+                Math.min(dp(340), screenWidth - dp(40)),
+                ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        TextView title = new TextView(this);
-        title.setText(R.string.settings);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-        title.setTypeface(typeBold);
-        title.setTextColor(theme.textPrimary);
-        title.setGravity(Gravity.CENTER);
+        TextView title = label(R.string.settings, 20, true, theme.textPrimary);
         card.addView(title);
 
-        chipEasy = makeChip(R.string.difficulty_easy);
-        chipNormal = makeChip(R.string.difficulty_normal);
-        chipHard = makeChip(R.string.difficulty_hard);
-        card.addView(sectionLabel(R.string.difficulty), wrapWithTopMargin(18));
+        chipEasy = chipLabel(R.string.difficulty_easy);
+        chipNormal = chipLabel(R.string.difficulty_normal);
+        chipHard = chipLabel(R.string.difficulty_hard);
+        card.addView(sectionLabel(R.string.difficulty), wrapWithTopMargin(16));
         card.addView(chipRow(chipEasy, chipNormal, chipHard), wrapWithTopMargin(8));
 
-        chipNight = makeChip(R.string.theme_night);
-        chipDay = makeChip(R.string.theme_day);
-        card.addView(sectionLabel(R.string.appearance), wrapWithTopMargin(18));
+        chipNight = chipLabel(R.string.theme_night);
+        chipDay = chipLabel(R.string.theme_day);
+        card.addView(sectionLabel(R.string.appearance), wrapWithTopMargin(16));
         card.addView(chipRow(chipNight, chipDay), wrapWithTopMargin(8));
 
-        chipSoundOn = makeChip(R.string.on);
-        chipSoundOff = makeChip(R.string.off);
-        card.addView(sectionLabel(R.string.sound), wrapWithTopMargin(18));
+        chipSoundOn = chipLabel(R.string.on);
+        chipSoundOff = chipLabel(R.string.off);
+        card.addView(sectionLabel(R.string.sound), wrapWithTopMargin(16));
         card.addView(chipRow(chipSoundOn, chipSoundOff), wrapWithTopMargin(8));
 
-        Button back = primaryButton(R.string.back);
+        TextView back = primaryAction(R.string.back);
         LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(50));
         backParams.topMargin = dp(22);
         card.addView(back, backParams);
         back.setOnClickListener(new View.OnClickListener() {
@@ -319,6 +322,10 @@ public class GameActivity extends Activity {
                 hideSettings();
             }
         });
+
+        TextView footer = label(R.string.settings_footer, 11, false, theme.textMuted);
+        footer.setGravity(Gravity.CENTER);
+        card.addView(footer, wrapWithTopMargin(14));
 
         chipEasy.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -363,32 +370,27 @@ public class GameActivity extends Activity {
             }
         });
 
-        FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cardParams.gravity = Gravity.CENTER;
-        cardParams.leftMargin = dp(20);
-        cardParams.rightMargin = dp(20);
-        overlay.addView(card, cardParams);
-
+        overlay.addView(scroller, matchParent());
         root.addView(overlay, matchParent());
     }
 
     private TextView sectionLabel(int textRes) {
-        TextView label = new TextView(this);
-        label.setText(textRes);
-        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        label.setTypeface(typeRegular);
-        label.setTextColor(theme.textMuted);
+        TextView label = label(textRes, 12, false, theme.textMuted);
         label.setGravity(Gravity.CENTER);
         return label;
     }
 
-    private TextView makeChip(int textRes) {
+    private TextView chipLabel(int textRes) {
         TextView chip = new TextView(this);
         chip.setText(textRes);
         chip.setGravity(Gravity.CENTER);
-        chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        chip.setPadding(dp(10), dp(11), dp(10), dp(11));
+        chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        chip.setIncludeFontPadding(false);
+        chip.setSingleLine(true);
+        chip.setPadding(dp(6), dp(12), dp(6), dp(12));
+        chip.setMinHeight(dp(46));
+        chip.setClickable(true);
+        chip.setFocusable(true);
         return chip;
     }
 
@@ -399,7 +401,7 @@ public class GameActivity extends Activity {
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             if (i > 0) {
-                params.leftMargin = dp(8);
+                params.setMarginStart(dp(8));
             }
             row.addView(chips[i], params);
         }
@@ -417,12 +419,12 @@ public class GameActivity extends Activity {
     }
 
     private void styleChip(TextView chip, boolean selected) {
-        GradientDrawable background = new GradientDrawable();
-        background.setCornerRadius(dp(12));
-        background.setColor(selected ? theme.primaryButtonBackground : theme.secondaryButtonBackground);
-        background.setStroke(dp(1), selected ? theme.primaryButtonBackground : theme.panelStroke);
-        chip.setBackground(background);
-        chip.setTextColor(selected ? theme.primaryButtonText : theme.secondaryButtonText);
+        GradientDrawable shape = new GradientDrawable();
+        shape.setCornerRadius(dp(13));
+        shape.setColor(selected ? theme.primaryButtonBackground : theme.chipBackground);
+        shape.setStroke(dp(1), selected ? theme.primaryButtonBackground : theme.panelStroke);
+        chip.setBackground(shape);
+        chip.setTextColor(selected ? theme.primaryButtonText : theme.textSecondary);
         chip.setTypeface(selected ? typeBold : typeRegular);
     }
 
@@ -470,17 +472,12 @@ public class GameActivity extends Activity {
     // ---------------------------------------------------------------- pause / over
 
     private void buildPausePanel() {
-        LinearLayout panel = buildCard();
+        LinearLayout panel = card(theme, dp(320));
 
-        TextView title = new TextView(this);
-        title.setText(R.string.paused_title);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
-        title.setTypeface(typeBold);
-        title.setTextColor(theme.textPrimary);
-        title.setGravity(Gravity.CENTER);
+        TextView title = label(R.string.paused_title, 22, true, theme.textPrimary);
         panel.addView(title);
 
-        Button resume = primaryButton(R.string.resume);
+        TextView resume = primaryAction(R.string.resume);
         panel.addView(resume, fullWidthButtonParams(20));
         resume.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -489,7 +486,7 @@ public class GameActivity extends Activity {
             }
         });
 
-        Button restart = secondaryButton(R.string.restart);
+        TextView restart = secondaryAction(R.string.restart);
         panel.addView(restart, fullWidthButtonParams(10));
         restart.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -499,7 +496,7 @@ public class GameActivity extends Activity {
             }
         });
 
-        Button menu = secondaryButton(R.string.menu);
+        TextView menu = secondaryAction(R.string.menu);
         panel.addView(menu, fullWidthButtonParams(10));
         menu.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -514,38 +511,21 @@ public class GameActivity extends Activity {
     }
 
     private void buildGameOverPanel() {
-        LinearLayout panel = buildCard();
+        LinearLayout panel = card(theme, dp(320));
 
-        gameOverTitle = new TextView(this);
-        gameOverTitle.setText(R.string.game_over);
-        gameOverTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
-        gameOverTitle.setTypeface(typeBold);
-        gameOverTitle.setTextColor(theme.textPrimary);
-        gameOverTitle.setGravity(Gravity.CENTER);
+        gameOverTitle = label(R.string.game_over, 22, true, theme.textPrimary);
         panel.addView(gameOverTitle);
 
-        gameOverScore = new TextView(this);
-        gameOverScore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
-        gameOverScore.setTypeface(typeBold);
-        gameOverScore.setTextColor(theme.playerCyan);
-        gameOverScore.setGravity(Gravity.CENTER);
+        gameOverScore = label(R.string.score_line, 24, true, theme.playerBlue);
         panel.addView(gameOverScore, wrapWithTopMargin(12));
 
-        gameOverRows = new TextView(this);
-        gameOverRows.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        gameOverRows.setTypeface(typeRegular);
-        gameOverRows.setTextColor(theme.textSecondary);
-        gameOverRows.setGravity(Gravity.CENTER);
+        gameOverRows = label(R.string.rows_line, 13, false, theme.textSecondary);
         panel.addView(gameOverRows, wrapWithTopMargin(6));
 
-        gameOverBest = new TextView(this);
-        gameOverBest.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        gameOverBest.setTypeface(typeBold);
-        gameOverBest.setTextColor(theme.playerPink);
-        gameOverBest.setGravity(Gravity.CENTER);
+        gameOverBest = label(R.string.best_line, 13, true, theme.playerRed);
         panel.addView(gameOverBest, wrapWithTopMargin(6));
 
-        Button again = primaryButton(R.string.play_again);
+        TextView again = primaryAction(R.string.play_again);
         panel.addView(again, fullWidthButtonParams(18));
         again.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -555,7 +535,7 @@ public class GameActivity extends Activity {
             }
         });
 
-        Button menu = secondaryButton(R.string.menu);
+        TextView menu = secondaryAction(R.string.menu);
         panel.addView(menu, fullWidthButtonParams(10));
         menu.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -571,12 +551,23 @@ public class GameActivity extends Activity {
 
     // ---------------------------------------------------------------- shared views
 
-    private LinearLayout buildCard() {
+    private TextView label(int textRes, float sizeSp, boolean bold, int color) {
+        TextView view = new TextView(this);
+        view.setText(textRes);
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp);
+        view.setTypeface(bold ? typeBold : typeRegular);
+        view.setTextColor(color);
+        view.setGravity(Gravity.CENTER);
+        view.setIncludeFontPadding(false);
+        view.setLineSpacing(dp(4), 1f);
+        return view;
+    }
+
+    private LinearLayout card(Theme theme, int maxWidthPx) {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setGravity(Gravity.CENTER_HORIZONTAL);
-        panel.setPadding(dp(24), dp(22), dp(24), dp(22));
-        panel.setMinimumWidth(dp(252));
+        panel.setPadding(dp(22), dp(20), dp(22), dp(20));
         panel.setClickable(true);
 
         GradientDrawable background = new GradientDrawable();
@@ -585,37 +576,69 @@ public class GameActivity extends Activity {
         background.setStroke(dp(1), theme.panelStroke);
         panel.setBackground(background);
 
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        panel.setMinimumWidth(Math.min(maxWidthPx, screenWidth - dp(48)));
+
         panel.setVisibility(View.GONE);
         panel.setAlpha(0f);
         return panel;
     }
 
-    private Button primaryButton(int textRes) {
-        Button button = new Button(this);
-        button.setText(textRes);
-        button.setAllCaps(false);
-        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        button.setTypeface(typeBold);
+    private TextView primaryAction(int textRes) {
+        TextView button = actionBase(textRes, 16, true);
         button.setTextColor(theme.primaryButtonText);
-        button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                theme.primaryButtonBackground));
+        button.setBackground(buttonBackground(theme.primaryButtonBackground,
+                blend(theme.primaryButtonBackground, theme.primaryButtonText, 0.16f)));
         return button;
     }
 
-    private Button secondaryButton(int textRes) {
-        Button button = new Button(this);
-        button.setText(textRes);
-        button.setAllCaps(false);
-        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        button.setTypeface(typeRegular);
+    private TextView secondaryAction(int textRes) {
+        TextView button = actionBase(textRes, 15, false);
         button.setTextColor(theme.secondaryButtonText);
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(theme.secondaryButtonBackground);
-        background.setCornerRadius(dp(14));
-        background.setStroke(dp(1), theme.panelStroke);
-        button.setBackground(background);
-        button.setPadding(dp(12), dp(10), dp(12), dp(10));
+        button.setBackground(buttonBackground(theme.secondaryButtonBackground,
+                blend(theme.secondaryButtonBackground, theme.secondaryButtonText, 0.10f)));
         return button;
+    }
+
+    private TextView actionBase(int textRes, float sizeSp, boolean bold) {
+        TextView button = new TextView(this);
+        button.setText(textRes);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp);
+        button.setTypeface(bold ? typeBold : typeRegular);
+        button.setGravity(Gravity.CENTER);
+        button.setIncludeFontPadding(false);
+        button.setPadding(dp(14), dp(10), dp(14), dp(10));
+        button.setClickable(true);
+        button.setFocusable(true);
+        return button;
+    }
+
+    private Drawable buttonBackground(int normal, int pressed) {
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[] {android.R.attr.state_pressed}, roundedRect(pressed));
+        states.addState(new int[] {android.R.attr.state_enabled}, roundedRect(normal));
+        return states;
+    }
+
+    private Drawable roundedRect(int color) {
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(color);
+        shape.setCornerRadius(dp(14));
+        shape.setStroke(dp(1), theme.panelStroke);
+        return shape;
+    }
+
+    private GradientDrawable menuBackground() {
+        return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[] {theme.menuOverlayTop, theme.menuOverlayBottom});
+    }
+
+    private static int blend(int from, int to, float amount) {
+        int a = (int) (((from >> 24) & 0xFF) * (1f - amount) + ((to >> 24) & 0xFF) * amount);
+        int r = (int) (((from >> 16) & 0xFF) * (1f - amount) + ((to >> 16) & 0xFF) * amount);
+        int g = (int) (((from >> 8) & 0xFF) * (1f - amount) + ((to >> 8) & 0xFF) * amount);
+        int b = (int) ((from & 0xFF) * (1f - amount) + (to & 0xFF) * amount);
+        return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
     private LinearLayout.LayoutParams fullWidthButtonParams(int topMarginDp) {
@@ -636,8 +659,8 @@ public class GameActivity extends Activity {
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.gravity = Gravity.CENTER;
-        params.leftMargin = dp(24);
-        params.rightMargin = dp(24);
+        params.leftMargin = dp(20);
+        params.rightMargin = dp(20);
         return params;
     }
 
@@ -654,6 +677,7 @@ public class GameActivity extends Activity {
             hideSettings();
         }
         hideGameOver();
+        pauseOnResume = false;
         hud.setVisibility(View.VISIBLE);
         if (!hintConsumed) {
             hint.setVisibility(View.VISIBLE);
@@ -683,6 +707,9 @@ public class GameActivity extends Activity {
     private void showPause() {
         GameEngine.State state = gameView.engine().state();
         if (state != GameEngine.State.PLAYING && state != GameEngine.State.COUNTDOWN) {
+            return;
+        }
+        if (gameOverPanel.getVisibility() == View.VISIBLE) {
             return;
         }
         gameView.pauseGame();

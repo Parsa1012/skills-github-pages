@@ -1,7 +1,5 @@
 package io.github.parsa1012.mirrordash;
 
-import android.graphics.Color;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -37,6 +35,13 @@ public class GameEngine {
     private static final float FIRST_ROW_DELAY_SECONDS = 0.25f;
     private static final int MAX_ROWS = 10;
     private static final int MAX_SPAWN_ATTEMPTS = 48;
+
+    /** Row archetypes: the pair is either bunched on the axis or pulled wide apart. */
+    private static final int SPREAD_TOGETHER = 0;
+    private static final int SPREAD_APART = 1;
+
+    /** Model of a quick swipe, used to keep the required between-row travel honest. */
+    private static final float HUMAN_SWIPE_DP_PER_SECOND = 1100f;
     private static final int BREATHER_EVERY_ROWS = 7;
 
     private static final int POINTS_PER_SECOND = 10;
@@ -52,8 +57,8 @@ public class GameEngine {
     private static final float SHAKE_DECAY = 5.5f;
     private static final float FLASH_DECAY = 4.0f;
 
-    private final Player leftPlayer = new Player(Color.parseColor("#22D3EE"));
-    private final Player rightPlayer = new Player(Color.parseColor("#F472B6"));
+    private final Player leftPlayer = new Player(Theme.BLUE_NIGHT);
+    private final Player rightPlayer = new Player(Theme.RED_NIGHT);
 
     private Difficulty difficulty = Difficulty.NORMAL;
 
@@ -95,6 +100,8 @@ public class GameEngine {
     private int rowsCleared;
     private int rowsSinceBreather;
     private float lastWindowCenter = -1f;
+    private int lastSpread = -1;
+    private int spreadRun;
 
     private int score;
     private float countdown = COUNTDOWN_SECONDS;
@@ -168,8 +175,8 @@ public class GameEngine {
 
     /** Recolours the two bodies to match the active theme. */
     public void applyTheme(Theme theme) {
-        leftPlayer.color = theme.playerCyan;
-        rightPlayer.color = theme.playerPink;
+        leftPlayer.color = theme.playerBlue;
+        rightPlayer.color = theme.playerRed;
     }
 
     public void setPaused(boolean paused) {
@@ -528,43 +535,78 @@ public class GameEngine {
         return Math.min(budget, scaled);
     }
 
-    private float twoGapChanceFor(float level) {
-        float chance = LevelConfig.twoGapChance(level) * difficulty.twoGapScale();
-        return Math.max(0f, Math.min(0.85f, chance));
-    }
-
     private float movingChanceFor(float level) {
         float chance = LevelConfig.movingChance(level) * difficulty.movingScale();
         return Math.max(0f, Math.min(0.50f, chance));
     }
 
-    private float maxJumpFor(float level) {
-        return LevelConfig.maxJump(width, level) * difficulty.jumpScale();
+    /** How often the row type flips between "together" and "apart". */
+    private float switchChanceFor(float level) {
+        float levelBoost = 0.08f * LevelConfig.clamp01((level - 1f) / 8f);
+        return Math.max(0.30f, Math.min(0.85f, difficulty.switchChance() + levelBoost));
+    }
+
+    /**
+     * Furthest the pair may be asked to move sideways between two rows while staying
+     * humanly reachable: a fast swipe (~1100 dp/s) for the time the rows are apart.
+     */
+    private float maxTravelFor(float level) {
+        float seconds = spacingFor(level) / Math.max(1f, speedFor(level));
+        return Math.max(width * 0.30f, HUMAN_SWIPE_DP_PER_SECOND * density * seconds);
+    }
+
+    /** How far from the centre line an "apart" row may sit, in the x of the left body. */
+    private float apartMaxOffset(float level) {
+        float levelT = LevelConfig.clamp01((level - 1f) / 8f);
+        return width * (0.26f + 0.10f * levelT) * difficulty.apartScale();
     }
 
     // ---------------------------------------------------------------- generation
+
+    /**
+     * Picks the archetype of the next row.
+     *
+     * <p>Rows alternate between <em>together</em> (one shared opening, so both bodies sit on
+     * the axis) and <em>apart</em> (two openings, so the bodies are pulled towards the edges).
+     * Alternating is what forces the player to keep repositioning; the randomness and the odd
+     * repeat stop it from feeling like a metronome. Two identical rows in a row are the
+     * maximum, so the pattern can never settle into one safe corner.</p>
+     */
+    private int nextSpread(float level) {
+        if (lastSpread < 0) {
+            return random.nextFloat() < 0.5f ? SPREAD_APART : SPREAD_TOGETHER;
+        }
+        int opposite = lastSpread == SPREAD_APART ? SPREAD_TOGETHER : SPREAD_APART;
+        if (spreadRun >= 2) {
+            return opposite;
+        }
+        return random.nextFloat() < switchChanceFor(level) ? opposite : lastSpread;
+    }
 
     private void spawnRow(float level) {
         ObstacleRow row = new ObstacleRow();
         row.begin(-LevelConfig.rowHeight(density), LevelConfig.rowHeight(density));
 
         boolean breather = rowsSinceBreather >= BREATHER_EVERY_ROWS || lastWindowCenter < 0f;
-        boolean wantsTwoGaps = !breather && random.nextFloat() < twoGapChanceFor(level);
+        int wanted = breather ? SPREAD_TOGETHER : nextSpread(level);
 
         boolean built;
-        if (breather) {
-            built = trySingleGap(row, level) || tryEasyMirror(row, level);
-            rowsSinceBreather = 0;
-        } else if (wantsTwoGaps) {
-            built = tryTwoGaps(row, level);
+        if (wanted == SPREAD_APART) {
+            built = tryApartGap(row, level) || tryTogetherGap(row, level);
         } else {
-            built = trySingleGap(row, level) || tryTwoGaps(row, level);
+            built = tryTogetherGap(row, level) || tryApartGap(row, level);
         }
-
         if (!built && !tryEasyMirror(row, level)) {
             buildFallback(row, level);
         }
-        if (!breather) {
+
+        int builtSpread = row.gapCount > 1 ? SPREAD_APART : SPREAD_TOGETHER;
+        spreadRun = builtSpread == lastSpread ? spreadRun + 1 : 1;
+        lastSpread = builtSpread;
+
+        if (breather) {
+            rowsSinceBreather = 0;
+        } else {
             rowsSinceBreather++;
         }
 
@@ -573,10 +615,12 @@ public class GameEngine {
     }
 
     /**
-     * A row with one opening: both bodies have to share it, so the only feasible position
-     * is the screen centre. That makes it the natural "breather" row.
+     * "Together" row: a single opening wide enough for both bodies, so the only feasible
+     * position is the screen centre (the two bodies overlap there). The opening is nudged off
+     * centre a little to eat into the safe window, which raises the precision requirement
+     * without changing where the player has to be.
      */
-    private boolean trySingleGap(ObstacleRow row, float level) {
+    private boolean tryTogetherGap(ObstacleRow row, float level) {
         float gapWidth = singleGapFor(level);
         float minWindow = minWindowFor();
         float margin = LevelConfig.EDGE_MARGIN_DP * density;
@@ -585,24 +629,17 @@ public class GameEngine {
         }
         float sliver = LevelConfig.minSliver(density);
         float maxOffset = Math.max(0f, (gapWidth - minWindow) * 0.5f);
-        float centreLimit = Math.max(0f, width * 0.5f - gapWidth * 0.5f - sliver);
-        maxOffset = Math.min(maxOffset, centreLimit);
-        float maxJump = maxJumpFor(level);
-        float windowCenter = width * 0.5f;
-        float anchor = lastWindowCenter < 0f ? windowCenter : lastWindowCenter;
+        maxOffset = Math.min(maxOffset, Math.max(0f, width * 0.5f - gapWidth * 0.5f - sliver));
 
-        if (Math.abs(windowCenter - anchor) > maxJump) {
-            return false;
-        }
         for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++) {
-            float center = windowCenter + (random.nextFloat() * 2f - 1f) * maxOffset;
+            float center = width * 0.5f + (random.nextFloat() * 2f - 1f) * maxOffset;
             float windowWidth = gapWidth - Math.abs(2f * center - width);
             if (windowWidth < minWindow) {
                 continue;
             }
             row.begin(-row.height, row.height);
             row.setGap(0, center, gapWidth);
-            row.windowCenter = windowCenter;
+            row.windowCenter = width * 0.5f;
             row.windowWidth = windowWidth;
             return true;
         }
@@ -610,42 +647,55 @@ public class GameEngine {
     }
 
     /**
-     * The main row type: two openings whose centres are almost mirrored. The gap between
-     * the "almost" is the mistake budget the player has to split between the two bodies.
+     * "Apart" row: two openings mirrored with a deliberate offset from the centre line, so
+     * the two bodies have to sit far from each other (each in its own opening). The offset is
+     * biased towards the far end of the allowed band, and the pair is never asked to travel
+     * further than a fast swipe can cover in the time between rows.
      */
-    private boolean tryTwoGaps(ObstacleRow row, float level) {
+    private boolean tryApartGap(ObstacleRow row, float level) {
         float gapWidth = gapFor(level);
         float minWindow = minWindowFor();
         float margin = LevelConfig.EDGE_MARGIN_DP * density;
-        float amplitude = LevelConfig.waveAmplitude(density);
-        float inset = gapWidth * 0.5f + margin + amplitude;
-        if (inset * 2f >= width) {
+        float sliver = LevelConfig.minSliver(density);
+        float halfWidth = width * 0.5f;
+        float minOffset = Math.max((gapWidth + sliver) * 0.5f, width * 0.16f);
+        float maxOffset = apartMaxOffset(level);
+        if (maxOffset <= minOffset) {
             return false;
         }
-        float maxMismatch = mismatchFor(level, gapWidth);
-        float minSliver = LevelConfig.minSliver(density);
-        float maxJump = maxJumpFor(level);
+
+        float mismatch = mismatchFor(level, gapWidth);
+        float amplitude = LevelConfig.waveAmplitude(density);
         float movingMinWindow = LevelConfig.movingMinWindow(density);
         float movingChance = movingChanceFor(level);
+        float anchor = lastWindowCenter < 0f ? halfWidth : lastWindowCenter;
+        float travel = maxTravelFor(level);
+        float edge = gapWidth * 0.5f + margin;
 
         for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++) {
-            float first = inset + random.nextFloat() * (width - 2f * inset);
-            float error = (random.nextFloat() * 2f - 1f) * maxMismatch;
-            float second = width - first + error;
-            if (second < inset || second > width - inset) {
+            float side = random.nextBoolean() ? 1f : -1f;
+            // Clamp the offset so this row stays reachable from wherever the player is.
+            float reachable = side > 0f ? anchor + travel - halfWidth : halfWidth - anchor + travel;
+            float limit = Math.min(maxOffset, reachable);
+            if (limit < minOffset) {
                 continue;
             }
-            // Keep the solid piece between the two openings thick enough to read as a wall.
-            if (Math.abs(first - second) - gapWidth < minSliver) {
+            // sqrt skew: the far end of the band is the common case, which is what makes the
+            // rows feel wide apart instead of a timid wobble around the axis.
+            float bias = (float) Math.sqrt(random.nextFloat());
+            float offset = minOffset + (limit - minOffset) * bias;
+            float windowCenter = halfWidth + side * offset;
+            float error = (random.nextFloat() * 2f - 1f) * mismatch;
+            float first = windowCenter + error * 0.5f;
+            float second = width - windowCenter + error * 0.5f;
+            if (first < edge || first > width - edge || second < edge || second > width - edge) {
+                continue;
+            }
+            if (Math.abs(first - second) - gapWidth < sliver) {
                 continue;
             }
             float windowWidth = gapWidth - Math.abs(error);
             if (windowWidth < minWindow) {
-                continue;
-            }
-            float windowCenter = first - error * 0.5f;
-            float anchor = lastWindowCenter < 0f ? width * 0.5f : lastWindowCenter;
-            if (Math.abs(windowCenter - anchor) > maxJump) {
                 continue;
             }
 

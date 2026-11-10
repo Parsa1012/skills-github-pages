@@ -7,34 +7,35 @@ package io.github.parsa1012.mirrordash;
  */
 public enum Difficulty {
 
-    /** Slower rows, wider openings, more forgiving precision and plenty of easy rows. */
-    EASY(0.85f, 1.15f, 8f, 0.55f, 0.65f, 0.50f, 6f, 1.10f),
+    /** Slower rows, wider openings, gentler jumps between rows and plenty of breathers. */
+    EASY(0.88f, 1.14f, 6f, 0.72f, 0.55f, 5f, 0.95f, 0.55f),
 
     /** The curve as designed. */
-    NORMAL(1.00f, 1.00f, 0f, 1.00f, 1.00f, 1.00f, 0f, 1.00f),
+    NORMAL(1.00f, 1.00f, 0f, 1.00f, 1.00f, 0f, 1.00f, 0.62f),
 
-    /** Faster, denser, tighter openings and more sliding rows. */
-    HARD(1.15f, 0.88f, -6f, 1.25f, 1.15f, 1.35f, -4f, 0.86f);
+    /** Faster, denser, tighter openings, wider swings and more sliding rows. */
+    HARD(1.15f, 0.88f, -6f, 1.20f, 1.15f, -4f, 1.10f, 0.72f);
 
     private final float speedScale;
     private final float spacingScale;
     private final float gapBonusDp;
     private final float mismatchScale;
-    private final float twoGapScale;
     private final float movingScale;
     private final float minWindowBonusDp;
-    private final float jumpScale;
+    private final float apartScale;
+    private final float switchChance;
 
     Difficulty(float speedScale, float spacingScale, float gapBonusDp, float mismatchScale,
-               float twoGapScale, float movingScale, float minWindowBonusDp, float jumpScale) {
+               float movingScale, float minWindowBonusDp, float apartScale,
+               float switchChance) {
         this.speedScale = speedScale;
         this.spacingScale = spacingScale;
         this.gapBonusDp = gapBonusDp;
         this.mismatchScale = mismatchScale;
-        this.twoGapScale = twoGapScale;
         this.movingScale = movingScale;
         this.minWindowBonusDp = minWindowBonusDp;
-        this.jumpScale = jumpScale;
+        this.apartScale = apartScale;
+        this.switchChance = switchChance;
     }
 
     public float speedScale() {
@@ -53,11 +54,6 @@ public enum Difficulty {
         return mismatchScale;
     }
 
-    /** Two-gap rows both add variety and difficulty, so the chance scales with the preset. */
-    public float twoGapScale() {
-        return twoGapScale;
-    }
-
     public float movingScale() {
         return movingScale;
     }
@@ -66,9 +62,17 @@ public enum Difficulty {
         return minWindowBonusDp * density;
     }
 
-    /** Reachability budget: harder presets leave less time between rows, so smaller jumps. */
-    public float jumpScale() {
-        return jumpScale;
+    /**
+     * How wide the "apart" rows may pull the bodies towards the edges. Bigger values mean the
+     * pair has to travel further sideways between rows.
+     */
+    public float apartScale() {
+        return apartScale;
+    }
+
+    /** Base chance that the next row flips between "together" and "apart". */
+    public float switchChance() {
+        return switchChance;
     }
 
     public int labelRes() {

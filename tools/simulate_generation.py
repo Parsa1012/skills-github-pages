@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Offline sanity checks for the Mirror row generator.
+"""Offline sanity checks for the row generator and the row pattern.
 
-This is a faithful port of the fairness maths in GameEngine/LevelConfig. It runs the
-generator and two virtual players (a perfect one and a reaction-limited one) so the
-"is every row clearable?" question is answered by simulation instead of guesswork.
+This is a faithful port of the fairness maths in GameEngine/LevelConfig/Difficulty. It runs
+the generator and two virtual players (a perfect one and a reaction-limited one) so the
+"is every row clearable?" question is answered by simulation instead of guesswork, and it
+also reports the mix of the two row archetypes (bodies together vs. pulled wide apart).
 
-Run: python3 tools/simulate_generation.py            # all three presets
+Run: python3 tools/simulate_generation.py                  # all three presets
      python3 tools/simulate_generation.py --difficulty hard
 """
 
@@ -32,19 +33,24 @@ BREATHER_EVERY_ROWS = 7
 SPEED_TABLE = [150, 190, 230, 270, 310]
 SPACING_TABLE = [320, 300, 280, 260, 240]
 GAP_TABLE = [96, 92, 88, 84, 80]
-TWO_GAP_TABLE = [0.0, 0.10, 0.20, 0.35, 0.50]
 
-# Mirrors Difficulty.java. Every knob is a multiplier or a dp offset on the curves above.
+# A quick swipe, used to keep the required between-row travel honest (GameEngine).
+HUMAN_SWIPE_DP_PER_SECOND = 1100.0
+
+# Mirrors Difficulty.java.
 DIFFICULTIES = {
-    "easy": dict(speed=0.85, spacing=1.15, gap_bonus=8.0, mismatch=0.55,
-                 two_gap=0.65, moving=0.50, min_window_bonus=6.0, jump=1.10),
+    "easy": dict(speed=0.88, spacing=1.14, gap_bonus=6.0, mismatch=0.72,
+                 moving=0.55, min_window_bonus=5.0, apart=0.95, switch=0.55),
     "normal": dict(speed=1.00, spacing=1.00, gap_bonus=0.0, mismatch=1.00,
-                   two_gap=1.00, moving=1.00, min_window_bonus=0.0, jump=1.00),
-    "hard": dict(speed=1.15, spacing=0.88, gap_bonus=-6.0, mismatch=1.25,
-                 two_gap=1.35, moving=1.15, min_window_bonus=-4.0, jump=0.86),
+                   moving=1.00, min_window_bonus=0.0, apart=1.00, switch=0.62),
+    "hard": dict(speed=1.15, spacing=0.88, gap_bonus=-6.0, mismatch=1.20,
+                 moving=1.15, min_window_bonus=-4.0, apart=1.10, switch=0.72),
 }
 ACTIVE_NAME = "normal"
 ACTIVE = DIFFICULTIES[ACTIVE_NAME]
+
+TOGETHER = "T"
+APART = "A"
 
 
 def use(name):
@@ -52,11 +58,6 @@ def use(name):
     global ACTIVE_NAME, ACTIVE
     ACTIVE_NAME = name
     ACTIVE = DIFFICULTIES[name]
-
-
-def min_window():
-    """Engine: max(20dp, minWindow + difficulty bonus)."""
-    return max(20.0, MIN_WINDOW + ACTIVE["min_window_bonus"])
 
 
 def clamp(v, lo, hi):
@@ -95,18 +96,16 @@ def single_gap_width(level):
     return max(40.0, gap_width(level) + SINGLE_GAP_EXTRA)
 
 
-def two_gap_chance(level):
-    return clamp(sample(TWO_GAP_TABLE, level, 0.05, 0.70, True) * ACTIVE["two_gap"], 0.0, 0.85)
+def min_window():
+    return max(20.0, MIN_WINDOW + ACTIVE["min_window_bonus"])
 
 
 def max_mismatch(level):
     budget = gap_width(level) - min_window()
-    raw = 0.0 if budget <= 0 else budget * (0.35 + 0.65 * clamp01((level - 1) / 5.0))
+    if budget <= 0:
+        return 0.0
+    raw = budget * (0.35 + 0.65 * clamp01((level - 1) / 5.0))
     return min(budget, raw * ACTIVE["mismatch"])
-
-
-def max_jump(level):
-    return WIDTH * (0.34 + 0.28 * clamp01((level - 1) / 5.0)) * ACTIVE["jump"]
 
 
 def moving_chance(level):
@@ -114,11 +113,23 @@ def moving_chance(level):
     return clamp(raw * ACTIVE["moving"], 0.0, 0.50)
 
 
+def switch_chance(level):
+    return clamp(ACTIVE["switch"] + 0.08 * clamp01((level - 1) / 8.0), 0.30, 0.85)
+
+
+def max_travel(level):
+    return max(WIDTH * 0.30, HUMAN_SWIPE_DP_PER_SECOND * spacing(level) / max(1.0, speed(level)))
+
+
+def apart_max_offset(level):
+    return WIDTH * (0.26 + 0.10 * clamp01((level - 1) / 8.0)) * ACTIVE["apart"]
+
+
 class Row:
-    def __init__(self, y=-ROW_HEIGHT):
-        self.y = y
+    def __init__(self):
+        self.y = -ROW_HEIGHT
         self.height = ROW_HEIGHT
-        self.gaps = []          # list of (center, width)
+        self.gaps = []          # list of (centre, width)
         self.window_center = 0.0
         self.window_width = 0.0
         self.wave = False
@@ -126,6 +137,7 @@ class Row:
         self.wave_phase = 0.0
         self.offset = 0.0
         self.scored = False
+        self.mode = TOGETHER
 
     def segments(self):
         gaps = sorted(((c + self.offset, w) for c, w in self.gaps))
@@ -147,50 +159,65 @@ class Generator:
         self.rng = random.Random(seed)
         self.last_window_center = -1.0
         self.rows_since_breather = 0
-        self.log = []
+        self.last_spread = None
+        self.spread_run = 0
+        self.modes = []
 
     # -- helpers ------------------------------------------------------------
-    def try_single_gap(self, row, level):
+    def next_spread(self, level):
+        if self.last_spread is None:
+            return APART if self.rng.random() < 0.5 else TOGETHER
+        opposite = TOGETHER if self.last_spread == APART else APART
+        if self.spread_run >= 2:
+            return opposite
+        return opposite if self.rng.random() < switch_chance(level) else self.last_spread
+
+    def try_together(self, row, level):
         gw = single_gap_width(level)
         if gw >= WIDTH - 2 * EDGE_MARGIN:
             return False
         max_offset = max(0.0, (gw - min_window()) / 2)
         max_offset = min(max_offset, max(0.0, WIDTH / 2 - gw / 2 - MIN_SLIVER))
-        window_center = WIDTH / 2
-        anchor = window_center if self.last_window_center < 0 else self.last_window_center
-        if abs(window_center - anchor) > max_jump(level):
-            return False
         for _ in range(48):
-            center = window_center + self.rng.uniform(-1, 1) * max_offset
+            center = WIDTH / 2 + self.rng.uniform(-1, 1) * max_offset
             window_width = gw - abs(2 * center - WIDTH)
             if window_width < min_window():
                 continue
             row.gaps = [(center, gw)]
-            row.window_center = window_center
+            row.window_center = WIDTH / 2
             row.window_width = window_width
             return True
         return False
 
-    def try_two_gaps(self, row, level):
+    def try_apart(self, row, level):
         gw = gap_width(level)
-        inset = gw / 2 + EDGE_MARGIN + WAVE_AMPLITUDE
-        if inset * 2 >= WIDTH:
+        half = WIDTH / 2
+        min_offset = max((gw + MIN_SLIVER) / 2, WIDTH * 0.16)
+        max_offset = apart_max_offset(level)
+        if max_offset <= min_offset:
             return False
-        mismatch = min(max_mismatch(level), gw - min_window())
+        mismatch = max_mismatch(level)
+        anchor = half if self.last_window_center < 0 else self.last_window_center
+        travel = max_travel(level)
+        edge = gw / 2 + EDGE_MARGIN
         for _ in range(48):
-            first = inset + self.rng.random() * (WIDTH - 2 * inset)
+            side = 1.0 if self.rng.random() < 0.5 else -1.0
+            reachable = (anchor + travel - half) if side > 0 else (half - anchor + travel)
+            limit = min(max_offset, reachable)
+            if limit < min_offset:
+                continue
+            bias = math.sqrt(self.rng.random())
+            offset = min_offset + (limit - min_offset) * bias
+            window_center = half + side * offset
             error = self.rng.uniform(-1, 1) * mismatch
-            second = WIDTH - first + error
-            if not (inset <= second <= WIDTH - inset):
+            first = window_center + error / 2
+            second = WIDTH - window_center + error / 2
+            if not (edge <= first <= WIDTH - edge and edge <= second <= WIDTH - edge):
                 continue
             if abs(first - second) - gw < MIN_SLIVER:
                 continue
             window_width = gw - abs(error)
             if window_width < min_window():
-                continue
-            window_center = first - error / 2
-            anchor = WIDTH / 2 if self.last_window_center < 0 else self.last_window_center
-            if abs(window_center - anchor) > max_jump(level):
                 continue
             row.gaps = [(first, gw), (second, gw)]
             row.window_center = window_center
@@ -226,23 +253,27 @@ class Generator:
     def spawn(self, level):
         row = Row()
         breather = self.rows_since_breather >= BREATHER_EVERY_ROWS or self.last_window_center < 0
-        wants_two = (not breather) and self.rng.random() < two_gap_chance(level)
+        wanted = TOGETHER if breather else self.next_spread(level)
 
-        if breather:
-            built = self.try_single_gap(row, level) or self.try_easy_mirror(row, level)
-            self.rows_since_breather = 0
-        elif wants_two:
-            built = self.try_two_gaps(row, level)
+        if wanted == APART:
+            built = self.try_apart(row, level) or self.try_together(row, level)
         else:
-            built = self.try_single_gap(row, level) or self.try_two_gaps(row, level)
-
+            built = self.try_together(row, level) or self.try_apart(row, level)
         if not built and not self.try_easy_mirror(row, level):
             self.build_fallback(row, level)
-        if not breather:
+
+        mode = APART if len(row.gaps) > 1 else TOGETHER
+        row.mode = mode
+        self.spread_run = self.spread_run + 1 if mode == self.last_spread else 1
+        self.last_spread = mode
+        self.modes.append(mode)
+
+        if breather:
+            self.rows_since_breather = 0
+        else:
             self.rows_since_breather += 1
 
         self.last_window_center = row.window_center
-        self.log.append((level, row.window_center, row.window_width, row.wave))
         return row
 
 
@@ -254,15 +285,19 @@ def circle_hits_rect(cx, cy, radius, left, top, right, bottom):
 
 
 def window_is_inside_screen(center, width):
-    return center - width / 2 >= 0 - 0.5 and center + width / 2 <= WIDTH + 0.5
+    return center - width / 2 >= -0.5 and center + width / 2 <= WIDTH + 0.5
 
 
-# --- test 1: generator invariants -------------------------------------------
+# --- test 1: generator invariants --------------------------------------------
 def check_generator(rows_per_level=400, levels=range(1, 13)):
     gen = Generator(seed=7)
     bad_window = 0
-    bad_jump = 0
+    bad_sliver = 0
+    unreachable = 0
     previous = None
+    runs = []
+    current_run = 0
+    last_mode = None
     for level in levels:
         for _ in range(rows_per_level):
             row = gen.spawn(float(level))
@@ -270,30 +305,49 @@ def check_generator(rows_per_level=400, levels=range(1, 13)):
                 bad_window += 1
             if not window_is_inside_screen(row.window_center, row.window_width):
                 bad_window += 1
-            if previous is not None and abs(row.window_center - previous.window_center) > max_jump(level) + 1e-3:
-                bad_jump += 1
+            if len(row.gaps) == 2 and abs(row.gaps[0][0] - row.gaps[1][0]) - row.gaps[0][1] < MIN_SLIVER - 0.5:
+                bad_sliver += 1
+            if previous is not None:
+                travel = abs(row.window_center - previous.window_center)
+                if travel > max_travel(level) + 0.5:
+                    unreachable += 1
+            if row.mode == last_mode:
+                current_run += 1
+            else:
+                if last_mode is not None:
+                    runs.append(current_run)
+                current_run = 1
+                last_mode = row.mode
             previous = row
-    total = rows_per_level * len(list(levels))
-    print(f"[generator] rows={total} bad_window={bad_window} bad_jump={bad_jump}")
-    return bad_window == 0 and bad_jump == 0
+
+    modes = gen.modes
+    apart_rate = modes.count(APART) / len(modes)
+    switches = sum(1 for a, b in zip(modes, modes[1:]) if a != b)
+    switch_rate = switches / (len(modes) - 1)
+    longest = max(runs) if runs else 1
+    print(f"[generator] rows={len(modes)} bad_window={bad_window} bad_sliver={bad_sliver} "
+          f"unreachable={unreachable}")
+    print(f"[pattern] apart={apart_rate * 100:.1f}% switches={switch_rate * 100:.1f}% "
+          f"longest_run={longest}")
+    return (bad_window == 0 and bad_sliver == 0 and unreachable == 0
+            and 0.32 <= apart_rate <= 0.62 and switch_rate >= 0.50 and longest <= 3)
 
 
 # --- test 2/3: simulated runs ------------------------------------------------
 def simulate(seed, skill, max_seconds=600.0, log=False,
              reaction=0.22, sight=340.0, vmax_human=760.0):
     """skill: 'perfect' teleports into the safe window; 'human' has a sight range,
-    a reaction delay, a lateral speed limit and the same 0.08 s smoothing as the game."""
+    a reaction delay and a lateral speed limit."""
     gen = Generator(seed)
     dt = 1.0 / 60.0
     rows = []
     distance_since_spawn = spacing(1) - speed(1) * 0.6
     rows_cleared = 0
-    rows_since_breather = 0
     elapsed = 0.0
     x = WIDTH * 0.3
-    vmax = 1500.0 if skill == "perfect" else vmax_human   # dp/s lateral speed
+    vmax = 4000.0 if skill == "perfect" else vmax_human
     radius = PLAYER_RADIUS * COLLISION_FORGIVENESS
-    pending = []          # (deliver_at, target) queue standing in for reaction time
+    scheduled = {}          # id(row) -> time the player will know its position
     known_target = WIDTH * 0.5
 
     while elapsed < max_seconds:
@@ -302,31 +356,30 @@ def simulate(seed, skill, max_seconds=600.0, log=False,
         sp = speed(level)
         spc = spacing(level)
 
-        # pick a target: centre of the safe window of the nearest not-yet-passed row
-        target = gen.last_window_center if gen.last_window_center >= 0 else WIDTH / 2
-        # The row that matters is the lowest one that has not passed the player band yet,
-        # including the row currently crossing it.
         if skill == "perfect":
             relevant = [r for r in rows if r.y <= PLAYER_Y + PLAYER_RADIUS]
             if relevant:
                 nearest = max(relevant, key=lambda r: r.y)
                 target = nearest.window_center + nearest.offset
+            else:
+                target = WIDTH / 2
         else:
-            visible = [r for r in rows if r.y + r.height >= PLAYER_Y - sight
-                       and r.y <= PLAYER_Y + PLAYER_RADIUS]
-            if visible:
-                nearest = max(visible, key=lambda r: r.y)
-                pending.append((elapsed + reaction, nearest.window_center + nearest.offset))
-            while pending and pending[0][0] <= elapsed:
-                known_target = pending.pop(0)[1]
+            live = [r for r in rows if r.y + r.height >= PLAYER_Y - sight
+                    and r.y <= PLAYER_Y + PLAYER_RADIUS]
+            if live:
+                nearest = max(live, key=lambda r: r.y)
+                if id(nearest) not in scheduled:
+                    scheduled[id(nearest)] = elapsed + reaction
+            for key in list(scheduled):
+                if scheduled[key] <= elapsed:
+                    del scheduled[key]
+                    known_target = nearest.window_center + nearest.offset if live else WIDTH / 2
             target = known_target
         target = clamp(target, PLAYER_RADIUS, WIDTH - PLAYER_RADIUS)
-        if skill == "perfect":
-            x = target
-        else:
-            dx = target - x
-            step = vmax * dt
-            x += clamp(dx, -step, step)
+
+        dx = target - x
+        step = vmax * dt
+        x += clamp(dx, -step, step)
         x = clamp(x, PLAYER_RADIUS, WIDTH - PLAYER_RADIUS)
 
         for row in rows:
@@ -343,7 +396,6 @@ def simulate(seed, skill, max_seconds=600.0, log=False,
             distance_since_spawn = 0.0
             rows.append(gen.spawn(level))
 
-        # collision
         for row in rows:
             top, bottom = row.y, row.y + row.height
             if bottom < PLAYER_Y - radius or top > PLAYER_Y + radius:
@@ -389,9 +441,10 @@ def run_preset(name):
 
 if __name__ == "__main__":
     requested = None
-    for i, arg in enumerate(sys.argv[1:]):
-        if arg == "--difficulty" and i + 2 <= len(sys.argv) - 1:
-            requested = sys.argv[i + 2]
+    args = sys.argv[1:]
+    for i, arg in enumerate(args):
+        if arg == "--difficulty" and i + 1 < len(args):
+            requested = args[i + 1]
         elif arg.startswith("--difficulty="):
             requested = arg.split("=", 1)[1]
     presets = [requested] if requested else ["easy", "normal", "hard"]

@@ -2,6 +2,8 @@ package io.github.parsa1012.mirrordash;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.os.Build;
+import android.os.Process;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -38,6 +40,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private Runnable firstTouchListener;
     private GameOverListener gameOverListener;
+
+    /** The surface was (re)created, so the next frame must be painted even while paused. */
+    private boolean forceFrame = true;
+    private boolean lastPaused;
 
     public interface GameOverListener {
         void onGameOver(int score, int rowsCleared);
@@ -100,12 +106,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        forceFrame = true;
         start();
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         engine.resize(width, height, getResources().getDisplayMetrics().density);
+        forceFrame = true;
     }
 
     @Override
@@ -206,8 +214,29 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         }
     }
 
+    /**
+     * Hardware canvas when the platform has one: the rows are paths and the bodies are
+     * scaled bitmaps, and both are dramatically cheaper through the GPU than through the
+     * software rasteriser. Falls back silently on API 21-25.
+     */
+    private Canvas lockSurface() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                Canvas hardware = surfaceHolder.lockHardwareCanvas();
+                if (hardware != null) {
+                    return hardware;
+                }
+            } catch (RuntimeException ignored) {
+                // Locked elsewhere or unsupported: use the software path below.
+            }
+        }
+        return surfaceHolder.lockCanvas();
+    }
+
     @Override
     public void run() {
+        // Draw at display priority so a busy UI thread cannot starve the game loop.
+        Process.setThreadPriority(Process.THREAD_PRIORITY_DISPLAY);
         long lastFrame = System.nanoTime();
         long nextDeadline = lastFrame;
         long fpsWindowStart = lastFrame;
@@ -254,20 +283,26 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
                 });
             }
 
+            boolean pausedNow = engine.isPaused();
+            boolean repaint = !pausedNow || pausedNow != lastPaused || forceFrame;
+            lastPaused = pausedNow;
             Canvas canvas = null;
-            try {
-                canvas = surfaceHolder.lockCanvas();
-                if (canvas != null) {
-                    renderer.draw(canvas, engine, fps, BuildConfig.DEBUG);
-                }
-            } catch (Exception ignored) {
-                // Surface went away mid frame; retry on the next iteration.
-            } finally {
-                if (canvas != null) {
-                    try {
-                        surfaceHolder.unlockCanvasAndPost(canvas);
-                    } catch (Exception ignored) {
-                        // Surface already destroyed.
+            if (repaint) {
+                try {
+                    canvas = lockSurface();
+                    if (canvas != null) {
+                        forceFrame = false;
+                        renderer.draw(canvas, engine, fps, BuildConfig.DEBUG);
+                    }
+                } catch (Exception ignored) {
+                    // Surface went away mid frame; retry on the next iteration.
+                } finally {
+                    if (canvas != null) {
+                        try {
+                            surfaceHolder.unlockCanvasAndPost(canvas);
+                        } catch (Exception ignored) {
+                            // Surface already destroyed.
+                        }
                     }
                 }
             }

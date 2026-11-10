@@ -1,7 +1,8 @@
 package io.github.parsa1012.mirrordash;
 
 /**
- * Central tuning table for the difficulty curve.
+ * Base tuning table for the difficulty curve. {@link Difficulty} scales these numbers, and
+ * the row pattern (together / apart) is produced by {@link GameEngine}.
  *
  * <p>Every gameplay number lives here so balancing never requires touching the engine.
  * The tables describe levels 1..5; past level 5 the values keep moving linearly with
@@ -16,17 +17,14 @@ public final class LevelConfig {
     private static final float[] SPEED_DP = {150f, 190f, 230f, 270f, 310f};
     private static final float[] SPACING_DP = {320f, 300f, 280f, 260f, 240f};
     private static final float[] GAP_DP = {96f, 92f, 88f, 84f, 80f};
-    private static final float[] TWO_GAP_CHANCE = {0f, 0.10f, 0.20f, 0.35f, 0.50f};
 
     private static final float SPEED_PER_LEVEL_DP = 40f;
     private static final float SPACING_PER_LEVEL_DP = -15f;
     private static final float GAP_PER_LEVEL_DP = -3f;
-    private static final float TWO_GAP_PER_LEVEL = 0.05f;
 
     private static final float SPEED_CAP_DP = 520f;
     private static final float SPACING_FLOOR_DP = 170f;
     private static final float GAP_FLOOR_DP = 78f;
-    private static final float TWO_GAP_CAP = 0.70f;
 
     /** Geometry shared by every row. */
     public static final float ROW_HEIGHT_DP = 28f;
@@ -57,10 +55,6 @@ public final class LevelConfig {
 
     public static float gapWidth(float density, float level) {
         return sample(GAP_DP, level, GAP_PER_LEVEL_DP, GAP_FLOOR_DP, false) * density;
-    }
-
-    public static float twoGapChance(float level) {
-        return sample(TWO_GAP_CHANCE, level, TWO_GAP_PER_LEVEL, TWO_GAP_CAP, true);
     }
 
     public static float rowHeight(float density) {
@@ -97,11 +91,6 @@ public final class LevelConfig {
             return 0f;
         }
         return budget * (0.35f + 0.65f * clamp01((level - 1f) / 5f));
-    }
-
-    /** How far the required position may jump between two consecutive rows. */
-    public static float maxJump(float width, float level) {
-        return width * (0.34f + 0.28f * clamp01((level - 1f) / 5f));
     }
 
     /** Chance that a row's gaps slide sideways. Introduced at level 4. */

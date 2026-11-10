@@ -37,6 +37,7 @@ public class Renderer {
     private final Paint trailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint particlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glowPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+    private final Paint backgroundPaint = new Paint();
     private final Paint scorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint floaterPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint countdownPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -49,8 +50,17 @@ public class Renderer {
     private final Path rowPath = new Path();
 
     private Theme theme = Theme.of(true);
-    private Bitmap cyanGlow;
-    private Bitmap pinkGlow;
+    private Bitmap blueGlow;
+    private Bitmap redGlow;
+    /**
+     * The grid, the centre axis and the flat background never change between frames, so they
+     * are painted once into this bitmap and blitted in one call: that is the difference
+     * between ~30 line draws per frame and one copy, which is what keeps the frame budget.
+     */
+    private Bitmap background;
+    private int backgroundWidth;
+    private int backgroundHeight;
+    private boolean backgroundNight;
     private float density = 1f;
     private boolean ready;
 
@@ -140,8 +150,12 @@ public class Renderer {
         debugPaint.setTextSize(11f * density);
         debugPaint.setTypeface(typeRegular);
 
-        cyanGlow = makeGlow(theme.playerCyan);
-        pinkGlow = makeGlow(theme.playerPink);
+        blueGlow = makeGlow(theme.playerBlue);
+        redGlow = makeGlow(theme.playerRed);
+        backgroundPaint.setFilterBitmap(false);
+        backgroundPaint.setDither(false);
+        // Dropped, not recycled: the render thread may still be painting with the old bitmap.
+        background = null;
         ready = true;
     }
 
@@ -159,12 +173,11 @@ public class Renderer {
             dt = 0.016f;
         }
 
-        canvas.drawColor(theme.background);
+        drawBackground(canvas, width, height);
 
         canvas.save();
         canvas.translate(engine.shakeX(), engine.shakeY());
 
-        drawGrid(canvas, width, height);
         drawRows(canvas, engine.rows(), width);
         drawParticles(canvas, engine);
 
@@ -172,8 +185,8 @@ public class Renderer {
         Player right = engine.rightPlayer();
         drawTrail(canvas, left);
         drawTrail(canvas, right);
-        drawBody(canvas, left, cyanGlow);
-        drawBody(canvas, right, pinkGlow);
+        drawBody(canvas, left, blueGlow);
+        drawBody(canvas, right, redGlow);
 
         drawFloaters(canvas, engine);
         canvas.restore();
@@ -194,6 +207,22 @@ public class Renderer {
         }
     }
 
+    /** Blits the cached background, rebuilding it when the surface or the theme changes. */
+    private void drawBackground(Canvas canvas, int width, int height) {
+        if (background == null || backgroundWidth != width || backgroundHeight != height
+                || backgroundNight != theme.night) {
+            background = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
+            backgroundWidth = width;
+            backgroundHeight = height;
+            backgroundNight = theme.night;
+            Canvas target = new Canvas(background);
+            target.drawColor(theme.background);
+            drawGrid(target, width, height);
+        }
+        canvas.drawBitmap(background, 0f, 0f, backgroundPaint);
+    }
+
+    /** Only ever drawn into the cached background bitmap, never directly on screen. */
     private void drawGrid(Canvas canvas, int width, int height) {
         float step = GRID_STEP_DP * density;
         for (float x = step - 2f * step; x < width + 2f * step; x += step) {
@@ -265,7 +294,7 @@ public class Renderer {
         if (flash <= 0.01f) {
             return;
         }
-        flashPaint.setColor(withAlpha(theme.playerPink, (int) (90f * flash)));
+        flashPaint.setColor(withAlpha(theme.playerRed, (int) (90f * flash)));
         canvas.drawRect(0f, 0f, width, height, flashPaint);
     }
 
