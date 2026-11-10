@@ -1,32 +1,32 @@
-run=42894916536
-commit=ff6bec365f4ec13b7144896dd09b1d52b3b2e66e
+run=42899979025
+commit=7c1a36270e32fb4fccb18f613e8aff44933ea88f
 release_step_outcome=success
 build_tools=/usr/local/lib/android/sdk/build-tools/37.0.0
-Tue Nov 10 20:25:17 UTC 2026
+Tue Nov 10 20:57:00 UTC 2026
 --- release build log (tail) ---
 > Task :mirror:mergeReleaseNativeDebugMetadata NO-SOURCE
 > Task :mirror:checkReleaseDuplicateClasses
-> Task :mirror:processReleaseManifestForPackage
 > Task :mirror:desugarReleaseFileDependencies
 > Task :mirror:mergeReleaseStartupProfile
+> Task :mirror:processReleaseManifestForPackage
+> Task :mirror:mergeExtDexRelease
 > Task :mirror:mergeReleaseArtProfile
 > Task :mirror:mergeReleaseShaders
-> Task :mirror:mergeExtDexRelease
 > Task :mirror:compileReleaseShaders NO-SOURCE
 > Task :mirror:generateReleaseAssets UP-TO-DATE
 > Task :mirror:mergeReleaseAssets
 > Task :mirror:compressReleaseAssets
 > Task :mirror:extractReleaseVersionControlInfo
+> Task :mirror:processReleaseJavaRes NO-SOURCE
 note: generating mipmap/ic_launcher_round with config "anydpi-v26" for round icon compatibility.
 
-> Task :mirror:processReleaseJavaRes NO-SOURCE
 > Task :mirror:processReleaseResources
-> Task :mirror:collectReleaseDependencies
 > Task :mirror:mergeReleaseJavaResource
 > Task :mirror:compileReleaseJavaWithJavac
 > Task :mirror:generateReleaseLintVitalReportModel
 > Task :mirror:dexBuilderRelease
 > Task :mirror:mergeReleaseGlobalSynthetics
+> Task :mirror:collectReleaseDependencies
 > Task :mirror:sdkReleaseDependencyData
 > Task :mirror:optimizeReleaseResources
 > Task :mirror:validateSigningRelease
@@ -40,11 +40,11 @@ note: generating mipmap/ic_launcher_round with config "anydpi-v26" for round ico
 > Task :mirror:lintVitalReportRelease
 > Task :mirror:lintVitalRelease
 > Task :mirror:assembleRelease
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/release-1794342301027.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/release-1794344199642.json
 
-BUILD SUCCESSFUL in 18s
+BUILD SUCCESSFUL in 24s
 44 actionable tasks: 44 executed
---- mirror-dash-1.2.apk ---
+--- mirror-dash-1.3.apk ---
 V2 Signer: certificate DN: C=DE, OU=Development, O=Parsa1012, CN=Mirror Dash Dev Key
 V2 Signer: certificate SHA-256 digest: 09228d155ddceb4fbe9897406cf4576db9dfe0a449f4ef391c1aeaaf1227664c
 V2 Signer: certificate SHA-1 digest: 2c66c499112d62d00ce978701522d2a47b0aa545
@@ -54,7 +54,7 @@ WARNING: META-INF/version-control-info.textproto not protected by signature. Una
      1385  1981-01-01 01:01   META-INF/CERT.RSA
      2113  1981-01-01 01:01   META-INF/MANIFEST.MF
 ---------                     -------
-   340259                     26 files
+   408119                     26 files
 --- mirror-dash-debug.apk ---
 V2 Signer: certificate DN: C=DE, OU=Development, O=Parsa1012, CN=Mirror Dash Dev Key
 V2 Signer: certificate SHA-256 digest: 09228d155ddceb4fbe9897406cf4576db9dfe0a449f4ef391c1aeaaf1227664c
@@ -64,12 +64,13 @@ WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected
      1385  1981-01-01 01:01   META-INF/CERT.RSA
      2466  1981-01-01 01:01   META-INF/MANIFEST.MF
 ---------                     -------
-   353601                     26 files
+   422137                     26 files
 --- dist ---
-total 928
--rw-r--r-- 1 runner runner   3588 Nov 10 20:25 build-status.txt
--rw-r--r-- 1 runner runner  11987 Nov 10 20:24 demo-app-debug.apk
--rw-r--r-- 1 runner runner  56789 Nov 10 20:24 mirror-dash-1.0.apk
--rw-r--r-- 1 runner runner 243795 Nov 10 20:24 mirror-dash-1.1.apk
--rw-r--r-- 1 runner runner 309275 Nov 10 20:25 mirror-dash-1.2.apk
--rw-r--r-- 1 runner runner 319400 Nov 10 20:25 mirror-dash-debug.apk
+total 1348
+-rw-r--r-- 1 runner runner   3588 Nov 10 20:57 build-status.txt
+-rw-r--r-- 1 runner runner  11987 Nov 10 20:55 demo-app-debug.apk
+-rw-r--r-- 1 runner runner  56789 Nov 10 20:55 mirror-dash-1.0.apk
+-rw-r--r-- 1 runner runner 243795 Nov 10 20:55 mirror-dash-1.1.apk
+-rw-r--r-- 1 runner runner 309275 Nov 10 20:55 mirror-dash-1.2.apk
+-rw-r--r-- 1 runner runner 366108 Nov 10 20:57 mirror-dash-1.3.apk
+-rw-r--r-- 1 runner runner 376929 Nov 10 20:57 mirror-dash-debug.apk
