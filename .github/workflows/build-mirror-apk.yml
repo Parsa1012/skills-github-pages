@@ -125,6 +125,30 @@ jobs:
             mirror/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
 
+      - name: Publish GitHub release
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          FILES="dist/mirror-dash-1.0.apk dist/mirror-dash-debug.apk"
+          for f in $FILES; do
+            if [ ! -f "$f" ]; then
+              echo "missing $f, skipping release"
+              exit 0
+            fi
+          done
+          TAG="v1.0"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$TAG" $FILES --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" $FILES \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "آینه ۱٫۰ — Mirror Dash" \
+              --notes $'بازی «آینه» نسخه ۱٫۰\n\nنصب: فایل mirror-dash-1.0.apk را دانلود کنید و روی گوشی باز کنید (اجازه‌ی نصب از منابع ناشناس لازم است)،\nیا با adb: adb install -r mirror-dash-1.0.apk\n\nاندروید ۵ و بالاتر · بدون هیچ مجوز · بدون اینترنت'
+          fi
+
       - name: Commit published files
         if: always()
         run: |
