@@ -2,6 +2,7 @@ package io.github.parsa1012.mirrordash;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
@@ -54,6 +55,8 @@ public class Renderer {
     private Bitmap redGlow;
     private Bitmap blueSphere;
     private Bitmap redSphere;
+    private final Bitmap nightScene;
+    private final Bitmap dayScene;
     /**
      * The grid, the centre axis and the flat background never change between frames, so they
      * are painted once into this bitmap and blitted in one call: that is the difference
@@ -74,6 +77,8 @@ public class Renderer {
     private String fpsText = "";
 
     public Renderer(Context context) {
+        nightScene = BitmapFactory.decodeResource(context.getResources(), R.drawable.scene_night);
+        dayScene = BitmapFactory.decodeResource(context.getResources(), R.drawable.scene_day);
         typeBold = load(context, "fonts/Vazirmatn-Bold.ttf", Typeface.BOLD);
         typeRegular = load(context, "fonts/Vazirmatn-Regular.ttf", Typeface.NORMAL);
     }
@@ -221,7 +226,13 @@ public class Renderer {
             backgroundNight = theme.night;
             Canvas target = new Canvas(background);
             target.drawColor(theme.background);
-            drawGrid(target, width, height);
+            Bitmap scene = theme.night ? nightScene : dayScene;
+            if (scene != null) {
+                Paint backdropPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+                target.drawBitmap(scene, null, new RectF(0, 0, width, height), backdropPaint);
+            } else {
+                drawGrid(target, width, height);
+            }
         }
         canvas.drawBitmap(background, 0f, 0f, backgroundPaint);
     }

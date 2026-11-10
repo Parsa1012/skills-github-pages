@@ -12,6 +12,7 @@ public final class GamePrefs {
     private static final String KEY_BEST_PREFIX = "best_";
     private static final String KEY_MIGRATED = "records_split";
     private static final String KEY_SOUND = "sound_enabled";
+    private static final String KEY_MUSIC = "music_enabled";
     private static final String KEY_NIGHT = "night_mode";
     private static final String KEY_DIFFICULTY = "difficulty";
     private static final String KEY_LANG = "language";
@@ -24,6 +25,9 @@ public final class GamePrefs {
      */
     public static void migrate(Context context) {
         SharedPreferences prefs = prefs(context);
+        if (!prefs.contains(KEY_MUSIC)) {
+            prefs.edit().putBoolean(KEY_MUSIC, prefs.getBoolean(KEY_SOUND, true)).apply();
+        }
         if (prefs.getBoolean(KEY_MIGRATED, false)) {
             return;
         }
@@ -49,6 +53,15 @@ public final class GamePrefs {
 
     public static void setSoundEnabled(Context context, boolean enabled) {
         prefs(context).edit().putBoolean(KEY_SOUND, enabled).apply();
+    }
+
+    /** On upgrade, inherit the old combined sound setting until the player changes music. */
+    public static boolean musicEnabled(Context context) {
+        return prefs(context).getBoolean(KEY_MUSIC, soundEnabled(context));
+    }
+
+    public static void setMusicEnabled(Context context, boolean enabled) {
+        prefs(context).edit().putBoolean(KEY_MUSIC, enabled).apply();
     }
 
     public static boolean nightMode(Context context) {

@@ -50,6 +50,7 @@ public class GameActivity extends Activity {
     private Difficulty difficulty;
     private boolean nightMode;
     private boolean soundEnabled;
+    private boolean musicEnabled;
 
     private LinearLayout hud;
     private TextView pauseButton;
@@ -71,6 +72,8 @@ public class GameActivity extends Activity {
     private TextView chipDay;
     private TextView chipSoundOn;
     private TextView chipSoundOff;
+    private TextView chipMusicOn;
+    private TextView chipMusicOff;
 
     private LinearLayout pausePanel;
     private LinearLayout gameOverPanel;
@@ -93,7 +96,8 @@ public class GameActivity extends Activity {
 
         nightMode = GamePrefs.nightMode(this);
         soundEnabled = GamePrefs.soundEnabled(this);
-        music = new MusicPlayer(this, soundEnabled);
+        musicEnabled = GamePrefs.musicEnabled(this);
+        music = new MusicPlayer(this, musicEnabled);
         music.setScene(MusicPlayer.Scene.MENU);
         difficulty = GamePrefs.difficulty(this);
         theme = Theme.of(nightMode);
@@ -270,12 +274,12 @@ public class GameActivity extends Activity {
 
     private void addMenuTools(FrameLayout overlay) {
         LinearLayout tools = new LinearLayout(this);
-        tools.setOrientation(LinearLayout.HORIZONTAL);
+        tools.setOrientation(LinearLayout.VERTICAL);
         tools.setPadding(dp(12), dp(12), dp(12), 0);
         addTool(tools, "i", strings.infoDescription, () -> showTextDialog(strings.helpTitle, strings.helpBody));
         addTool(tools, "A", strings.languageDescription, () -> showLanguageDialog());
         addTool(tools, "@", strings.aboutDescription, () -> showTextDialog(strings.aboutTitle,
-                strings.creatorLabel + ": " + strings.creatorName + "\n" + strings.emailLabel + ":\n" + strings.creatorEmail + "\n\n" + strings.aboutBody + "\n\n" + strings.versionLabel + ": 1.3"));
+                strings.creatorLabel + ": " + strings.creatorName + "\n" + strings.emailLabel + ":\n" + strings.creatorEmail + "\n\n" + strings.aboutBody + "\n\n" + strings.versionLabel + ": 1.5"));
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END);
         overlay.addView(tools, lp);
     }
@@ -286,7 +290,7 @@ public class GameActivity extends Activity {
         b.setTextColor(theme.textPrimary);
         b.setBackground(buttonBackground(theme.chipBackground, theme.panelStroke));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(48), dp(48));
-        lp.setMarginStart(dp(6));
+        lp.topMargin = dp(6);
         row.addView(b, lp);
         b.setOnClickListener(v -> action.run());
     }
@@ -369,6 +373,11 @@ public class GameActivity extends Activity {
         card.addView(sectionLabel(strings.sound), wrapWithTopMargin(16));
         card.addView(chipRow(chipSoundOn, chipSoundOff), wrapWithTopMargin(8));
 
+        chipMusicOn = chipLabel(strings.on);
+        chipMusicOff = chipLabel(strings.off);
+        card.addView(sectionLabel(strings.music), wrapWithTopMargin(16));
+        card.addView(chipRow(chipMusicOn, chipMusicOff), wrapWithTopMargin(8));
+
         card.addView(sectionLabel(strings.records), wrapWithTopMargin(16));
         recordsText = label("", 13, false, theme.textSecondary);
         card.addView(recordsText, wrapWithTopMargin(8));
@@ -427,6 +436,9 @@ public class GameActivity extends Activity {
             }
         });
 
+        chipMusicOn.setOnClickListener(v -> selectMusic(true));
+        chipMusicOff.setOnClickListener(v -> selectMusic(false));
+
         overlay.addView(scroller, matchParent());
         root.addView(overlay, matchParent());
     }
@@ -473,6 +485,8 @@ public class GameActivity extends Activity {
         styleChip(chipDay, !nightMode);
         styleChip(chipSoundOn, soundEnabled);
         styleChip(chipSoundOff, !soundEnabled);
+        styleChip(chipMusicOn, musicEnabled);
+        styleChip(chipMusicOff, !musicEnabled);
     }
 
     private void styleChip(TextView chip, boolean selected) {
@@ -497,6 +511,12 @@ public class GameActivity extends Activity {
         soundEnabled = enabled;
         GamePrefs.setSoundEnabled(this, enabled);
         gameView.setSoundEnabled(enabled);
+        refreshSettingChips();
+    }
+
+    private void selectMusic(boolean enabled) {
+        musicEnabled = enabled;
+        GamePrefs.setMusicEnabled(this, enabled);
         music.setEnabled(enabled);
         refreshSettingChips();
     }
@@ -686,9 +706,11 @@ public class GameActivity extends Activity {
         return shape;
     }
 
-    private GradientDrawable menuBackground() {
-        return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[] {theme.menuOverlayTop, theme.menuOverlayBottom});
+    private Drawable menuBackground() {
+        Drawable image = getResources().getDrawable(nightMode ? R.drawable.scene_night : R.drawable.scene_day);
+        GradientDrawable shade = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                nightMode ? new int[] {0x66061020, 0x99061020} : new int[] {0x55ffffff, 0x99f2f5fb});
+        return new android.graphics.drawable.LayerDrawable(new Drawable[] {image, shade});
     }
 
     private static int blend(int from, int to, float amount) {

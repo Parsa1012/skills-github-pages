@@ -35,6 +35,7 @@ public final class Strings {
     public String night;
     public String day;
     public String sound;
+    public String music;
     public String on;
     public String off;
 
@@ -107,7 +108,8 @@ public final class Strings {
         s.appearance = "حالت نمایش";
         s.night = "شب";
         s.day = "روز";
-        s.sound = "صدا";
+        s.sound = "جلوه‌های صوتی";
+        s.music = "موسیقی";
         s.on = "روشن";
         s.off = "خاموش";
 
@@ -138,7 +140,7 @@ public final class Strings {
                         + "۵) رکورد\n"
                         + "رکورد هر درجه سختی جدا ذخیره می‌شود؛ هر سه را در تنظیمات می‌بینید.\n\n"
                         + "۶) صدا و تم\n"
-                        + "از تنظیمات صدا را خاموش کنید یا بین حالت شب و روز جابه‌جا شوید.\n\n"
+                        + "در تنظیمات، جلوه‌های صوتی و موسیقی را جداگانه خاموش یا روشن کنید و حالت شب یا روز را انتخاب کنید.\n\n"
                         + "۷) پایان بازی\n"
                         + "برخورد هر یک از دو توپ با دیوار بازی را تمام می‌کند، پس مراقب هر دو "
                         + "نیمه باشید.";
@@ -187,7 +189,8 @@ public final class Strings {
         s.appearance = "Theme";
         s.night = "Night";
         s.day = "Day";
-        s.sound = "Sound";
+        s.sound = "Sound effects";
+        s.music = "Music";
         s.on = "On";
         s.off = "Off";
 
@@ -220,7 +223,7 @@ public final class Strings {
                         + "Each difficulty keeps its own record; all three are shown in "
                         + "Settings.\n\n"
                         + "6) Sound and theme\n"
-                        + "Turn the sound off, or switch between night and day, in Settings.\n\n"
+                        + "Control sound effects and music independently, and choose night or day, in Settings.\n\n"
                         + "7) Game over\n"
                         + "If either ball touches a wall the run ends, so watch both halves.";
         s.languageTitle = "Language";
@@ -268,7 +271,8 @@ public final class Strings {
         s.appearance = "المظهر";
         s.night = "ليل";
         s.day = "نهار";
-        s.sound = "الصوت";
+        s.sound = "المؤثرات الصوتية";
+        s.music = "الموسيقى";
         s.on = "مفعّل";
         s.off = "مغلق";
 
@@ -298,7 +302,7 @@ public final class Strings {
                         + "٥) الأرقام القياسية\n"
                         + "لكل درجة صعوبة رقمها القياسي المستقل، وتجد الثلاثة في الإعدادات.\n\n"
                         + "٦) الصوت والمظهر\n"
-                        + "يمكنك إغلاق الصوت أو التبديل بين الليل والنهار من الإعدادات.\n\n"
+                        + "تحكّم بالمؤثرات الصوتية والموسيقى كل على حدة، واختر الليل أو النهار من الإعدادات.\n\n"
                         + "٧) نهاية اللعبة\n"
                         + "اصطدام أي من الكرتين بالجدار ينهي الجولة، فاحترس للنصفين.";
         s.languageTitle = "اللغة";
@@ -345,7 +349,8 @@ public final class Strings {
         s.appearance = "Tema";
         s.night = "Noche";
         s.day = "Día";
-        s.sound = "Sonido";
+        s.sound = "Efectos de sonido";
+        s.music = "Música";
         s.on = "Sí";
         s.off = "No";
 
@@ -378,7 +383,7 @@ public final class Strings {
                         + "5) Récords\n"
                         + "Cada dificultad guarda su propio récord; los tres están en Ajustes.\n\n"
                         + "6) Sonido y tema\n"
-                        + "Puedes silenciar el sonido o cambiar entre noche y día en Ajustes.\n\n"
+                        + "Controla los efectos y la música por separado, y elige noche o día en Ajustes.\n\n"
                         + "7) Fin del juego\n"
                         + "Si cualquiera de las dos bolas toca un muro, la partida termina: "
                         + "vigila las dos mitades.";
