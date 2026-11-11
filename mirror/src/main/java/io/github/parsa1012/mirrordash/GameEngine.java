@@ -144,6 +144,7 @@ public class GameEngine {
     private float distanceSinceSpawn;
     private int rowsCleared;
     private int rowsSpawned;
+    private int visualRowsSpawned;
     /** NaN until the finish line enters from above, one row-spacing after the last obstacle. */
     private float finishY = Float.NaN;
     public float finishY() { return finishY; }
@@ -268,6 +269,7 @@ public class GameEngine {
     private void resetRunData() {
         rowsCleared = 0;
         rowsSpawned = 0;
+        visualRowsSpawned = 0;
         worldSeconds = 0;
         java.util.Arrays.fill(coinVisible, false);
         coinEvents = 0;
@@ -751,6 +753,8 @@ public class GameEngine {
             rowsSinceBreather++;
         }
 
+        visualRowsSpawned++;
+        row.shimmer = mode != Mode.PRACTICE && visualRowsSpawned >= 9 && visualRowsSpawned % 6 == 3;
         rows.add(row);
         lastWindowCenter = row.windowCenter;
     }

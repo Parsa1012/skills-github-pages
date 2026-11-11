@@ -85,7 +85,11 @@ public class GameActivity extends Activity {
     private TextView chipMusicOn;
     private TextView chipMusicOff;
 
-    private LinearLayout pausePanel;
+    private View pausePanel;
+    private TextView pauseSound, pauseMusic;
+    private SeekBar pauseSoundVolume, pauseMusicVolume;
+    private android.widget.Switch pauseEffects, settingsEffects;
+    private SeekBar settingsSoundVolume, settingsMusicVolume;
     private View gameOverPanel;
     private TextView gameOverTitle;
     private TextView gameOverScore;
@@ -161,6 +165,7 @@ public class GameActivity extends Activity {
         hideSystemBars();
         refreshLabels();
         refreshSettingChips();
+        if (!GamePrefs.helpSeen(this)) root.post(() -> { if (!isFinishing()) showHelp(); });
         if (initialStageBonus) Toast.makeText(this, tr("مرحلهٔ اول باز است: ۲۰ سکه هدیه!", "Stage 1 unlocked: 20 bonus coins!", "المرحلة الأولى مفتوحة: ٢٠ عملة هدية!", "Nivel 1 desbloqueado: ¡20 monedas de regalo!"), Toast.LENGTH_LONG).show();
 
         if (reopenSettingsAfterRecreate) {
@@ -334,7 +339,7 @@ public class GameActivity extends Activity {
         LinearLayout tools = new LinearLayout(this);
         tools.setOrientation(LinearLayout.VERTICAL);
         tools.setPadding(dp(12), dp(12), dp(12), 0);
-        addTool(tools, "i", strings.infoDescription, () -> showTextDialog(strings.helpTitle, strings.helpBody));
+        addTool(tools, "i", strings.infoDescription, () -> showHelp());
         addTool(tools, "A", strings.languageDescription, () -> showLanguageDialog());
         addTool(tools, "@", strings.aboutDescription, () -> showTextDialog(strings.aboutTitle,
                 strings.creatorLabel + ": " + strings.creatorName + "\n" + strings.emailLabel + ":\n" + strings.creatorEmail + "\n\n" + strings.aboutBody + "\n\n" + strings.versionLabel + ": " + BuildConfig.VERSION_NAME));
@@ -351,6 +356,46 @@ public class GameActivity extends Activity {
         lp.topMargin = dp(6);
         row.addView(b, lp);
         b.setOnClickListener(v -> action.run());
+    }
+
+    /** Readable, scrollable first-run guide, also available from the menu's info button. */
+    private void showHelp() {
+        gameView.playUiMenu();
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(20), dp(12), dp(20), dp(18));
+        content.setBackgroundColor(0xfff4f7fc);
+        helpSection(content, "01  " + tr("کنترل دو توپ", "Control both balls", "التحكم بالكرتين", "Controla las dos bolas"),
+            tr("انگشت را روی صفحه به چپ و راست بکش. توپ دوم آینه‌ای حرکت می‌کند؛ هر دو توپ باید از شکاف رد شوند.", "Drag left or right anywhere on the screen. The second ball mirrors the first; both must pass through the openings.", "اسحب إصبعك يميناً ويساراً. تتحرك الكرة الثانية بصورة معكوسة؛ يجب أن تعبر الكرتان الفتحات.", "Desliza el dedo a izquierda o derecha. La segunda bola se mueve en espejo; ambas deben cruzar los huecos."));
+        helpSection(content, "02  " + tr("آینه‌ها و نشانه‌ها", "Mirrors and markers", "المرايا والعلامات", "Espejos y señales"),
+            tr("آینه‌ها از بالا می‌آیند. یک شکاف یعنی توپ‌ها نزدیک وسط؛ دو شکاف یعنی دورتر از هم. فلش‌ها حرکت افقی و دو خط باز و بسته شدن شکاف را نشان می‌دهند. بعضی آینه‌ها در ادامه برق می‌زنند.", "Mirrors descend from above. One gap brings the balls together; two gaps pull them apart. Arrows mark sliding gaps and two bars mark expanding gaps. A few later mirrors shimmer.", "تنزل المرايا من الأعلى. فتحة واحدة تقرّب الكرتين وفتحتان تبعدانهما. الأسهم للحركة الجانبية والخطان للفتحة المتغيرة. بعض المرايا تلمع لاحقاً.", "Los espejos bajan. Un hueco junta las bolas y dos las separan. Las flechas indican movimiento lateral y las barras, apertura variable. Algunos espejos brillan más adelante."));
+        helpSection(content, "03  " + tr("حالت‌های بازی", "Game modes", "أوضاع اللعب", "Modos de juego"),
+            tr("بی‌پایان: تا برخورد بازی کن و برای هر سختی رکورد جدا ثبت کن. مرحله‌ای: از همهٔ آینه‌ها و خط پایان عبور کن تا مرحلهٔ بعد باز شود. تمرین: برخورد پایان بازی نیست و رکورد ثبت نمی‌شود.", "Endless: survive to set a separate record for each difficulty. Stages: clear all mirrors and cross the finish to unlock the next stage. Practice: collisions do not end the run or set records.", "اللامتناهي: سجّل رقماً لكل صعوبة. المراحل: اعبر المرايا وخط النهاية لفتح المرحلة التالية. التدريب: الاصطدام لا ينهي اللعب ولا يسجل رقماً.", "Infinito: consigue un récord por dificultad. Niveles: supera los espejos y cruza la meta para desbloquear el siguiente. Práctica: los choques no terminan la partida ni cuentan como récord."));
+        helpSection(content, "04  " + tr("سکه و فروشگاه", "Coins and shop", "العملات والمتجر", "Monedas y tienda"),
+            tr("سکه‌های مرحله‌ای را با هر کدام از توپ‌ها جمع کن. باز شدن هر مرحله ۲۰ سکه جایزه دارد. برد دوبارهٔ مراحل ۱ و ۲ به‌ترتیب ۵ و ۸ سکه می‌دهد؛ مراحل ۳ تا ۵ در مسیر سکه دارند. در فروشگاه ظاهر، قیمت و رکورد لازم هر آیتم را ببین.", "Collect stage coins with either ball. Each newly unlocked stage gives 20 coins. Replaying stages 1 and 2 gives 5 and 8 coins on victory; stages 3–5 have coins along the way. Check each shop item's price and required record.", "اجمع العملات بأي كرة. فتح كل مرحلة يمنح ٢٠ عملة. الفوز مجدداً في ١ و٢ يمنح ٥ و٨؛ المراحل ٣–٥ فيها عملات في المسار. تحقق من السعر والرقم المطلوب في المتجر.", "Recoge monedas con cualquiera de las bolas. Cada nivel desbloqueado da 20 monedas. Al repetir los niveles 1 y 2 ganas 5 y 8 al vencer; los niveles 3–5 tienen monedas en el camino. Consulta el precio y el récord de cada artículo."));
+        helpSection(content, "05  " + tr("توقف و تنظیمات", "Pause and settings", "الإيقاف والإعدادات", "Pausa y ajustes"),
+            tr("با دکمهٔ توقف، بازی را ادامه بده، دوباره شروع کن یا به منو برو. صدا، موسیقی و کاهش جلوه‌ها در توقف و تنظیمات در دسترس‌اند. برای بازگشت به این راهنما دکمهٔ i منو را بزن.", "Pause to resume, restart or return to the menu. Sound, music and reduced effects are available in pause and settings. Reopen this guide with the menu's i button.", "أوقف اللعبة للمتابعة أو الإعادة أو العودة للقائمة. الصوت والموسيقى وتقليل المؤثرات متاحة في الإيقاف والإعدادات. اضغط i لفتح الدليل مجدداً.", "Pausa para continuar, reiniciar o volver al menú. El sonido, la música y los efectos reducidos están en pausa y ajustes. Pulsa i en el menú para volver a esta guía."));
+        ScrollView scroll = new ScrollView(this); scroll.setFillViewport(false); scroll.addView(content);
+        android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this, android.app.AlertDialog.THEME_DEVICE_DEFAULT_LIGHT)
+                .setTitle(strings.helpTitle).setView(scroll).setPositiveButton(tr("متوجه شدم", "Got it", "فهمت", "Entendido"), (d, w) -> {}).create();
+        dialog.setOnDismissListener(d -> GamePrefs.setHelpSeen(this));
+        dialog.setOnShowListener(d -> dialog.getWindow().getDecorView().setLayoutDirection(lang.rtl() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR));
+        dialog.show();
+    }
+
+    private void helpSection(LinearLayout container, String title, String body) {
+        LinearLayout section = new LinearLayout(this);
+        section.setOrientation(LinearLayout.VERTICAL); section.setPadding(dp(15), dp(12), dp(15), dp(12));
+        GradientDrawable bg = new GradientDrawable(); bg.setColor(0xffffffff); bg.setCornerRadius(dp(14)); bg.setStroke(dp(1), 0xffd7e4f5);
+        section.setBackground(bg);
+        TextView heading = label(title, 16, true, 0xff194c80); heading.setGravity(Gravity.START);
+        TextView text = label(body, 14, false, 0xff29384b); text.setGravity(Gravity.START);
+        text.setTextDirection(lang.rtl() ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
+        section.addView(heading, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams paragraph = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); paragraph.topMargin = dp(6);
+        section.addView(text, paragraph);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); params.bottomMargin = dp(10);
+        container.addView(section, params);
     }
 
     private void showTextDialog(String title, String body) {
@@ -637,7 +682,7 @@ public class GameActivity extends Activity {
         int width = Math.max(dp(180), Math.min(dp(380), getResources().getDisplayMetrics().widthPixels - dp(48)));
         LinearLayout.LayoutParams itemsParams = new LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT);
         itemsParams.topMargin = dp(18); content.addView(shopItems, itemsParams);
-        content.addView(label("Twemoji artwork © Twitter, Inc. and contributors · CC BY 4.0\nhttps://twemoji.twitter.com/", 11, false, theme.textSecondary), wrapWithTopMargin(18));
+        content.addView(label("Fluent UI Emoji © Microsoft · MIT License\nhttps://github.com/microsoft/fluentui-emoji", 11, false, theme.textSecondary), wrapWithTopMargin(18));
         TextView back = secondaryAction(strings.back);
         LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(width, dp(50)); backParams.topMargin = dp(20);
         content.addView(back, backParams);
@@ -663,13 +708,18 @@ public class GameActivity extends Activity {
             LinearLayout item = new LinearLayout(this); item.setOrientation(LinearLayout.VERTICAL);
             item.setGravity(Gravity.CENTER); item.setPadding(dp(14), dp(12), dp(14), dp(12));
             item.setClickable(true); item.setFocusable(true);
-            item.setBackground(tileBackground(0xff293e61, 0xff1e293f, selected ? 0xffffd45c : 0xff607b9e));
+            int badgeColor = selected ? 0xffffd45c : owned ? 0xff51e3b0 : 0xff71849c;
+            item.setBackground(tileBackground(owned ? 0xff224c4c : 0xff293e61, owned ? 0xff193c40 : 0xff1e293f, badgeColor));
+            final android.graphics.Paint badgePaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            badgePaint.setColor(badgeColor); badgePaint.setStyle(android.graphics.Paint.Style.STROKE); badgePaint.setStrokeWidth(dp(2));
             View preview = new View(this) {
                 @Override protected void onDraw(android.graphics.Canvas canvas) {
                     super.onDraw(canvas);
                     float x = getWidth() / 2f, y = getHeight() / 2f, r = dp(25);
                     shopArt.preview(canvas, choice, x - dp(34), y, r, BallPalette.left(choice, theme));
                     shopArt.preview(canvas, choice, x + dp(34), y, r, BallPalette.right(choice, theme));
+                    canvas.drawCircle(x - dp(34), y, r + dp(3), badgePaint);
+                    canvas.drawCircle(x + dp(34), y, r + dp(3), badgePaint);
                 }
             };
             item.addView(preview, new LinearLayout.LayoutParams(dp(180), dp(62)));
@@ -726,6 +776,7 @@ public class GameActivity extends Activity {
     private void addAccessibilityControls(LinearLayout card) {
         card.addView(sectionLabel(tr("دسترس‌پذیری", "Accessibility", "إمكانية الوصول", "Accesibilidad")), wrapWithTopMargin(16));
         android.widget.Switch effects = new android.widget.Switch(this);
+        settingsEffects = effects;
         effects.setText(tr("کاهش جلوه‌های تصویری", "Reduce visual effects", "تقليل المؤثرات البصرية", "Reducir efectos visuales"));
         effects.setTextColor(theme.textPrimary);
         effects.setChecked(GamePrefs.reducedEffects(this));
@@ -761,6 +812,7 @@ public class GameActivity extends Activity {
         caption.setText(strings.volume + ": " + initial + "%");
         card.addView(caption, wrapWithTopMargin(8));
         SeekBar bar = new SeekBar(this);
+        if (isMusic) settingsMusicVolume = bar; else settingsSoundVolume = bar;
         bar.setMax(100);
         bar.setProgress(initial);
         bar.setContentDescription((isMusic ? strings.music : strings.sound) + " — " + strings.volume);
@@ -920,6 +972,9 @@ public class GameActivity extends Activity {
 
     private void showSettings() {
         gameView.playUiMenu();
+        settingsSoundVolume.setProgress(GamePrefs.volume(this, false));
+        settingsMusicVolume.setProgress(GamePrefs.volume(this, true));
+        settingsEffects.setChecked(GamePrefs.reducedEffects(this));
         settingsOverlay.setVisibility(View.VISIBLE);
         settingsOverlay.setAlpha(0f);
         settingsOverlay.animate().alpha(1f).setDuration(180).start();
@@ -939,42 +994,75 @@ public class GameActivity extends Activity {
     // ---------------------------------------------------------------- pause / over
 
     private void buildPausePanel() {
-        LinearLayout panel = card(theme, dp(320));
-
-        TextView title = label(strings.pausedTitle, 22, true, theme.textPrimary);
+        LinearLayout panel = card(theme, dp(340));
+        panel.setVisibility(View.VISIBLE);
+        TextView title = label(strings.pausedTitle, 24, true, theme.textPrimary);
         panel.addView(title);
+        panel.addView(label(tr("تنظیمات سریع", "QUICK SETTINGS", "إعدادات سريعة", "AJUSTES RÁPIDOS"), 12, true, theme.playerBlue), wrapWithTopMargin(12));
 
-        TextView resume = primaryAction(strings.resume);
-        panel.addView(resume, fullWidthButtonParams(20));
-        resume.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hidePause();
-            }
+        pauseSound = secondaryAction(""); pauseMusic = secondaryAction("");
+        LinearLayout toggles = new LinearLayout(this); toggles.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams toggleParams = new LinearLayout.LayoutParams(0, dp(48), 1f); toggleParams.setMarginEnd(dp(4));
+        toggles.addView(pauseSound, toggleParams);
+        LinearLayout.LayoutParams otherParams = new LinearLayout.LayoutParams(0, dp(48), 1f); otherParams.setMarginStart(dp(4));
+        toggles.addView(pauseMusic, otherParams);
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); rowParams.topMargin = dp(8);
+        panel.addView(toggles, rowParams);
+        pauseSound.setOnClickListener(v -> { selectSound(!soundEnabled); refreshPauseControls(); });
+        pauseMusic.setOnClickListener(v -> { selectMusic(!musicEnabled); refreshPauseControls(); });
+        pauseSoundVolume = addPauseVolume(panel, false);
+        pauseMusicVolume = addPauseVolume(panel, true);
+
+        pauseEffects = new android.widget.Switch(this);
+        pauseEffects.setText(tr("کاهش جلوه‌های تصویری", "Reduce visual effects", "تقليل المؤثرات البصرية", "Reducir efectos visuales"));
+        pauseEffects.setTextColor(theme.textSecondary); pauseEffects.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        LinearLayout.LayoutParams switchParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); switchParams.topMargin = dp(8);
+        panel.addView(pauseEffects, switchParams);
+        pauseEffects.setOnCheckedChangeListener((button, checked) -> {
+            GamePrefs.setReducedEffects(this, checked); applyAccessibility();
         });
+        TextView resume = primaryAction(strings.resume); panel.addView(resume, fullWidthButtonParams(16));
+        resume.setOnClickListener(v -> hidePause());
+        TextView restart = secondaryAction(strings.restart); panel.addView(restart, fullWidthButtonParams(8));
+        restart.setOnClickListener(v -> { hidePause(); startGame(); });
+        TextView menu = secondaryAction(strings.menu); panel.addView(menu, fullWidthButtonParams(8));
+        menu.setOnClickListener(v -> { hidePause(); goToMenu(); });
 
-        TextView restart = secondaryAction(strings.restart);
-        panel.addView(restart, fullWidthButtonParams(10));
-        restart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hidePause();
-                startGame();
+        LinearLayout centre = new LinearLayout(this); centre.setGravity(Gravity.CENTER); centre.setOrientation(LinearLayout.VERTICAL);
+        centre.addView(panel, new LinearLayout.LayoutParams(Math.max(dp(180), Math.min(dp(340), getResources().getDisplayMetrics().widthPixels - dp(48))), ViewGroup.LayoutParams.WRAP_CONTENT));
+        ScrollView wrapper = new ScrollView(this); wrapper.setFillViewport(true); wrapper.addView(centre); wrapper.setVisibility(View.GONE);
+        pausePanel = wrapper;
+        FrameLayout.LayoutParams wrapperParams = matchParent(); wrapperParams.topMargin = dp(12); wrapperParams.bottomMargin = dp(12);
+        root.addView(wrapper, wrapperParams);
+    }
+
+    private SeekBar addPauseVolume(LinearLayout panel, boolean isMusic) {
+        TextView caption = label("", 13, false, theme.textSecondary); caption.setGravity(Gravity.START);
+        LinearLayout.LayoutParams captionParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); captionParams.topMargin = dp(9);
+        panel.addView(caption, captionParams);
+        SeekBar bar = new SeekBar(this); bar.setMax(100);
+        bar.setContentDescription((isMusic ? strings.music : strings.sound) + " — " + strings.volume);
+        panel.addView(bar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)));
+        caption.setText((isMusic ? strings.music : strings.sound) + " · " + GamePrefs.volume(this, isMusic) + "%");
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar b, int value, boolean fromUser) {
+                caption.setText((isMusic ? strings.music : strings.sound) + " · " + value + "%");
+                if (!fromUser) return;
+                GamePrefs.setVolume(GameActivity.this, isMusic, value);
+                if (isMusic) music.setVolume(value); else gameView.setSoundVolume(value);
             }
+            public void onStartTrackingTouch(SeekBar b) {}
+            public void onStopTrackingTouch(SeekBar b) {}
         });
+        return bar;
+    }
 
-        TextView menu = secondaryAction(strings.menu);
-        panel.addView(menu, fullWidthButtonParams(10));
-        menu.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hidePause();
-                goToMenu();
-            }
-        });
-
-        pausePanel = panel;
-        root.addView(panel, centeredPanelParams());
+    private void refreshPauseControls() {
+        pauseSound.setText("♪  " + strings.sound + ": " + (soundEnabled ? strings.on : strings.off));
+        pauseMusic.setText("♫  " + strings.music + ": " + (musicEnabled ? strings.on : strings.off));
+        pauseSoundVolume.setProgress(GamePrefs.volume(this, false));
+        pauseMusicVolume.setProgress(GamePrefs.volume(this, true));
+        pauseEffects.setChecked(GamePrefs.reducedEffects(this));
     }
 
     private void buildGameOverPanel() {
@@ -1224,6 +1312,7 @@ public class GameActivity extends Activity {
             return;
         }
         gameView.pauseGame();
+        refreshPauseControls();
         gameView.playUiMenu();
         music.setPaused(true);
         hud.setVisibility(View.GONE);

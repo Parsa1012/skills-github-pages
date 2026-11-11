@@ -18,6 +18,7 @@ public class ObstacleRow {
     float y;
     float height;
     boolean scored;
+    boolean shimmer;
 
     /** Feasible player x-window this row allows, used for fairness and jump limiting. */
     float windowCenter;
@@ -43,6 +44,7 @@ public class ObstacleRow {
         this.height = height;
         this.gapCount = 0;
         this.scored = false;
+        this.shimmer = false;
         this.wave = false;
         this.pulse = false;
         this.pulseAmplitude = 0f;

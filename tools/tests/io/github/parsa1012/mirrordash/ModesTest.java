@@ -110,6 +110,18 @@ public final class ModesTest {
         sweep.setAccessible(true);
         check((Boolean) sweep.invoke(null, -40f, 0f, 40f, 0f, 10f), "fast crossing collected");
         check(!(Boolean) sweep.invoke(null, -40f, 11f, 40f, 11f, 10f), "outside circle not collected");
+        for (GameEngine.Mode effectMode : new GameEngine.Mode[]{GameEngine.Mode.ENDLESS, GameEngine.Mode.STAGES, GameEngine.Mode.PRACTICE}) {
+            GameEngine effects = playing(effectMode, 2);
+            set(effects, "visualRowsSpawned", 8); set(effects, "distanceSinceSpawn", 10000f);
+            effects.update(1.0 / 60);
+            check(effects.rows().size() > 0, "effect row spawned");
+            ObstacleRow ninth = effects.rows().get(effects.rows().size() - 1);
+            check(ninth.shimmer == (effectMode != GameEngine.Mode.PRACTICE), "only stage and endless shimmer at row 9");
+            set(effects, "visualRowsSpawned", 9); set(effects, "distanceSinceSpawn", 10000f);
+            effects.update(1.0 / 60);
+            check(!effects.rows().get(effects.rows().size() - 1).shimmer, "effect is sparse");
+            effects.startRun(); check(getInt(effects, "visualRowsSpawned") == 0, "shimmer schedule resets");
+        }
         java.lang.reflect.Method speed = GameEngine.class.getDeclaredMethod("speedFor", float.class);
         speed.setAccessible(true);
         float previous = 0;

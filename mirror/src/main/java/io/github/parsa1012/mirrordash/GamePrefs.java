@@ -25,6 +25,10 @@ public final class GamePrefs {
      */
     public static void migrate(Context context) {
         SharedPreferences prefs = prefs(context);
+        // A truly new install sees the guide; existing installs are not interrupted.
+        if (!prefs.contains("help_seen")) {
+            prefs.edit().putBoolean("help_seen", prefs.getBoolean(KEY_MIGRATED, false)).apply();
+        }
         if (!prefs.contains(KEY_MUSIC)) {
             prefs.edit().putBoolean(KEY_MUSIC, prefs.getBoolean(KEY_SOUND, true)).apply();
         }
@@ -33,6 +37,9 @@ public final class GamePrefs {
         }
         prefs.edit().putBoolean(KEY_MIGRATED, true).apply();
     }
+
+    public static boolean helpSeen(Context c) { return prefs(c).getBoolean("help_seen", false); }
+    public static void setHelpSeen(Context c) { prefs(c).edit().putBoolean("help_seen", true).apply(); }
 
     public static int best(Context context, Difficulty difficulty) {
         return prefs(context).getInt(bestKey(difficulty), 0);

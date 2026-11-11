@@ -31,6 +31,12 @@ public final class ProgressTest {
         c.store.putBoolean("sound_enabled", false);
         c.store.putInt("best_EASY", 200);
         GamePrefs.migrate(c);
+        check(!GamePrefs.helpSeen(c), "new install shows guide");
+        GamePrefs.setHelpSeen(c); GamePrefs.migrate(c);
+        check(GamePrefs.helpSeen(c), "guide acknowledgement persists");
+        App existing = new App(); existing.store.putBoolean("records_split", true);
+        GamePrefs.migrate(existing);
+        check(GamePrefs.helpSeen(existing), "existing installations not interrupted by onboarding");
         check(!GamePrefs.musicEnabled(c) && !GamePrefs.soundEnabled(c));
         GamePrefs.setSoundEnabled(c, true);
         check(GamePrefs.soundEnabled(c) && !GamePrefs.musicEnabled(c));

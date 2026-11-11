@@ -51,6 +51,9 @@ public class Renderer {
     private final Paint coinTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final RectF rowRect = new RectF();
+    private final RectF gapRect = new RectF();
+    private final Path rowPath = new Path();
+    private final Paint shimmerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF glowBounds = new RectF();
 
     private Theme theme = Theme.of(true);
@@ -224,7 +227,7 @@ public class Renderer {
         rowEdgePaint.setColor(darkStage ? 0xffc9e9ff : withAlpha(theme.rowEdge, 140));
         markerPaint.setColor(darkStage ? 0xffffffff : (theme.night ? 0xFFEAF2FF : 0xFF173861));
         markerPaint.setStrokeWidth((clearMarkers ? 3.5f : 1.6f) * density);
-        drawRows(canvas, engine.rows(), width, darkStage);
+        drawRows(canvas, engine.rows(), width, darkStage, !engine.reducedEffects());
         drawFinishLine(canvas, engine, width);
         drawCoins(canvas, engine);
         if (!engine.reducedEffects()) drawParticles(canvas, engine);
@@ -363,7 +366,8 @@ public class Renderer {
      * Each row is one continuous wall with its openings punched out (even-odd path).
      * Drawing the solid pieces separately made the row read as floating pills.
      */
-    private void drawRows(Canvas canvas, List<ObstacleRow> rows, int width, boolean darkStage) {
+    private void drawRows(Canvas canvas, List<ObstacleRow> rows, int width, boolean darkStage, boolean effects) {
+        float outerCorner = 6f * density;
         for (int i = 0; i < rows.size(); i++) {
             ObstacleRow row = rows.get(i);
             float top = row.y;
@@ -372,13 +376,38 @@ public class Renderer {
                 continue;
             }
 
-            // Draw collision segments directly. Dynamic even-odd paths were repeatedly
-            // tessellated by the GPU as moving rows crossed the screen at high speed.
-            int segmentCount = row.segments(width);
-            for (int k = 0; k < segmentCount; k++) {
-                rowRect.set(row.segmentEdges[2 * k], top, row.segmentEdges[2 * k + 1], bottom);
-                canvas.drawRect(rowRect, rowFillPaint);
-                canvas.drawRect(rowRect, rowEdgePaint);
+            rowPath.reset();
+            rowPath.setFillType(Path.FillType.EVEN_ODD);
+            rowRect.set(0f, top, width, bottom);
+            rowPath.addRoundRect(rowRect, outerCorner, outerCorner, Path.Direction.CW);
+
+            float gapCorner = row.height * 0.5f;
+            for (int g = 0; g < row.gapCount; g++) {
+                float center = row.currentGapCenter(g);
+                float half = row.currentGapWidth(g) * 0.5f;
+                gapRect.set(center - half, top, center + half, bottom);
+                rowPath.addRoundRect(gapRect, gapCorner, gapCorner, Path.Direction.CW);
+            }
+
+            canvas.drawPath(rowPath, rowFillPaint);
+            canvas.drawPath(rowPath, rowEdgePaint);
+            if (effects && row.shimmer) {
+                // A subtle travelling glint confined to one solid segment; no gameplay changes.
+                int segments = row.segments(width);
+                int best = -1; float longest = 0f;
+                for (int k = 0; k < segments; k++) {
+                    float length = row.segmentEdges[k * 2 + 1] - row.segmentEdges[k * 2];
+                    if (length > longest) { longest = length; best = k; }
+                }
+                if (best >= 0 && longest > 20f * density) {
+                    float left = row.segmentEdges[best * 2], right = row.segmentEdges[best * 2 + 1];
+                    float margin = Math.min(longest * .2f, 8f * density);
+                    float phase = (float) ((Math.sin(row.y / (70f * density)) + 1.0) * .5);
+                    float x = left + margin + (right - left - 2f * margin) * phase;
+                    shimmerPaint.setColor(0x88ddfaff);
+                    shimmerPaint.setStrokeWidth(2f * density);
+                    canvas.drawLine(x, top + row.height * .25f, x, bottom - row.height * .25f, shimmerPaint);
+                }
             }
             if ((row.wave || row.pulse) && top > canvas.getHeight() * .30f && top < canvas.getHeight() * .8f) {
                 markerPaint.setColor(0xfffef8d9);
@@ -386,8 +415,9 @@ public class Renderer {
                 markerPaint.setColor(darkStage ? Color.WHITE : (theme.night ? 0xFFEAF2FF : 0xFF173861));
             }
             if (row.wave || row.pulse) {
+                int count = row.segments(width);
                 float bestLeft = 0f, bestRight = 0f;
-                for (int k = 0; k < segmentCount; k++) {
+                for (int k = 0; k < count; k++) {
                     float l = row.segmentEdges[2 * k], r = row.segmentEdges[2 * k + 1];
                     if (r - l > bestRight - bestLeft) { bestLeft = l; bestRight = r; }
                 }
