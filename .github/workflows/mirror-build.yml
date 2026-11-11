@@ -52,7 +52,7 @@ jobs:
   # Publishes only the specifically requested build; ordinary pushes and PRs stay read-only.
   publish:
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/arena/323dcaf0-skills-github-pages' && github.event.head_commit.message == 'Publish Twin Balls 1.9.3'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/arena/323dcaf0-skills-github-pages' && startsWith(github.event.head_commit.message, 'Publish Twin Balls 1.9.3')
     runs-on: ubuntu-latest
     permissions:
       contents: write
