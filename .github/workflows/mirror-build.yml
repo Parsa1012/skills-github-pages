@@ -42,10 +42,30 @@ jobs:
           "$tools/apksigner" verify --verbose --print-certs "$apk" | tee /tmp/signature.txt
           grep -qi '09228d155ddceb4fbe9897406cf4576db9dfe0a449f4ef391c1aeaaf1227664c' /tmp/signature.txt
           "$tools/aapt" dump badging "$apk" | tee /tmp/badging.txt
-          grep -q "package: name='io.github.parsa1012.mirrordash' versionCode='12' versionName='1.9.2'" /tmp/badging.txt
+          grep -q "package: name='io.github.parsa1012.mirrordash' versionCode='13' versionName='1.9.3'" /tmp/badging.txt
       - uses: actions/upload-artifact@v4
         with:
           name: twin-balls-apks
           path: |
             mirror/build/outputs/apk/debug/*.apk
             mirror/build/outputs/apk/release/*.apk
+  # Publishes only the specifically requested build; ordinary pushes and PRs stay read-only.
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/arena/323dcaf0-skills-github-pages' && github.event.head_commit.message == 'Publish Twin Balls 1.9.3'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: twin-balls-apks
+          path: apks
+      - name: Publish APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create v1.9.3 'apks/release/mirror-release.apk#mirror-dash-1.9.3.apk' \
+            --target "$GITHUB_SHA" --title 'توپ‌های همزاد ۱٫۹٫۳' \
+            --notes 'مراحل دشوارتر و گوی‌های قدرت سه‌ثانیه‌ای. نسخهٔ انتشار با امضای قبلی ساخته شده است.'

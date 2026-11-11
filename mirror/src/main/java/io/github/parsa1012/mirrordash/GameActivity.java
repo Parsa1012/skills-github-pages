@@ -55,8 +55,6 @@ public class GameActivity extends Activity {
     private boolean musicEnabled;
 
     private LinearLayout hud;
-    private LinearLayout powerBar;
-    private final TextView[] powerButtons = new TextView[4];
     private TextView pauseButton;
     private TextView hudBest;
 
@@ -143,6 +141,13 @@ public class GameActivity extends Activity {
         buildPausePanel();
         buildGameOverPanel();
 
+        gameView.setPowerListener(power -> {
+            String name = power == GameEngine.POWER_SHIELD ? tr("سپر", "Shield", "درع", "Escudo")
+                    : power == GameEngine.POWER_SLOW ? tr("کندی زمان", "Slow motion", "إبطاء", "Cámara lenta")
+                    : tr("راهنمای مسیر فعلی", "Current-path guide", "دليل المسار الحالي", "Guía actual");
+            Toast.makeText(this, name + tr(" — ۳ ثانیه", " — 3 seconds", " — ٣ ثوانٍ", " — 3 segundos"), Toast.LENGTH_SHORT).show();
+        });
+
         gameView.setGameOverListener(new GameView.GameOverListener() {
             @Override
             public void onGameOver(int score, int rowsCleared, long millis) {
@@ -203,49 +208,6 @@ public class GameActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.gravity = Gravity.TOP;
         root.addView(hud, params);
-        buildPowerBar();
-    }
-
-    private void buildPowerBar() {
-        powerBar = new LinearLayout(this);
-        powerBar.setOrientation(LinearLayout.HORIZONTAL);
-        powerBar.setPadding(dp(12), 0, dp(12), 0);
-        powerBar.setVisibility(View.GONE);
-        String[] names = {"", tr("سپر", "Shield", "درع", "Escudo"), tr("کندی", "Slow", "إبطاء", "Lento"), tr("راهنما", "Guide", "دليل", "Guía")};
-        for (int i = 1; i <= 3; i++) {
-            final int power = i;
-            TextView button = actionBase(names[i] + " · 1", 12, true);
-            button.setTextColor(0xfff5fbff);
-            button.setBackground(buttonBackground(0xee273a5b, 0xff536f97));
-            button.setContentDescription(names[i] + tr("؛ یک بار در هر مرحله", "; one use per stage", "؛ مرة واحدة في كل مرحلة", "; un uso por nivel"));
-            LinearLayout.LayoutParams item = new LinearLayout.LayoutParams(0, dp(42), 1f);
-            if (i > 1) item.setMarginStart(dp(5));
-            powerBar.addView(button, item);
-            powerButtons[i] = button;
-            button.setOnClickListener(v -> {
-                if (gameView.engine().state() != GameEngine.State.PLAYING || gameView.engine().isPaused()) {
-                    Toast.makeText(this, tr("پس از شروع بازی استفاده کن", "Use after the game starts", "استخدمها بعد بدء اللعب", "Úsalo al comenzar"), Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                gameView.requestPower(power);
-                button.setEnabled(false);
-                button.setAlpha(.45f);
-                gameView.playUiClick();
-                if (power == 3) Toast.makeText(this, tr("راهنما مسیر فعلی را نشان می‌دهد؛ موانع متحرک تغییر می‌کنند", "Guide shows the current gap; moving obstacles can change", "الدليل يعرض الفتحة الحالية؛ العوائق المتحركة تتغير", "La guía muestra el hueco actual; los obstáculos se mueven"), Toast.LENGTH_LONG).show();
-            });
-        }
-        FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP);
-        barParams.topMargin = dp(75);
-        root.addView(powerBar, barParams);
-    }
-
-    private void resetPowerBar() {
-        for (int i = 1; i <= 3; i++) {
-            boolean unlocked = i <= selectedStage;
-            powerButtons[i].setVisibility(unlocked ? View.VISIBLE : View.GONE);
-            powerButtons[i].setEnabled(unlocked);
-            powerButtons[i].setAlpha(1f);
-        }
     }
 
     private void buildHint() {
@@ -587,7 +549,7 @@ public class GameActivity extends Activity {
         LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT);
         gridParams.topMargin = dp(24);
         centre.addView(stageGrid, gridParams);
-        TextView powerInfo = label(tr("هر قدرت یک‌بار در هر مرحله: سپر از مرحلهٔ ۱، کندی از ۲ و راهنمای مسیر فعلی از ۳. مسیر موانع متحرک ممکن است تغییر کند.", "One use per stage: shield from stage 1, slow from 2, current-path guide from 3. Moving gaps can change.", "استخدام واحد لكل مرحلة: الدرع من ١، الإبطاء من ٢ والدليل من ٣. قد تتغير الفتحات المتحركة.", "Un uso por nivel: escudo desde el 1, cámara lenta desde el 2 y guía desde el 3. Los huecos móviles pueden cambiar."), 12, false, theme.textSecondary);
+        TextView powerInfo = label(tr("گوی زرد اختیاری را با یکی از توپ‌ها بگیر؛ هر قدرت ۳ ثانیه است. ○ سپر (از مرحلهٔ ۱)، ⧖ کندی (از ۲)، ◇ راهنمای مسیر فعلی (از ۳). شکاف‌های متحرک تغییر می‌کنند.", "Collect an optional yellow orb with either ball. Each power lasts 3 seconds: ○ shield (stage 1+), ⧖ slow (2+), ◇ current-path guide (3+). Moving gaps change.", "التقط الكرة الصفراء بإحدى الكرتين. كل قوة تدوم ٣ ثوانٍ: ○ الدرع من ١، ⧖ الإبطاء من ٢، ◇ الدليل من ٣. الفتحات المتحركة تتغير.", "Recoge el orbe amarillo con una bola. Cada poder dura 3 segundos: ○ escudo (nivel 1+), ⧖ lento (2+), ◇ guía actual (3+). Los huecos móviles cambian."), 12, false, theme.textSecondary);
         centre.addView(powerInfo, wrapWithTopMargin(14));
         TextView back = secondaryAction(strings.back);
         LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(width, dp(50));
@@ -1102,8 +1064,6 @@ public class GameActivity extends Activity {
         hideGameOver();
         pauseOnResume = false;
         hud.setVisibility(View.VISIBLE);
-        if (mode == GameEngine.Mode.STAGES) { resetPowerBar(); powerBar.setVisibility(View.VISIBLE); }
-        else powerBar.setVisibility(View.GONE);
         hudBest.setTextColor(mode == GameEngine.Mode.STAGES && selectedStage >= 2 ? 0xffdcefff : theme.textMuted);
         if (!hintConsumed) {
             hint.setVisibility(View.VISIBLE);
@@ -1128,7 +1088,6 @@ public class GameActivity extends Activity {
         stageOverlay.setVisibility(View.GONE);
         music.setScene(MusicPlayer.Scene.MENU);
         hud.setVisibility(View.GONE);
-        powerBar.setVisibility(View.GONE);
         hint.setVisibility(View.GONE);
         menuOverlay.setVisibility(View.VISIBLE);
         scrim.setVisibility(View.GONE);
@@ -1149,7 +1108,6 @@ public class GameActivity extends Activity {
         gameView.playUiMenu();
         music.setPaused(true);
         hud.setVisibility(View.GONE);
-        powerBar.setVisibility(View.GONE);
         scrim.setVisibility(View.VISIBLE);
         fadeIn(scrim);
         panelIn(pausePanel);
@@ -1160,7 +1118,6 @@ public class GameActivity extends Activity {
         music.setPaused(false);
         hideCard(pausePanel);
         hud.setVisibility(View.VISIBLE);
-        if (mode == GameEngine.Mode.STAGES) powerBar.setVisibility(View.VISIBLE);
         gameView.resumeGame();
     }
 
@@ -1212,7 +1169,6 @@ public class GameActivity extends Activity {
         }
 
         hud.setVisibility(View.GONE);
-        powerBar.setVisibility(View.GONE);
         hideHint();
         scrim.setVisibility(View.VISIBLE);
         fadeIn(scrim);

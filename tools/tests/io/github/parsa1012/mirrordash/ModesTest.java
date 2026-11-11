@@ -75,13 +75,21 @@ public final class ModesTest {
         check(shield.activatePower(GameEngine.POWER_SHIELD) && !shield.activatePower(GameEngine.POWER_SHIELD), "shield once");
         wall = new ObstacleRow(); wall.begin(shield.leftPlayer().y - 10, 28); shield.rows().add(wall);
         shield.update(1.0 / 60);
-        check(shield.state() == GameEngine.State.PLAYING && !shield.shieldArmed(), "shield saves exactly one hit");
+        check(shield.state() == GameEngine.State.PLAYING && shield.shieldArmed(), "shield survives impact while timer remains");
         shield.update(1.0 / 60);
         check(shield.state() == GameEngine.State.PLAYING, "saved obstacle does not instantly hit again");
         shield.rows().clear();
         wall = new ObstacleRow(); wall.begin(shield.leftPlayer().y - 10, 28); shield.rows().add(wall);
         shield.update(1.0 / 60);
-        check(shield.state() == GameEngine.State.DYING, "second obstacle is lethal");
+        check(shield.state() == GameEngine.State.PLAYING && shield.shieldArmed(), "shield covers additional hits for its duration");
+        shield.setPaused(true); float shieldTime = shield.shieldRemaining(); shield.update(1);
+        check(shield.shieldRemaining() == shieldTime, "shield timer pauses");
+        shield.setPaused(false);
+        for (int i = 0; i < 185; i++) { shield.rows().clear(); set(shield, "distanceSinceSpawn", 0f); shield.update(1.0 / 60); }
+        check(!shield.shieldArmed(), "shield expires after three seconds");
+        wall = new ObstacleRow(); wall.begin(shield.leftPlayer().y - 10, 28); shield.rows().add(wall);
+        shield.update(1.0 / 60);
+        check(shield.state() == GameEngine.State.DYING, "collision lethal after shield expires");
         shield.startRun(); set(shield, "state", GameEngine.State.PLAYING);
         check(shield.activatePower(GameEngine.POWER_SHIELD), "power reset on restart");
 
@@ -113,6 +121,73 @@ public final class ModesTest {
         guide.setPaused(false);
         for (int i = 0; i < 300; i++) { guide.rows().clear(); set(guide, "distanceSinceSpawn", 0f); guide.update(1.0 / 60); }
         check(guide.guideRemaining() == 0 && !guide.guideWindow(bounds), "guide expires");
+
+        // The real pickup path: each orb spawns once, may be ignored, and either ball can collect it.
+        GameEngine pickups = playing(GameEngine.Mode.STAGES, 3);
+        set(pickups, "rowsSpawned", 2); set(pickups, "distanceSinceSpawn", 10000f);
+        pickups.update(1.0 / 60);
+        check(pickups.pickupVisible(1) && !pickups.pickupVisible(2), "shield orb spawned");
+        Field xs = GameEngine.class.getDeclaredField("pickupX"), ys = GameEngine.class.getDeclaredField("pickupY");
+        xs.setAccessible(true); ys.setAccessible(true);
+        ((float[]) xs.get(pickups))[1] = pickups.rightPlayer().x;
+        ((float[]) ys.get(pickups))[1] = pickups.rightPlayer().y;
+        pickups.rows().clear(); set(pickups, "distanceSinceSpawn", 0f);
+        pickups.update(1.0 / 60);
+        check(!pickups.pickupVisible(1) && pickups.shieldArmed(), "right ball collects shield");
+        check(pickups.consumePickupEvent() == 1 && pickups.consumePickupEvent() == 0, "pickup event once");
+        check(pickups.shieldRemaining() == 3f, "shield lasts three real seconds");
+        set(pickups, "rowsSpawned", 6); set(pickups, "distanceSinceSpawn", 10000f);
+        pickups.update(1.0 / 60);
+        check(pickups.pickupVisible(2), "slow orb spawned");
+        ((float[]) xs.get(pickups))[2] = pickups.leftPlayer().x;
+        ((float[]) ys.get(pickups))[2] = pickups.leftPlayer().y;
+        pickups.rows().clear(); set(pickups, "distanceSinceSpawn", 0f);
+        pickups.update(1.0 / 60);
+        check(pickups.consumePickupEvent() == 2 && pickups.slowRemaining() == 3f, "left ball collects 3-second slow");
+        set(pickups, "rowsSpawned", 10); set(pickups, "distanceSinceSpawn", 10000f);
+        pickups.update(1.0 / 60);
+        check(pickups.pickupVisible(3), "guide orb spawned");
+        ((float[]) xs.get(pickups))[3] = pickups.leftPlayer().x;
+        ((float[]) ys.get(pickups))[3] = pickups.leftPlayer().y;
+        pickups.rows().clear(); set(pickups, "distanceSinceSpawn", 0f);
+        pickups.update(1.0 / 60);
+        check(pickups.consumePickupEvent() == 3 && pickups.guideRemaining() == 3f, "guide lasts 3 seconds");
+        pickups.startRun();
+        check(!pickups.pickupVisible(1) && !pickups.pickupVisible(2) && !pickups.pickupVisible(3)
+                && !pickups.shieldArmed() && pickups.guideRemaining() == 0, "restart clears orbs and powers");
+        GameEngine missed = playing(GameEngine.Mode.STAGES, 1);
+        set(missed, "rowsSpawned", 2); set(missed, "distanceSinceSpawn", 10000f); missed.update(1.0 / 60);
+        ((float[]) ys.get(missed))[1] = 900;
+        missed.rows().clear(); set(missed, "distanceSinceSpawn", 0f); missed.update(1.0 / 60);
+        check(!missed.pickupVisible(1) && !missed.shieldArmed(), "missed pickup disappears without activation");
+        GameEngine locked = playing(GameEngine.Mode.STAGES, 1);
+        set(locked, "rowsSpawned", 6); set(locked, "distanceSinceSpawn", 10000f); locked.update(1.0 / 60);
+        check(!locked.pickupVisible(2), "locked pickup does not appear");
+
+        // Same-frame shield collection is resolved before lethal collision.
+        GameEngine simultaneous = playing(GameEngine.Mode.STAGES, 1);
+        set(simultaneous, "rowsSpawned", 2); set(simultaneous, "distanceSinceSpawn", 10000f);
+        simultaneous.update(1.0 / 60);
+        ((float[]) xs.get(simultaneous))[1] = simultaneous.leftPlayer().x;
+        ((float[]) ys.get(simultaneous))[1] = simultaneous.leftPlayer().y;
+        simultaneous.rows().clear(); set(simultaneous, "distanceSinceSpawn", 0f);
+        wall = new ObstacleRow(); wall.begin(simultaneous.leftPlayer().y - 10, 28); simultaneous.rows().add(wall);
+        simultaneous.update(1.0 / 60);
+        check(simultaneous.shieldArmed() && simultaneous.state() == GameEngine.State.PLAYING, "pickup before collision");
+        java.lang.reflect.Method sweep = GameEngine.class.getDeclaredMethod("sweptCircle",
+                float.class, float.class, float.class, float.class, float.class);
+        sweep.setAccessible(true);
+        check((Boolean) sweep.invoke(null, -40f, 0f, 40f, 0f, 10f), "fast horizontal crossing collected");
+        check(!(Boolean) sweep.invoke(null, -40f, 11f, 40f, 11f, 10f), "outside circular pickup not collected");
+        java.lang.reflect.Method speed = GameEngine.class.getDeclaredMethod("speedFor", float.class);
+        speed.setAccessible(true);
+        float previous = 0;
+        for (int number = 2; number <= 5; number++) {
+            GameEngine difficultyCheck = playing(GameEngine.Mode.STAGES, number);
+            float value = (Float) speed.invoke(difficultyCheck, 8f);
+            check(value > previous, "stage speeds strictly increase through stage 5");
+            previous = value;
+        }
 
         java.lang.reflect.Method hitRect = GameEngine.class.getDeclaredMethod("circleHitsRect",
                 float.class, float.class, float.class, float.class, float.class, float.class, float.class);

@@ -71,21 +71,30 @@ public class GameEngine {
     private float impactX, impactY, impactTimer;
     public static final int POWER_SHIELD = 1, POWER_SLOW = 2, POWER_GUIDE = 3;
     private final boolean[] powerUsed = new boolean[4];
-    private boolean shieldArmed;
-    private float slowRemaining, guideRemaining;
+    private float shieldRemaining, slowRemaining, guideRemaining;
+    private int pickupEvent;
+    private final boolean[] pickupVisible = new boolean[4];
+    private final float[] pickupX = new float[4], pickupY = new float[4];
+    /** One optional orb per available type; all move at the current world speed. */
+    public boolean pickupVisible(int type) { return type >= 1 && type <= 3 && pickupVisible[type]; }
+    public float pickupX(int type) { return pickupX[type]; }
+    public float pickupY(int type) { return pickupY[type]; }
+    public float pickupRadius() { return 10f * density; }
+    public float shieldRemaining() { return shieldRemaining; }
+    public int consumePickupEvent() { int event = pickupEvent; pickupEvent = 0; return event; }
     private double worldSeconds;
-    public boolean shieldArmed() { return shieldArmed; }
+    public boolean shieldArmed() { return shieldRemaining > 0f; }
     public float slowRemaining() { return slowRemaining; }
     public float guideRemaining() { return guideRemaining; }
     public int stageNumber() { return stage; }
-    /** Stage 1 grants shield, stage 2 adds slow motion, stage 3 adds the current-path guide. */
+    /** Only collected stage orbs can activate these powers. Each type appears at most once. */
     public boolean activatePower(int power) {
         if (mode != Mode.STAGES || state != State.PLAYING || paused || power < 1 || power > 3
                 || power > stage || powerUsed[power]) return false;
         powerUsed[power] = true;
-        if (power == POWER_SHIELD) shieldArmed = true;
-        if (power == POWER_SLOW) slowRemaining = 4f;
-        if (power == POWER_GUIDE) guideRemaining = 4f;
+        if (power == POWER_SHIELD) shieldRemaining = 3f;
+        if (power == POWER_SLOW) slowRemaining = 3f;
+        if (power == POWER_GUIDE) guideRemaining = 3f;
         return true;
     }
     private volatile int hitBall;
@@ -137,6 +146,7 @@ public class GameEngine {
     private float density = 1f;
 
     private float targetX;
+    private float previousLeftX, previousRightX;
     private boolean touchActive;
 
     private double elapsedSeconds;
@@ -269,9 +279,11 @@ public class GameEngine {
         rowsSpawned = 0;
         worldSeconds = 0;
         java.util.Arrays.fill(powerUsed, false);
-        shieldArmed = false;
+        shieldRemaining = 0;
         slowRemaining = 0;
         guideRemaining = 0;
+        java.util.Arrays.fill(pickupVisible, false);
+        pickupEvent = 0;
         finishY = Float.NaN;
         stageCompleted = false;
         hitBall = 0;
@@ -387,10 +399,13 @@ public class GameEngine {
                 break;
             case PLAYING:
                 runSeconds += dtValue;
+                previousLeftX = leftPlayer.x;
+                previousRightX = rightPlayer.x;
                 updatePlayers(dt);
                 // The power runs in real game time; it slows world translation and gap motion,
                 // but never the player's finger or elapsed-time score.
                 float worldDt = slowRemaining > 0f ? dt * .55f : dt;
+                shieldRemaining = Math.max(0f, shieldRemaining - dt);
                 slowRemaining = Math.max(0f, slowRemaining - dt);
                 guideRemaining = Math.max(0f, guideRemaining - dt);
                 updateWorld(worldDt, true);
@@ -462,6 +477,24 @@ public class GameEngine {
             }
         }
 
+        for (int type = 1; type <= 3; type++) {
+            if (!pickupVisible[type]) continue;
+            float previousY = pickupY[type];
+            pickupY[type] += speed * dt;
+            float reach = pickupRadius() + leftPlayer.radius;
+            // Sweep relative motion of both orb and player, including fast horizontal swipes.
+            float oldY = leftPlayer.y - previousY, newY = leftPlayer.y - pickupY[type];
+            boolean leftTouch = sweptCircle(previousLeftX - pickupX[type], oldY,
+                    leftPlayer.x - pickupX[type], newY, reach);
+            boolean rightTouch = sweptCircle(previousRightX - pickupX[type], oldY,
+                    rightPlayer.x - pickupX[type], newY, reach);
+            if (lethal && (leftTouch || rightTouch)) {
+                pickupVisible[type] = false;
+                if (activatePower(type)) pickupEvent = type;
+            } else if (pickupY[type] > height + reach) {
+                pickupVisible[type] = false;
+            }
+        }
         if (!Float.isNaN(finishY)) finishY += speed * dt;
         distanceSinceSpawn += speed * dt;
         if (distanceSinceSpawn >= spacing) {
@@ -473,15 +506,24 @@ public class GameEngine {
             } else if (rows.size() < MAX_ROWS) {
                 distanceSinceSpawn = 0f;
                 spawnRow(level);
-                if (mode == Mode.STAGES) rowsSpawned++;
+                if (mode == Mode.STAGES) {
+                    rowsSpawned++;
+                    // An optional orb halfway between this row and the next. It follows
+                    // the last row's feasible centre; it never changes obstacle geometry.
+                    int type = rowsSpawned == 3 ? POWER_SHIELD : rowsSpawned == 7 ? POWER_SLOW : rowsSpawned == 11 ? POWER_GUIDE : 0;
+                    if (type > 0 && type <= stage) {
+                        pickupVisible[type] = true;
+                        pickupX[type] = clamp(lastWindowCenter, pickupRadius(), width - pickupRadius());
+                        pickupY[type] = -LevelConfig.rowHeight(density) - spacing * .5f;
+                    }
+                }
             }
         }
 
         if (lethal && collides()) {
             impactTimer = mode == Mode.PRACTICE ? 0.8f : 3f;
             impactEvent = true;
-            if (mode == Mode.STAGES && shieldArmed) shieldArmed = false;
-            else if (mode != Mode.PRACTICE) die();
+            if (!(mode == Mode.STAGES && shieldArmed()) && mode != Mode.PRACTICE) die();
         }
         if (lethal && state == State.PLAYING && mode == Mode.STAGES && rowsCleared >= stageGoal()
                 && !Float.isNaN(finishY) && finishY > leftPlayer.y + leftPlayer.radius) {
@@ -603,7 +645,9 @@ public class GameEngine {
     // ------------------------------------------------------------ tuning helpers
 
     private float speedFor(float level) {
-        return LevelConfig.rowSpeed(density, level) * difficulty.speedScale();
+        // Stages 3–5 are progressively faster even once the base speed curve caps out.
+        float stageScale = mode != Mode.STAGES || stage < 3 ? 1f : 1f + (stage - 2) * .06f;
+        return LevelConfig.rowSpeed(density, level) * difficulty.speedScale() * stageScale;
     }
 
     private float spacingFor(float level) {
@@ -800,6 +844,9 @@ public class GameEngine {
             float bias = (float) Math.sqrt(random.nextFloat());
             float offset = minOffset + (limit - minOffset) * bias;
             float windowCenter = halfWidth + side * offset;
+            // The upper bound alone does not constrain jumps back toward the axis.
+            // Reject both directions that exceed the actual swipe budget.
+            if (lastWindowCenter >= 0f && Math.abs(windowCenter - anchor) > travel) continue;
             float error = (random.nextFloat() * 2f - 1f) * mismatch;
             float first = windowCenter + error * 0.5f;
             float second = width - windowCenter + error * 0.5f;
@@ -908,6 +955,15 @@ public class GameEngine {
             }
         }
         return false;
+    }
+
+    /** Minimum distance from the relative motion segment to the pickup centre. */
+    private static boolean sweptCircle(float x0, float y0, float x1, float y1, float radius) {
+        float dx = x1 - x0, dy = y1 - y0;
+        float length2 = dx * dx + dy * dy;
+        float t = length2 > 0f ? clamp(-(x0 * dx + y0 * dy) / length2, 0f, 1f) : 0f;
+        float x = x0 + t * dx, y = y0 + t * dy;
+        return x * x + y * y <= radius * radius;
     }
 
     /** Current, not predicted, safe intersection for the nearest upcoming row. */

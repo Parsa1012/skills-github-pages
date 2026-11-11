@@ -16,6 +16,7 @@ public final class GameEngineFairnessTest {
         Field rng = GameEngine.class.getDeclaredField("random");
         spawn.setAccessible(true); maxTravel.setAccessible(true); rng.setAccessible(true);
         long count = 0, waves = 0, together = 0, pulseSingle = 0, pulseDouble = 0;
+        for (int stage : new int[]{0, 3, 4, 5}) {
         for (Difficulty d : Difficulty.values()) {
             for (int widthDp : new int[]{280, 320, 360, 411, 600}) {
                 for (float density : new float[]{1f, 2f, 3f}) {
@@ -24,13 +25,14 @@ public final class GameEngineFairnessTest {
                         float width = widthDp * density;
                         e.resize((int) width, (int) (780 * density), density);
                         e.setDifficulty(d);
+                        if (stage > 0) e.configureRun(GameEngine.Mode.STAGES, stage);
                         ((Random) rng.get(e)).setSeed(1234567L + widthDp + (int) level);
                         Float prev = null;
                         for (int i = 0; i < 400; i++) {
                             spawn.invoke(e, level);
                             ObstacleRow row = e.rows().get(e.rows().size() - 1);
-                            String where = d + " width=" + widthDp + " density=" + density + " level=" + level + " row=" + i;
-                            if (prev != null) check(Math.abs(row.windowCenter - prev) <= (float) maxTravel.invoke(e, level) + EPS * density, "unreachable " + where);
+                            String where = "stage=" + stage + " " + d + " width=" + widthDp + " density=" + density + " level=" + level + " row=" + i;
+                            if (prev != null) check(Math.abs(row.windowCenter - prev) <= (float) maxTravel.invoke(e, level) + EPS * density, "unreachable " + where + " prev=" + prev + " next=" + row.windowCenter + " max=" + maxTravel.invoke(e, level));
                             prev = row.windowCenter;
                             if (row.gapCount == 1) together++;
                             if (row.wave) waves++;
@@ -57,6 +59,7 @@ public final class GameEngineFairnessTest {
                     }
                 }
             }
+        }
         }
         check(waves > 0 && together > 0 && pulseSingle > 0 && pulseDouble > 0, "missing pattern coverage");
         System.out.println("Real Java generator PASS: " + count + " rows; shared=" + together + ", sliding=" + waves + ", breathing single=" + pulseSingle + ", breathing double=" + pulseDouble);

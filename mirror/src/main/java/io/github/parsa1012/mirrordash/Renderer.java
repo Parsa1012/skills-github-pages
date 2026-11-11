@@ -46,6 +46,10 @@ public class Renderer {
     private final Paint countdownPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint flashPaint = new Paint();
     private final Paint debugPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint orbPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint orbSymbolPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path orbPath = new Path();
+    private final RectF orbArc = new RectF();
 
     private final RectF rowRect = new RectF();
     private final RectF gapRect = new RectF();
@@ -223,6 +227,7 @@ public class Renderer {
         markerPaint.setStrokeWidth((clearMarkers ? 3.5f : 1.6f) * density);
         drawRows(canvas, engine.rows(), width, darkStage);
         drawFinishLine(canvas, engine, width);
+        drawPowerPickups(canvas, engine);
         if (!engine.reducedEffects()) drawParticles(canvas, engine);
 
         Player left = engine.leftPlayer();
@@ -260,6 +265,7 @@ public class Renderer {
             debugPaint.setTextSize(15f * density);
             canvas.drawText(engine.rowsCleared() + " / " + engine.stageGoal(), 12f * density, height - 40f * density, debugPaint);
         }
+        drawPowerTimers(canvas, engine, width);
         countdownPaint.setColor(stage >= 2 ? Color.WHITE : theme.scoreText);
         drawCountdown(canvas, engine, width, height);
 
@@ -270,6 +276,59 @@ public class Renderer {
                 fpsText = roundedFps + " fps";
             }
             canvas.drawText(fpsText, 12f * density, height - 14f * density, debugPaint);
+        }
+    }
+
+    private void drawPowerPickups(Canvas canvas, GameEngine engine) {
+        for (int type = 1; type <= 3; type++) {
+            if (!engine.pickupVisible(type)) continue;
+            float x = engine.pickupX(type), y = engine.pickupY(type), r = engine.pickupRadius();
+            if (y < -3 * r || y > canvas.getHeight() + 3 * r) continue;
+            if (!engine.reducedEffects()) {
+                orbPaint.setColor(0x33ffe45c); canvas.drawCircle(x, y, r * 2, orbPaint);
+                orbPaint.setColor(0x66fff078); canvas.drawCircle(x, y, r * 1.45f, orbPaint);
+            }
+            drawPowerSymbol(canvas, type, x, y, r);
+        }
+    }
+
+    private void drawPowerTimers(Canvas canvas, GameEngine engine, int width) {
+        if (engine.mode() != GameEngine.Mode.STAGES || engine.state() != GameEngine.State.PLAYING) return;
+        float x = width * .5f - 30f * density, y = 104f * density, r = 9f * density;
+        for (int type = 1; type <= 3; type++) {
+            float remaining = type == GameEngine.POWER_SHIELD ? engine.shieldRemaining()
+                    : type == GameEngine.POWER_SLOW ? engine.slowRemaining() : engine.guideRemaining();
+            if (remaining <= 0) continue;
+            float cx = x + (type - 1) * 30f * density;
+            drawPowerSymbol(canvas, type, cx, y, r);
+            orbSymbolPaint.setColor(0xffffffff);
+            orbSymbolPaint.setStyle(Paint.Style.STROKE);
+            orbSymbolPaint.setStrokeWidth(2f * density);
+            orbArc.set(cx-r-3*density, y-r-3*density, cx+r+3*density, y+r+3*density);
+            canvas.drawArc(orbArc, -90, 360f * Math.min(1f, remaining / 3f), false, orbSymbolPaint);
+        }
+    }
+
+    /** Circle = shield, hourglass = slow, diamond = current-path guide. */
+    private void drawPowerSymbol(Canvas canvas, int type, float x, float y, float r) {
+        orbPaint.setStyle(Paint.Style.FILL);
+        orbPaint.setColor(0xffffd948); canvas.drawCircle(x, y, r, orbPaint);
+        orbSymbolPaint.setStyle(Paint.Style.STROKE);
+        orbSymbolPaint.setStrokeWidth(Math.max(1.4f, 1.6f * density));
+        orbSymbolPaint.setColor(0xff573b00);
+        if (type == GameEngine.POWER_SHIELD) {
+            canvas.drawCircle(x, y, r * .48f, orbSymbolPaint);
+        } else {
+            orbPath.reset();
+            if (type == GameEngine.POWER_SLOW) {
+                orbPath.moveTo(x-r*.45f, y-r*.5f); orbPath.lineTo(x+r*.45f, y-r*.5f);
+                orbPath.lineTo(x-r*.45f, y+r*.5f); orbPath.lineTo(x+r*.45f, y+r*.5f);
+                orbPath.close();
+            } else {
+                orbPath.moveTo(x, y-r*.55f); orbPath.lineTo(x+r*.48f, y);
+                orbPath.lineTo(x, y+r*.55f); orbPath.lineTo(x-r*.48f, y); orbPath.close();
+            }
+            canvas.drawPath(orbPath, orbSymbolPaint);
         }
     }
 
