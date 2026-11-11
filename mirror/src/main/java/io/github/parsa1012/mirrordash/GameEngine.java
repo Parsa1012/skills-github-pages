@@ -124,6 +124,10 @@ public class GameEngine {
     private double runSeconds;
     private float distanceSinceSpawn;
     private int rowsCleared;
+    private int rowsSpawned;
+    /** NaN until the finish line enters from above, one row-spacing after the last obstacle. */
+    private float finishY = Float.NaN;
+    public float finishY() { return finishY; }
     private int rowsSinceBreather;
     private float lastWindowCenter = -1f;
     private int lastSpread = -1;
@@ -243,6 +247,8 @@ public class GameEngine {
 
     private void resetRunData() {
         rowsCleared = 0;
+        rowsSpawned = 0;
+        finishY = Float.NaN;
         stageCompleted = false;
         hitBall = 0;
         impactTimer = 0;
@@ -349,7 +355,7 @@ public class GameEngine {
             case COUNTDOWN:
                 countdown -= dt;
                 updatePlayers(dt);
-                updateWorld(dt, false);
+                if (mode != Mode.STAGES) updateWorld(dt, false);
                 if (countdown <= 0f) {
                     countdown = 0f;
                     state = State.PLAYING;
@@ -426,10 +432,19 @@ public class GameEngine {
             }
         }
 
+        if (!Float.isNaN(finishY)) finishY += speed * dt;
         distanceSinceSpawn += speed * dt;
-        if (rows.size() < MAX_ROWS && distanceSinceSpawn >= spacing) {
-            distanceSinceSpawn = 0f;
-            spawnRow(level);
+        if (distanceSinceSpawn >= spacing) {
+            if (mode == Mode.STAGES && rowsSpawned >= stageGoal()) {
+                if (Float.isNaN(finishY)) {
+                    finishY = -LevelConfig.rowHeight(density);
+                    distanceSinceSpawn = 0f;
+                }
+            } else if (rows.size() < MAX_ROWS) {
+                distanceSinceSpawn = 0f;
+                spawnRow(level);
+                if (mode == Mode.STAGES) rowsSpawned++;
+            }
         }
 
         if (lethal && collides()) {
@@ -437,7 +452,8 @@ public class GameEngine {
             impactEvent = true;
             if (mode != Mode.PRACTICE) die();
         }
-        if (lethal && state == State.PLAYING && mode == Mode.STAGES && rowsCleared >= stageGoal()) {
+        if (lethal && state == State.PLAYING && mode == Mode.STAGES && rowsCleared >= stageGoal()
+                && !Float.isNaN(finishY) && finishY > leftPlayer.y + leftPlayer.radius) {
             stageCompleted = true;
             score = computeScore();
             state = State.GAME_OVER;

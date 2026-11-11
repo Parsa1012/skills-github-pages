@@ -205,6 +205,7 @@ public class Renderer {
 
         markerPaint.setStrokeWidth((clearMarkers ? 3.5f : 1.6f) * density);
         drawRows(canvas, engine.rows(), width);
+        drawFinishLine(canvas, engine, width);
         if (!engine.reducedEffects()) drawParticles(canvas, engine);
 
         Player left = engine.leftPlayer();
@@ -245,6 +246,21 @@ public class Renderer {
             }
             canvas.drawText(fpsText, 12f * density, height - 14f * density, debugPaint);
         }
+    }
+
+    /** A checkered finish travels with the world and is never a collision obstacle. */
+    private void drawFinishLine(Canvas canvas, GameEngine engine, int width) {
+        float y = engine.finishY();
+        if (Float.isNaN(y) || y < -30f * density || y > canvas.getHeight() + 30f * density) return;
+        float cell = 12f * density;
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col * cell < width; col++) {
+                rowFillPaint.setColor((row + col) % 2 == 0 ? Color.WHITE : 0xFF17213A);
+                float x = col * cell;
+                canvas.drawRect(x, y + row * cell, Math.min(width, x + cell), y + (row + 1) * cell, rowFillPaint);
+            }
+        }
+        rowFillPaint.setColor(theme.rowFill);
     }
 
     /** Blits the cached background, rebuilding it when the surface or the theme changes. */

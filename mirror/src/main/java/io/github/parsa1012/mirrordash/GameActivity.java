@@ -67,6 +67,10 @@ public class GameActivity extends Activity {
     private TextView menuDifficulty;
 
     private View settingsOverlay;
+    private View stageOverlay;
+    private LinearLayout stageGrid;
+    private VictoryConfetti confetti;
+    private TextView nextStageButton;
     private TextView chipEasy;
     private TextView chipNormal;
     private TextView chipHard;
@@ -78,7 +82,7 @@ public class GameActivity extends Activity {
     private TextView chipMusicOff;
 
     private LinearLayout pausePanel;
-    private LinearLayout gameOverPanel;
+    private View gameOverPanel;
     private TextView gameOverTitle;
     private TextView gameOverScore;
     private TextView gameOverRows;
@@ -130,7 +134,10 @@ public class GameActivity extends Activity {
         buildHint();
         buildScrim();
         buildMenu();
+        buildStageMenu();
         buildSettings();
+        confetti = new VictoryConfetti(this);
+        root.addView(confetti, matchParent());
         buildPausePanel();
         buildGameOverPanel();
 
@@ -250,25 +257,27 @@ public class GameActivity extends Activity {
         menuDifficulty = label(strings.difficultyLine, 12, false, theme.textMuted);
         content.addView(menuDifficulty, wrapWithTopMargin(6));
 
-        TextView start = primaryAction(strings.start);
-        LinearLayout.LayoutParams startParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(54));
-        startParams.topMargin = dp(20);
-        content.addView(start, startParams);
-        start.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mode = GameEngine.Mode.ENDLESS;
-                startGame();
-            }
-        });
+        LinearLayout modes = new LinearLayout(this);
+        modes.setOrientation(LinearLayout.HORIZONTAL);
+        modes.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams modesParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        modesParams.topMargin = dp(20);
+        content.addView(modes, modesParams);
+        TextView endless = modeTile("∞", tr("رکورد بی‌پایان", "Endless record", "الرقم اللانهائي", "Récord infinito"), false);
+        LinearLayout.LayoutParams firstMode = new LinearLayout.LayoutParams(0, dp(112), 1f);
+        firstMode.setMarginEnd(dp(5));
+        modes.addView(endless, firstMode);
+        endless.setOnClickListener(v -> { mode = GameEngine.Mode.ENDLESS; startGame(); });
+        TextView stages = modeTile("◆", tr("بازی مرحله‌ای", "Stages", "المراحل", "Niveles"), true);
+        LinearLayout.LayoutParams secondMode = new LinearLayout.LayoutParams(0, dp(112), 1f);
+        secondMode.setMarginStart(dp(5));
+        modes.addView(stages, secondMode);
+        stages.setOnClickListener(v -> chooseStage());
 
         TextView practice = secondaryAction(tr("تمرین", "Practice", "تدريب", "Práctica"));
         content.addView(practice, fullWidthButtonParams(10));
         practice.setOnClickListener(v -> { mode = GameEngine.Mode.PRACTICE; startGame(); });
-        TextView stages = secondaryAction(tr("مرحله‌ای", "Stages", "المراحل", "Niveles"));
-        content.addView(stages, fullWidthButtonParams(10));
-        stages.setOnClickListener(v -> chooseStage());
 
         TextView settings = secondaryAction(strings.settings);
         LinearLayout.LayoutParams settingsParams = new LinearLayout.LayoutParams(
@@ -488,13 +497,100 @@ public class GameActivity extends Activity {
         root.addView(overlay, matchParent());
     }
 
+    private GradientDrawable tileBackground(int start, int end, int stroke) {
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[] {start, end});
+        bg.setCornerRadius(dp(20));
+        bg.setStroke(dp(1.5f), stroke);
+        return bg;
+    }
+
+    private TextView modeTile(String symbol, String text, boolean stages) {
+        TextView tile = actionBase(symbol + "\n" + text, 16, true);
+        android.text.SpannableString styled = new android.text.SpannableString(symbol + "\n" + text);
+        styled.setSpan(new android.text.style.RelativeSizeSpan(1.9f), 0, symbol.length(), 0);
+        tile.setText(styled);
+        tile.setTextColor(0xfff8fbff);
+        tile.setLineSpacing(dp(5), 1f);
+        tile.setBackground(stages ? tileBackground(0xff6240a0, 0xff392455, 0xffba94ff)
+                : tileBackground(0xff176995, 0xff153556, 0xff65d8ff));
+        tile.setContentDescription(text);
+        return tile;
+    }
+
+    /** Dedicated, scrollable level-select screen, rebuilt when returning after a win. */
+    private void buildStageMenu() {
+        FrameLayout overlay = new FrameLayout(this);
+        overlay.setBackground(menuBackground());
+        overlay.setClickable(true);
+        overlay.setVisibility(View.GONE);
+        stageOverlay = overlay;
+        ScrollView scroller = new ScrollView(this);
+        scroller.setFillViewport(true);
+        LinearLayout centre = new LinearLayout(this);
+        centre.setOrientation(LinearLayout.VERTICAL);
+        centre.setGravity(Gravity.CENTER_HORIZONTAL);
+        centre.setPadding(dp(24), dp(34), dp(24), dp(30));
+        scroller.addView(centre);
+        TextView eyebrow = label("◆  " + tr("ماجراجویی همزاد", "TWIN ADVENTURE", "مغامرة التوأم", "AVENTURA GEMELA") + "  ◆", 12, true, theme.playerBlue);
+        centre.addView(eyebrow);
+        centre.addView(label(tr("انتخاب مرحله", "Choose a stage", "اختر المرحلة", "Elige un nivel"), 27, true, theme.textPrimary), wrapWithTopMargin(10));
+        centre.addView(label(tr("هر پیروزی، راه مرحلهٔ بعد را باز می‌کند", "Win to unlock the next stage", "افز لفتح المرحلة التالية", "Gana para desbloquear el siguiente nivel"), 13, false, theme.textSecondary), wrapWithTopMargin(9));
+        stageGrid = new LinearLayout(this);
+        stageGrid.setOrientation(LinearLayout.VERTICAL);
+        int width = Math.max(dp(180), Math.min(dp(380), getResources().getDisplayMetrics().widthPixels - dp(48)));
+        LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT);
+        gridParams.topMargin = dp(24);
+        centre.addView(stageGrid, gridParams);
+        TextView back = secondaryAction(strings.back);
+        LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(width, dp(50));
+        backParams.topMargin = dp(20);
+        centre.addView(back, backParams);
+        back.setOnClickListener(v -> closeStageMenu());
+        overlay.addView(scroller, matchParent());
+        root.addView(overlay, matchParent());
+    }
+
     private void chooseStage() {
+        gameView.playUiMenu();
         int unlocked = GamePrefs.unlockedStage(this);
-        String[] options = new String[unlocked];
-        for (int i = 0; i < unlocked; i++) options[i] = tr("مرحله ", "Stage ", "المرحلة ", "Nivel ") + (i + 1) + " — " + (15 + 5 * i) + tr(" ردیف", " rows", " صفاً", " filas");
-        new android.app.AlertDialog.Builder(this).setTitle(tr("انتخاب مرحله", "Choose stage", "اختر المرحلة", "Elige un nivel"))
-            .setItems(options, (dialog, which) -> { mode = GameEngine.Mode.STAGES; selectedStage = which + 1; startGame(); })
-            .setNegativeButton(strings.close, null).show();
+        stageGrid.removeAllViews();
+        for (int i = 1; i <= 5; i += 2) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            for (int n = i; n <= Math.min(5, i + 1); n++) {
+                final int number = n;
+                boolean open = number <= unlocked;
+                String name = tr("مرحله ", "Stage ", "المرحلة ", "Nivel ") + number;
+                String status = open ? (GamePrefs.stageComplete(this, number) ? tr("✓ تکمیل‌شده", "✓ Complete", "✓ مكتملة", "✓ Completado") : tr("آمادهٔ بازی", "Ready to play", "جاهزة للعب", "Listo para jugar"))
+                    : tr("🔒 قفل", "🔒 Locked", "🔒 مقفلة", "🔒 Bloqueado");
+                TextView tile = actionBase((open ? "✦" : "🔒") + "\n" + name + "\n" + status, 15, true);
+                android.text.SpannableString iconText = new android.text.SpannableString(tile.getText());
+                int iconEnd = iconText.toString().indexOf('\n');
+                if (iconEnd > 0) iconText.setSpan(new android.text.style.RelativeSizeSpan(1.5f), 0, iconEnd, 0);
+                tile.setText(iconText);
+                tile.setLineSpacing(dp(4), 1f);
+                tile.setTextColor(open ? 0xfff6f7ff : 0xffaab3c1);
+                tile.setBackground(open ? tileBackground(0xff3b568e, 0xff29234d, 0xff8fa9ff)
+                        : tileBackground(0xff303b4a, 0xff202633, 0xff566170));
+                tile.setEnabled(open);
+                tile.setContentDescription(name + ", " + status + ", " + (10 + 5 * number) + tr(" ردیف", " rows", " صفاً", " filas"));
+                LinearLayout.LayoutParams item = new LinearLayout.LayoutParams(0, dp(120), 1f);
+                if (n == i) item.setMarginEnd(dp(5)); else item.setMarginStart(dp(5));
+                row.addView(tile, item);
+                if (open) tile.setOnClickListener(v -> { mode = GameEngine.Mode.STAGES; selectedStage = number; startGame(); });
+            }
+            if (i == 5) row.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            if (i > 1) rowParams.topMargin = dp(10);
+            stageGrid.addView(row, rowParams);
+        }
+        stageOverlay.setVisibility(View.VISIBLE);
+    }
+
+    private void closeStageMenu() {
+        gameView.playUiClick();
+        stageOverlay.setVisibility(View.GONE);
     }
 
     private void applyAccessibility() {
@@ -771,6 +867,11 @@ public class GameActivity extends Activity {
         gameOverBest = label(strings.bestLine, 13, true, theme.playerRed);
         panel.addView(gameOverBest, wrapWithTopMargin(6));
 
+        nextStageButton = primaryAction(tr("مرحلهٔ بعد", "Next stage", "المرحلة التالية", "Siguiente nivel"));
+        panel.addView(nextStageButton, fullWidthButtonParams(16));
+        nextStageButton.setVisibility(View.GONE);
+        nextStageButton.setOnClickListener(v -> { selectedStage++; startGame(); });
+
         TextView again = primaryAction(strings.playAgain);
         panel.addView(again, fullWidthButtonParams(18));
         again.setOnClickListener(new View.OnClickListener() {
@@ -791,8 +892,24 @@ public class GameActivity extends Activity {
             }
         });
 
-        gameOverPanel = panel;
-        root.addView(panel, centeredPanelParams());
+        // The result card can grow for translated text or large fonts; keep all actions reachable.
+        panel.setVisibility(View.VISIBLE);
+        panel.setAlpha(1f);
+        LinearLayout centre = new LinearLayout(this);
+        centre.setGravity(Gravity.CENTER);
+        centre.setOrientation(LinearLayout.VERTICAL);
+        centre.addView(panel, new LinearLayout.LayoutParams(
+                Math.max(dp(180), Math.min(dp(320), getResources().getDisplayMetrics().widthPixels - dp(48))),
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        ScrollView wrapper = new ScrollView(this);
+        wrapper.setFillViewport(true);
+        wrapper.addView(centre);
+        wrapper.setVisibility(View.GONE);
+        gameOverPanel = wrapper;
+        FrameLayout.LayoutParams wrapperParams = matchParent();
+        wrapperParams.topMargin = dp(16);
+        wrapperParams.bottomMargin = dp(16);
+        root.addView(wrapper, wrapperParams);
     }
 
     // ---------------------------------------------------------------- shared views
@@ -921,6 +1038,8 @@ public class GameActivity extends Activity {
 
     private void startGame() {
         gameView.playUiClick();
+        confetti.stop();
+        stageOverlay.setVisibility(View.GONE);
         music.setScene(MusicPlayer.Scene.GAME);
         music.setPaused(false);
         menuOverlay.setVisibility(View.GONE);
@@ -949,6 +1068,8 @@ public class GameActivity extends Activity {
 
     private void goToMenu() {
         gameView.playUiMenu();
+        confetti.stop();
+        stageOverlay.setVisibility(View.GONE);
         music.setScene(MusicPlayer.Scene.MENU);
         hud.setVisibility(View.GONE);
         hint.setVisibility(View.GONE);
@@ -995,13 +1116,40 @@ public class GameActivity extends Activity {
             gameView.playUiUnlock();
             Toast.makeText(this, strings.unlockNotice, Toast.LENGTH_LONG).show();
         }
-        gameOverTitle.setText(completed ? tr("مرحله کامل شد!", "Stage complete!", "اكتملت المرحلة!", "¡Nivel completado!") : (record ? strings.newRecord : strings.gameOver));
-        gameOverScore.setText(String.format(java.util.Locale.ROOT, strings.scoreLine, score));
-        String collision = gameView.engine().hitBall() == 1
-            ? tr("توپ آبی برخورد کرد", "Blue ball collided", "اصطدمت الكرة الزرقاء", "Chocó la bola azul")
-            : tr("توپ قرمز برخورد کرد", "Red ball collided", "اصطدمت الكرة الحمراء", "Chocó la bola roja");
-        gameOverRows.setText(String.format(java.util.Locale.ROOT, strings.rowsLine, rowsCleared) + (completed ? "" : "\n" + collision));
-        gameOverBest.setText(mode == GameEngine.Mode.ENDLESS ? String.format(java.util.Locale.ROOT, strings.bestLine, GamePrefs.best(this, difficulty)) : tr("رکورد بی‌پایان ثبت نمی‌شود", "Endless records are not affected", "لا تتأثر الأرقام القياسية", "Los récords no se modifican"));
+        nextStageButton.setVisibility(completed && selectedStage < 5 ? View.VISIBLE : View.GONE);
+        if (completed) {
+            gameOverTitle.setText(tr("تو بردی!", "You won!", "لقد فزت!", "¡Ganaste!"));
+            gameOverTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+            gameOverTitle.setTextColor(0xff70dfff);
+            gameOverTitle.getPaint().setShader(new android.graphics.LinearGradient(0, 0, dp(180), 0,
+                    new int[]{0xff67dfff, 0xffff81c0, 0xffffdc70}, null, android.graphics.Shader.TileMode.MIRROR));
+            gameOverScore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            gameOverScore.setTextColor(theme.textSecondary);
+            gameOverScore.setText(String.format(java.util.Locale.ROOT, strings.scoreLine, score));
+            gameOverRows.setText(String.format(java.util.Locale.ROOT, strings.rowsLine, rowsCleared)
+                    + "\n" + tr("مرحله ", "Stage ", "المرحلة ", "Nivel ") + selectedStage
+                    + " · " + difficultyName(difficulty));
+            gameOverBest.setTextColor(theme.textSecondary);
+            gameOverBest.setTypeface(typeRegular);
+            gameOverBest.setText(tr("زمان: ", "Time: ", "الوقت: ", "Tiempo: ") + String.format(java.util.Locale.ROOT, "%d:%02d", millis / 60000, (millis / 1000) % 60));
+            gameView.playUiUnlock();
+            if (!GamePrefs.reducedEffects(this)) confetti.celebrate();
+        } else {
+            gameOverTitle.getPaint().setShader(null);
+            gameOverTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+            gameOverTitle.setTextColor(theme.textPrimary);
+            gameOverTitle.setText(record ? strings.newRecord : strings.gameOver);
+            gameOverScore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+            gameOverScore.setTextColor(theme.playerBlue);
+            gameOverScore.setText(String.format(java.util.Locale.ROOT, strings.scoreLine, score));
+            String collision = gameView.engine().hitBall() == 1
+                ? tr("توپ آبی برخورد کرد", "Blue ball collided", "اصطدمت الكرة الزرقاء", "Chocó la bola azul")
+                : tr("توپ قرمز برخورد کرد", "Red ball collided", "اصطدمت الكرة الحمراء", "Chocó la bola roja");
+            gameOverRows.setText(String.format(java.util.Locale.ROOT, strings.rowsLine, rowsCleared) + "\n" + collision);
+            gameOverBest.setTextColor(theme.playerRed);
+            gameOverBest.setTypeface(typeBold);
+            gameOverBest.setText(mode == GameEngine.Mode.ENDLESS ? String.format(java.util.Locale.ROOT, strings.bestLine, GamePrefs.best(this, difficulty)) : tr("رکورد بی‌پایان ثبت نمی‌شود", "Endless records are not affected", "لا تتأثر الأرقام القياسية", "Los récords no se modifican"));
+        }
 
         hud.setVisibility(View.GONE);
         hideHint();
@@ -1012,6 +1160,7 @@ public class GameActivity extends Activity {
     }
 
     private void hideGameOver() {
+        if (confetti != null) confetti.stop();
         hideCard(gameOverPanel);
     }
 
@@ -1066,19 +1215,15 @@ public class GameActivity extends Activity {
         panel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(220).start();
     }
 
-    /** Fades a card out and only then hides the shared scrim behind it. */
+    /** Hide synchronously so a stale animation cannot dismiss a newer overlay. */
     private void hideCard(final View panel) {
-        panel.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(150)
-                .withEndAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        panel.setVisibility(View.GONE);
-                        if (pausePanel.getVisibility() != View.VISIBLE
-                                && gameOverPanel.getVisibility() != View.VISIBLE) {
-                            scrim.setVisibility(View.GONE);
-                        }
-                    }
-                }).start();
+        panel.animate().cancel();
+        panel.setVisibility(View.GONE);
+        if (pausePanel != null && gameOverPanel != null
+                && pausePanel.getVisibility() != View.VISIBLE && gameOverPanel.getVisibility() != View.VISIBLE) {
+            scrim.animate().cancel();
+            scrim.setVisibility(View.GONE);
+        }
     }
 
     // ------------------------------------------------------------------- lifecycle
@@ -1124,6 +1269,10 @@ public class GameActivity extends Activity {
     public void onBackPressed() {
         if (settingsOverlay.getVisibility() == View.VISIBLE) {
             hideSettings();
+            return;
+        }
+        if (stageOverlay.getVisibility() == View.VISIBLE) {
+            closeStageMenu();
             return;
         }
         if (menuOverlay.getVisibility() == View.VISIBLE) {

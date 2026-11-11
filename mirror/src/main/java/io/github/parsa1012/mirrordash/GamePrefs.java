@@ -133,8 +133,16 @@ public final class GamePrefs {
     }
 
     public static int unlockedStage(Context c) { return Math.max(1, Math.min(5, prefs(c).getInt("stage_unlocked", 1))); }
+    public static boolean stageComplete(Context c, int stage) {
+        // Older 1.9 installations only stored the highest unlocked stage.
+        return stage > 0 && stage <= 5 && (stage < unlockedStage(c)
+                || prefs(c).getInt("stage_completed", 0) >= stage);
+    }
     public static void completeStage(Context c, int stage) {
-        prefs(c).edit().putInt("stage_unlocked", Math.max(unlockedStage(c), Math.min(5, stage + 1))).apply();
+        if (stage < 1 || stage > 5 || stage > unlockedStage(c)) return;
+        SharedPreferences p = prefs(c);
+        p.edit().putInt("stage_unlocked", Math.max(unlockedStage(c), Math.min(5, stage + 1)))
+                .putInt("stage_completed", Math.max(p.getInt("stage_completed", 0), stage)).apply();
     }
     public static boolean reducedEffects(Context c) { return prefs(c).getBoolean("reduced_effects", false); }
     public static void setReducedEffects(Context c, boolean value) { prefs(c).edit().putBoolean("reduced_effects", value).apply(); }

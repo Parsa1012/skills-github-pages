@@ -52,9 +52,14 @@ public final class ProgressTest {
         GamePrefs.setVolume(c,true,27); GamePrefs.setVolume(c,false,200);
         check(GamePrefs.volume(c,true)==27 && GamePrefs.volume(c,false)==100);
         GamePrefs.setVolume(c,false,-10); check(GamePrefs.volume(c,false)==0);
-        check(GamePrefs.unlockedStage(c) == 1);
+        check(GamePrefs.unlockedStage(c) == 1 && !GamePrefs.stageComplete(c, 1));
+        GamePrefs.completeStage(c, 4); check(GamePrefs.unlockedStage(c) == 1);
+        GamePrefs.completeStage(c, 1); check(GamePrefs.unlockedStage(c) == 2 && GamePrefs.stageComplete(c, 1));
         GamePrefs.completeStage(c, 1); check(GamePrefs.unlockedStage(c) == 2);
-        GamePrefs.completeStage(c, 1); check(GamePrefs.unlockedStage(c) == 2);
+        GamePrefs.completeStage(c, 2); GamePrefs.completeStage(c, 3);
+        GamePrefs.completeStage(c, 4); GamePrefs.completeStage(c, 5);
+        check(GamePrefs.unlockedStage(c) == 5 && GamePrefs.stageComplete(c, 5));
+        GamePrefs.completeStage(c, 99); check(GamePrefs.unlockedStage(c) == 5);
         GamePrefs.setReducedEffects(c, true); GamePrefs.setClearMarkers(c, true);
         GamePrefs.setSensitivity(c, 1000);
         check(GamePrefs.reducedEffects(c) && GamePrefs.clearMarkers(c) && GamePrefs.sensitivity(c) == 150);
