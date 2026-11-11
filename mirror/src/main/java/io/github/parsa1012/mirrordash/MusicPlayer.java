@@ -13,6 +13,7 @@ final class MusicPlayer implements AudioManager.OnAudioFocusChangeListener {
     private final AudioManager audio;
     private MediaPlayer player;
     private Scene scene = Scene.NONE;
+    private int gameStage;
     private boolean enabled;
     private boolean foreground;
     private boolean paused;
@@ -24,6 +25,24 @@ final class MusicPlayer implements AudioManager.OnAudioFocusChangeListener {
         this.context = context.getApplicationContext();
         this.audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         this.enabled = enabled;
+    }
+
+    void setGameStage(int stage) {
+        int next = Math.max(0, Math.min(5, stage));
+        if (gameStage != next) {
+            gameStage = next;
+            if (scene == Scene.GAME) releasePlayer();
+        }
+    }
+
+    private int gameTrack() {
+        switch (gameStage) {
+            case 2: return R.raw.music_desert;
+            case 3: return R.raw.music_city;
+            case 4: return R.raw.music_fantasy;
+            case 5: return R.raw.music_space;
+            default: return R.raw.game_music;
+        }
     }
 
     void setScene(Scene next) {
@@ -74,7 +93,7 @@ final class MusicPlayer implements AudioManager.OnAudioFocusChangeListener {
         try {
             if (player == null) {
                 player = MediaPlayer.create(context, scene == Scene.MENU
-                        ? R.raw.menu_music : R.raw.game_music);
+                        ? R.raw.menu_music : gameTrack());
                 if (player == null) {
                     abandonFocus();
                     return;

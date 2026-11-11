@@ -62,6 +62,11 @@ public class Renderer {
     private volatile int ballStyle;
     private volatile int sceneStyle;
     private int cachedSceneStyle = -1;
+    private int cachedStage = -1;
+    private final android.content.res.Resources resources;
+    private Bitmap stageScene;
+    private final float[] guideBounds = new float[2];
+    private final Paint guidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Bitmap nightScene;
     private final Bitmap dayScene;
     /**
@@ -84,6 +89,7 @@ public class Renderer {
     private String fpsText = "";
 
     public Renderer(Context context) {
+        resources = context.getResources();
         nightScene = BitmapFactory.decodeResource(context.getResources(), R.drawable.scene_night);
         dayScene = BitmapFactory.decodeResource(context.getResources(), R.drawable.scene_day);
         typeBold = load(context, "fonts/Vazirmatn-Bold.ttf", Typeface.BOLD);
@@ -198,13 +204,24 @@ public class Renderer {
             dt = 0.016f;
         }
 
-        drawBackground(canvas, width, height);
+        int stage = engine.mode() == GameEngine.Mode.STAGES && engine.state() != GameEngine.State.ATTRACT ? engine.stageNumber() : 0;
+        drawBackground(canvas, width, height, stage);
 
         canvas.save();
         canvas.translate(engine.shakeX(), engine.shakeY());
 
+        if (engine.guideWindow(guideBounds)) {
+            guidePaint.setColor(0x554fffd0);
+            canvas.drawRect(guideBounds[0], 0, guideBounds[1], height, guidePaint);
+            canvas.drawRect(width-guideBounds[1], 0, width-guideBounds[0], height, guidePaint);
+        }
+        int rowColor = stage == 2 ? 0xff745036 : stage == 3 ? 0xff204d6b : stage == 4 ? 0xff583b76 : stage == 5 ? 0xff304a82 : theme.rowFill;
+        rowFillPaint.setColor(rowColor);
+        boolean darkStage = stage >= 2;
+        rowEdgePaint.setColor(darkStage ? 0xffc9e9ff : withAlpha(theme.rowEdge, 140));
+        markerPaint.setColor(darkStage ? 0xffffffff : (theme.night ? 0xFFEAF2FF : 0xFF173861));
         markerPaint.setStrokeWidth((clearMarkers ? 3.5f : 1.6f) * density);
-        drawRows(canvas, engine.rows(), width);
+        drawRows(canvas, engine.rows(), width, darkStage);
         drawFinishLine(canvas, engine, width);
         if (!engine.reducedEffects()) drawParticles(canvas, engine);
 
@@ -213,6 +230,12 @@ public class Renderer {
         if (!engine.reducedEffects()) { drawTrail(canvas, left); drawTrail(canvas, right); }
         drawBody(canvas, left, blueGlow);
         drawBody(canvas, right, redGlow);
+        if (engine.shieldArmed()) {
+            markerPaint.setColor(0xff8fffe5); markerPaint.setStrokeWidth(3f * density);
+            canvas.drawCircle(left.x, left.y, left.radius + 6f * density, markerPaint);
+            canvas.drawCircle(right.x, right.y, right.radius + 6f * density, markerPaint);
+            markerPaint.setColor(theme.night ? 0xFFEAF2FF : 0xFF173861);
+        }
 
         if (!engine.reducedEffects()) drawFloaters(canvas, engine);
         if (engine.impactTimer() > 0) {
@@ -229,13 +252,15 @@ public class Renderer {
 
         drawFlash(canvas, engine.flash(), width, height);
         if (engine.state() != GameEngine.State.ATTRACT) {
+            scorePaint.setColor(stage >= 2 ? Color.WHITE : theme.scoreText);
             drawScore(canvas, engine.score(), width, dt);
         }
         if (engine.mode() == GameEngine.Mode.STAGES && engine.state() != GameEngine.State.ATTRACT) {
-            debugPaint.setColor(theme.textPrimary);
+            debugPaint.setColor(stage >= 2 ? Color.WHITE : theme.textPrimary);
             debugPaint.setTextSize(15f * density);
             canvas.drawText(engine.rowsCleared() + " / " + engine.stageGoal(), 12f * density, height - 40f * density, debugPaint);
         }
+        countdownPaint.setColor(stage >= 2 ? Color.WHITE : theme.scoreText);
         drawCountdown(canvas, engine, width, height);
 
         if (showDebug) {
@@ -260,28 +285,34 @@ public class Renderer {
                 canvas.drawRect(x, y + row * cell, Math.min(width, x + cell), y + (row + 1) * cell, rowFillPaint);
             }
         }
-        rowFillPaint.setColor(theme.rowFill);
     }
 
     /** Blits the cached background, rebuilding it when the surface or the theme changes. */
-    private void drawBackground(Canvas canvas, int width, int height) {
+    private void drawBackground(Canvas canvas, int width, int height, int stage) {
         if (background == null || backgroundWidth != width || backgroundHeight != height
-                || backgroundNight != theme.night || cachedSceneStyle != sceneStyle) {
+                || backgroundNight != theme.night || cachedSceneStyle != sceneStyle || cachedStage != stage) {
             background = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
             backgroundWidth = width;
             backgroundHeight = height;
             backgroundNight = theme.night;
             cachedSceneStyle = sceneStyle;
+            if (cachedStage != stage) {
+                if (stageScene != null) { stageScene.recycle(); stageScene = null; }
+                int res = stage == 2 ? R.drawable.stage_desert : stage == 3 ? R.drawable.stage_city : stage == 4 ? R.drawable.stage_fantasy : stage == 5 ? R.drawable.stage_space : 0;
+                if (res != 0) stageScene = BitmapFactory.decodeResource(resources, res);
+                cachedStage = stage;
+            }
             Canvas target = new Canvas(background);
             target.drawColor(theme.background);
-            Bitmap scene = theme.night ? nightScene : dayScene;
+            Bitmap scene = stageScene != null ? stageScene : (theme.night ? nightScene : dayScene);
             if (scene != null) {
                 Paint backdropPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
                 target.drawBitmap(scene, null, new RectF(0, 0, width, height), backdropPaint);
             } else {
                 drawGrid(target, width, height);
             }
-            if (cachedSceneStyle > 0) {
+            if (stageScene != null) target.drawColor(0x66050a15);
+            if (stageScene == null && cachedSceneStyle > 0) {
                 Paint accent = new Paint(Paint.ANTI_ALIAS_FLAG);
                 int color = cachedSceneStyle == 1 ? 0xFF5595FF : 0xFFBD6EF5;
                 int alpha = theme.night ? 56 : 35;
@@ -313,7 +344,7 @@ public class Renderer {
      * Each row is one continuous wall with its openings punched out (even-odd path).
      * Drawing the solid pieces separately made the row read as floating pills.
      */
-    private void drawRows(Canvas canvas, List<ObstacleRow> rows, int width) {
+    private void drawRows(Canvas canvas, List<ObstacleRow> rows, int width, boolean darkStage) {
         float outerCorner = 6f * density;
         for (int i = 0; i < rows.size(); i++) {
             ObstacleRow row = rows.get(i);
@@ -338,6 +369,11 @@ public class Renderer {
 
             canvas.drawPath(rowPath, rowFillPaint);
             canvas.drawPath(rowPath, rowEdgePaint);
+            if ((row.wave || row.pulse) && top > canvas.getHeight() * .30f && top < canvas.getHeight() * .8f) {
+                markerPaint.setColor(0xfffef8d9);
+                canvas.drawLine(0, top - 3f * density, width, top - 3f * density, markerPaint);
+                markerPaint.setColor(darkStage ? Color.WHITE : (theme.night ? 0xFFEAF2FF : 0xFF173861));
+            }
             if (row.wave || row.pulse) {
                 int count = row.segments(width);
                 float bestLeft = 0f, bestRight = 0f;

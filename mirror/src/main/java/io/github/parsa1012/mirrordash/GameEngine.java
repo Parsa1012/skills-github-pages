@@ -69,6 +69,25 @@ public class GameEngine {
     private volatile boolean reducedEffects;
     private volatile float sensitivity = 1f;
     private float impactX, impactY, impactTimer;
+    public static final int POWER_SHIELD = 1, POWER_SLOW = 2, POWER_GUIDE = 3;
+    private final boolean[] powerUsed = new boolean[4];
+    private boolean shieldArmed;
+    private float slowRemaining, guideRemaining;
+    private double worldSeconds;
+    public boolean shieldArmed() { return shieldArmed; }
+    public float slowRemaining() { return slowRemaining; }
+    public float guideRemaining() { return guideRemaining; }
+    public int stageNumber() { return stage; }
+    /** Stage 1 grants shield, stage 2 adds slow motion, stage 3 adds the current-path guide. */
+    public boolean activatePower(int power) {
+        if (mode != Mode.STAGES || state != State.PLAYING || paused || power < 1 || power > 3
+                || power > stage || powerUsed[power]) return false;
+        powerUsed[power] = true;
+        if (power == POWER_SHIELD) shieldArmed = true;
+        if (power == POWER_SLOW) slowRemaining = 4f;
+        if (power == POWER_GUIDE) guideRemaining = 4f;
+        return true;
+    }
     private volatile int hitBall;
     public int hitBall() { return hitBall; }
     public Mode mode() { return mode; }
@@ -248,6 +267,11 @@ public class GameEngine {
     private void resetRunData() {
         rowsCleared = 0;
         rowsSpawned = 0;
+        worldSeconds = 0;
+        java.util.Arrays.fill(powerUsed, false);
+        shieldArmed = false;
+        slowRemaining = 0;
+        guideRemaining = 0;
         finishY = Float.NaN;
         stageCompleted = false;
         hitBall = 0;
@@ -364,7 +388,12 @@ public class GameEngine {
             case PLAYING:
                 runSeconds += dtValue;
                 updatePlayers(dt);
-                updateWorld(dt, true);
+                // The power runs in real game time; it slows world translation and gap motion,
+                // but never the player's finger or elapsed-time score.
+                float worldDt = slowRemaining > 0f ? dt * .55f : dt;
+                slowRemaining = Math.max(0f, slowRemaining - dt);
+                guideRemaining = Math.max(0f, guideRemaining - dt);
+                updateWorld(worldDt, true);
                 break;
             case DYING:
                 dyingTimer -= dt;
@@ -406,6 +435,7 @@ public class GameEngine {
 
     /** Moves and spawns rows, and (when {@code lethal}) resolves collisions. */
     private void updateWorld(float dt, boolean lethal) {
+        worldSeconds += dt;
         float level = level();
         float speed = speedFor(level);
         float spacing = spacingFor(level);
@@ -413,7 +443,7 @@ public class GameEngine {
         for (int i = rows.size() - 1; i >= 0; i--) {
             ObstacleRow row = rows.get(i);
             row.y += speed * dt;
-            row.updateWave(elapsedSeconds);
+            row.updateWave(worldSeconds);
 
             if (!row.scored && row.y > leftPlayer.y + leftPlayer.radius) {
                 row.scored = true;
@@ -450,7 +480,8 @@ public class GameEngine {
         if (lethal && collides()) {
             impactTimer = mode == Mode.PRACTICE ? 0.8f : 3f;
             impactEvent = true;
-            if (mode != Mode.PRACTICE) die();
+            if (mode == Mode.STAGES && shieldArmed) shieldArmed = false;
+            else if (mode != Mode.PRACTICE) die();
         }
         if (lethal && state == State.PLAYING && mode == Mode.STAGES && rowsCleared >= stageGoal()
                 && !Float.isNaN(finishY) && finishY > leftPlayer.y + leftPlayer.radius) {
@@ -854,7 +885,7 @@ public class GameEngine {
 
         for (int i = 0; i < rows.size(); i++) {
             ObstacleRow row = rows.get(i);
-            if (mode == Mode.PRACTICE && practiceHitRows.contains(row)) continue;
+            if ((mode == Mode.PRACTICE || mode == Mode.STAGES) && practiceHitRows.contains(row)) continue;
             float top = row.y;
             float bottom = row.y + row.height;
             if (bottom < playerTop || top > playerBottom) {
@@ -867,7 +898,7 @@ public class GameEngine {
                 boolean hitLeft = circleHitsRect(leftPlayer.x, leftPlayer.y, radius, left, top, right, bottom);
                 boolean hitRight = circleHitsRect(rightPlayer.x, rightPlayer.y, radius, left, top, right, bottom);
                 if (hitLeft || hitRight) {
-                    hitBall = hitLeft ? 1 : 2;
+                    hitBall = hitLeft && hitRight ? 3 : (hitLeft ? 1 : 2);
                     Player hit = hitLeft ? leftPlayer : rightPlayer;
                     impactX = clamp(hit.x, left, right);
                     impactY = clamp(hit.y, top, bottom);
@@ -877,6 +908,33 @@ public class GameEngine {
             }
         }
         return false;
+    }
+
+    /** Current, not predicted, safe intersection for the nearest upcoming row. */
+    public boolean guideWindow(float[] out) {
+        if (guideRemaining <= 0 || out == null || out.length < 2) return false;
+        ObstacleRow nearest = null;
+        for (ObstacleRow row : rows) {
+            if (row.y > leftPlayer.y + leftPlayer.radius || practiceHitRows.contains(row)) continue;
+            if (nearest == null || row.y > nearest.y) nearest = row;
+        }
+        if (nearest == null) return false;
+        float radius = leftPlayer.radius; // visible radius: conservative compared to collision radius
+        float best = Float.MAX_VALUE, loBest = 0, hiBest = 0;
+        for (int a = 0; a < nearest.gapCount; a++) for (int b = 0; b < nearest.gapCount; b++) {
+            float aHalf = nearest.currentGapWidth(a) * .5f - radius;
+            float bHalf = nearest.currentGapWidth(b) * .5f - radius;
+            if (aHalf < 0 || bHalf < 0) continue;
+            float ca = nearest.currentGapCenter(a), cb = width - nearest.currentGapCenter(b);
+            float lo = Math.max(radius, Math.max(ca - aHalf, cb - bHalf));
+            float hi = Math.min(width - radius, Math.min(ca + aHalf, cb + bHalf));
+            if (lo > hi) continue;
+            float distance = Math.abs((lo + hi) * .5f - leftPlayer.x);
+            if (distance < best) { best = distance; loBest = lo; hiBest = hi; }
+        }
+        if (best == Float.MAX_VALUE) return false;
+        out[0] = loBest; out[1] = hiBest;
+        return true;
     }
 
     /**

@@ -42,7 +42,7 @@ jobs:
           "$tools/apksigner" verify --verbose --print-certs "$apk" | tee /tmp/signature.txt
           grep -qi '09228d155ddceb4fbe9897406cf4576db9dfe0a449f4ef391c1aeaaf1227664c' /tmp/signature.txt
           "$tools/aapt" dump badging "$apk" | tee /tmp/badging.txt
-          grep -q "package: name='io.github.parsa1012.mirrordash' versionCode='11' versionName='1.9.1'" /tmp/badging.txt
+          grep -q "package: name='io.github.parsa1012.mirrordash' versionCode='12' versionName='1.9.2'" /tmp/badging.txt
       - uses: actions/upload-artifact@v4
         with:
           name: twin-balls-apks

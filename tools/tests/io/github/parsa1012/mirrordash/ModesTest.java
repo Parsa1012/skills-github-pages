@@ -65,6 +65,63 @@ public final class ModesTest {
         check(capped.rows().isEmpty() && !Float.isNaN(capped.finishY()), "finish replaces new obstacles");
         capped.update(1.0 / 60);
         check(capped.rows().isEmpty(), "no obstacles after finish");
+        GameEngine noPowers = playing(GameEngine.Mode.ENDLESS, 5);
+        check(!noPowers.activatePower(GameEngine.POWER_SHIELD), "no powers in endless");
+        GameEngine shield = playing(GameEngine.Mode.STAGES, 1);
+        check(!shield.activatePower(GameEngine.POWER_SLOW), "slow locked in stage 1");
+        shield.setPaused(true);
+        check(!shield.activatePower(GameEngine.POWER_SHIELD), "no activation while paused");
+        shield.setPaused(false);
+        check(shield.activatePower(GameEngine.POWER_SHIELD) && !shield.activatePower(GameEngine.POWER_SHIELD), "shield once");
+        wall = new ObstacleRow(); wall.begin(shield.leftPlayer().y - 10, 28); shield.rows().add(wall);
+        shield.update(1.0 / 60);
+        check(shield.state() == GameEngine.State.PLAYING && !shield.shieldArmed(), "shield saves exactly one hit");
+        shield.update(1.0 / 60);
+        check(shield.state() == GameEngine.State.PLAYING, "saved obstacle does not instantly hit again");
+        shield.rows().clear();
+        wall = new ObstacleRow(); wall.begin(shield.leftPlayer().y - 10, 28); shield.rows().add(wall);
+        shield.update(1.0 / 60);
+        check(shield.state() == GameEngine.State.DYING, "second obstacle is lethal");
+        shield.startRun(); set(shield, "state", GameEngine.State.PLAYING);
+        check(shield.activatePower(GameEngine.POWER_SHIELD), "power reset on restart");
+
+        GameEngine slow = playing(GameEngine.Mode.STAGES, 2);
+        ObstacleRow sliding = new ObstacleRow(); sliding.begin(0, 28); sliding.setGap(0, 180, 360); slow.rows().add(sliding);
+        check(slow.activatePower(GameEngine.POWER_SLOW), "slow unlocked in stage 2");
+        slow.setPaused(true); float before = slow.slowRemaining(); slow.update(1);
+        check(slow.slowRemaining() == before, "pause freezes power timer");
+        slow.setPaused(false); slow.update(1.0 / 60);
+        float slowDistance = sliding.y;
+        GameEngine normal = playing(GameEngine.Mode.STAGES, 2);
+        ObstacleRow baseline = new ObstacleRow(); baseline.begin(0, 28); baseline.setGap(0, 180, 360); normal.rows().add(baseline);
+        normal.update(1.0 / 60);
+        check(slowDistance > 0 && slowDistance < baseline.y * .6f, "slow reduces world speed");
+        check(!slow.activatePower(GameEngine.POWER_SLOW), "slow is single use");
+        check(!slow.activatePower(GameEngine.POWER_GUIDE), "guide locked until stage 3");
+
+        GameEngine guide = playing(GameEngine.Mode.STAGES, 3);
+        ObstacleRow split = new ObstacleRow(); split.begin(100, 28);
+        split.setGap(0, 110, 80); split.setGap(1, 250, 80); guide.rows().add(split);
+        float[] bounds = new float[2];
+        check(!guide.guideWindow(bounds) && guide.activatePower(GameEngine.POWER_GUIDE), "guide must be activated");
+        check(guide.guideWindow(bounds), "guide finds common safe opening");
+        check(bounds[0] >= 86 && bounds[1] <= 134 && bounds[0] <= bounds[1], "guide accounts for both visible radii");
+        split.waveOffset = 10;
+        check(guide.guideWindow(bounds) && bounds[0] >= 96 && bounds[1] <= 124, "guide reflects current moving-gap positions");
+        guide.setPaused(true); before = guide.guideRemaining(); guide.update(1);
+        check(guide.guideRemaining() == before, "guide pauses");
+        guide.setPaused(false);
+        for (int i = 0; i < 300; i++) { guide.rows().clear(); set(guide, "distanceSinceSpawn", 0f); guide.update(1.0 / 60); }
+        check(guide.guideRemaining() == 0 && !guide.guideWindow(bounds), "guide expires");
+
+        java.lang.reflect.Method hitRect = GameEngine.class.getDeclaredMethod("circleHitsRect",
+                float.class, float.class, float.class, float.class, float.class, float.class, float.class);
+        hitRect.setAccessible(true);
+        check((Boolean) hitRect.invoke(null, 5f, 5f, 2f, 0f, 0f, 10f, 10f), "inside wall collides");
+        check((Boolean) hitRect.invoke(null, 12f, 5f, 2f, 0f, 0f, 10f, 10f), "tangent collides");
+        check(!(Boolean) hitRect.invoke(null, 12.1f, 5f, 2f, 0f, 0f, 10f, 10f), "outside edge does not collide");
+        check(!(Boolean) hitRect.invoke(null, 12f, 12f, 2f, 0f, 0f, 10f, 10f), "outside corner does not collide");
+
         // Exercise the entire real spawn/scroll/finish pipeline at each stage and difficulty.
         // Neutralise collision geometry so this tests progression, not human touch accuracy.
         for (Difficulty difficulty : Difficulty.values()) {

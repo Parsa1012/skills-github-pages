@@ -39,6 +39,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private volatile boolean attractRequested;
     private volatile int pauseRequest;
     private volatile float fps;
+    private int pendingPowers;
+    public synchronized void requestPower(int power) {
+        if (power >= 1 && power <= 3) pendingPowers |= 1 << power;
+    }
+    private synchronized int takePowers() { int result = pendingPowers; pendingPowers = 0; return result; }
 
     private Runnable firstTouchListener;
     private GameOverListener gameOverListener;
@@ -202,8 +207,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         if (startRequested) {
             startRequested = false;
             engine.configureRun(requestedMode, requestedStage);
+            takePowers();
             engine.startRun();
         }
+        int powers = takePowers();
+        for (int i = 1; i <= 3; i++) if ((powers & (1 << i)) != 0) engine.activatePower(i);
         int request = pauseRequest;
         if (request != 0) {
             pauseRequest = 0;
