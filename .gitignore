@@ -35,3 +35,9 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Never commit real Android signing keys.
+*.jks
+*.keystore
+*.p12
+!mirror/signing/mirror-dev.p12

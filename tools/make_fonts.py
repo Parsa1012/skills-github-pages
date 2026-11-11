@@ -15,15 +15,19 @@ Run from the repo root (needs network the first time):
     python3 tools/make_fonts.py
 """
 
+import base64
+import hashlib
+import hmac
 import io
 import os
 import subprocess
 import sys
 import tarfile
+import tempfile
 import urllib.request
 
 NPM_TARBALL = "https://registry.npmjs.org/vazirmatn/-/vazirmatn-33.0.3.tgz"
-CACHE = "/tmp/package/fonts/ttf"
+EXPECTED_SHA512 = "fbjNc0CMjazZpIegWzz9OHGzI1APFboT+x7ZecXlUCtDe/nkyx7gtCTZnWS/+eeXG7fbfXymCPKJI8EsnM3iqw=="
 OUT = "mirror/src/main/assets/fonts"
 
 UNICODES = ",".join([
@@ -45,38 +49,43 @@ UNICODES = ",".join([
 ])
 
 
-def ensure_source():
-    if os.path.isdir(CACHE):
-        return
-    print("downloading Vazirmatn from npm ...")
+def ensure_source(directory):
+    """Download a pinned archive; only read three regular files, never extract paths/links."""
+    print("downloading pinned Vazirmatn from npm ...")
     with urllib.request.urlopen(NPM_TARBALL, timeout=60) as response:
-        payload = response.read()
+        payload = response.read(20 * 1024 * 1024 + 1)
+    if len(payload) > 20 * 1024 * 1024 or not hmac.compare_digest(
+            base64.b64encode(hashlib.sha512(payload).digest()).decode("ascii"), EXPECTED_SHA512):
+        raise ValueError("Font archive failed size or SHA-512 verification")
+    wanted = {
+        "package/fonts/ttf/Vazirmatn-Regular.ttf": "Vazirmatn-Regular.ttf",
+        "package/fonts/ttf/Vazirmatn-Bold.ttf": "Vazirmatn-Bold.ttf",
+        "package/OFL.txt": "OFL.txt",
+    }
     with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as tar:
-        for member in tar.getmembers():
-            if member.name.endswith(".ttf") or member.name.endswith("OFL.txt"):
-                tar.extract(member, path="/tmp")
+        for name, output in wanted.items():
+            entries = [member for member in tar.getmembers() if member.name == name]
+            if len(entries) != 1 or not entries[0].isfile() or entries[0].size > 10 * 1024 * 1024:
+                raise ValueError("Invalid or missing font archive member: " + name)
+            with tar.extractfile(entries[0]) as source, open(os.path.join(directory, output), "wb") as dest:
+                dest.write(source.read())
 
 
 def main():
-    ensure_source()
     os.makedirs(OUT, exist_ok=True)
-    for weight in ("Regular", "Bold"):
-        src = os.path.join(CACHE, f"Vazirmatn-{weight}.ttf")
-        dst = os.path.join(OUT, f"Vazirmatn-{weight}.ttf")
-        subprocess.run([
-            sys.executable, "-m", "fontTools.subset", src,
-            f"--unicodes={UNICODES}",
-            "--layout-features=*",
-            "--no-hinting",
-            "--name-IDs=1,2,3,4,6",
-            "--drop-tables+=DSIG,FFTM",
-            f"--output-file={dst}",
-        ], check=True)
-        print(f"{dst} {os.path.getsize(dst)} B")
-
-    licence = os.path.join("/tmp/package", "OFL.txt")
-    if os.path.exists(licence):
-        with open(licence, "rb") as src, open(os.path.join(OUT, "OFL.txt"), "wb") as dst:
+    with tempfile.TemporaryDirectory(prefix="mirror-font-") as source:
+        ensure_source(source)
+        for weight in ("Regular", "Bold"):
+            src = os.path.join(source, f"Vazirmatn-{weight}.ttf")
+            dst = os.path.join(OUT, f"Vazirmatn-{weight}.ttf")
+            subprocess.run([
+                sys.executable, "-m", "fontTools.subset", src,
+                f"--unicodes={UNICODES}",
+                "--layout-features=*", "--no-hinting", "--name-IDs=1,2,3,4,6",
+                "--drop-tables+=DSIG,FFTM", f"--output-file={dst}",
+            ], check=True)
+            print(f"{dst} {os.path.getsize(dst)} B")
+        with open(os.path.join(source, "OFL.txt"), "rb") as src, open(os.path.join(OUT, "OFL.txt"), "wb") as dst:
             dst.write(src.read())
 
     # Prove the four languages are actually covered by the shipped file.

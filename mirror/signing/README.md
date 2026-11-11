@@ -1,41 +1,39 @@
-# Development signing key
+# Signing and distribution
 
-`mirror-dev.p12` is a **throwaway development key** that is committed on purpose.
+## Public legacy key — TEST ONLY
 
-## Why is a keystore in the repository?
+`mirror-dev.p12` and its password are public. Anyone can sign as previous releases. An APK
+signed with it is cryptographically signed but **does not establish developer authenticity**.
+Removing this file from the current checkout would not make the key secret: it is in Git history
+and older releases. Never use this key for a store release. The CI output labelled
+`PUBLIC-TEST-KEY` is for compatibility testing only, not a trusted production release.
 
-Android refuses to install an update whose signing certificate differs from the installed
-one. GitHub-hosted runners start with no key and generate a random debug key per job, so
-every CI build would have a different signature and every new APK would require uninstalling
-the previous one. Committing one fixed key makes `mirror-dash-debug.apk` and
-`mirror-dash-1.0.apk` upgradable in place, and makes builds reproducible.
+## New private signing key
 
-## Details
+Create a new keystore **outside** the repository using Android Studio or the Android/Java
+`keytool`; protect and back it up. Do not paste keys or passwords into chat, commit them, or
+publish them in artifacts. Configure these environment variables securely on your own build
+machine (or protected CI environment):
 
-| Field | Value |
-|---|---|
-| File | `mirror-dev.p12` (PKCS#12) |
-| Alias | `mirror` |
-| Store / key password | `mirror-dash-dev` |
-| Subject | `CN=Mirror Dash Dev Key, O=Parsa1012, OU=Development, C=DE` |
-| Key | RSA 2048, SHA-256, valid for 30 years |
-| SHA-256 fingerprint | `09:22:8D:15:5D:DC:EB:4F:BE:98:97:40:6C:F4:57:6D:B9:DF:E0:A4:49:F4:EF:39:1C:1A:EA:AF:12:27:66:4C` |
+- `MIRROR_KEYSTORE_PATH`: absolute path to your private keystore;
+- `MIRROR_KEYSTORE_PASSWORD`: keystore password;
+- `MIRROR_KEY_ALIAS`: private key alias;
+- `MIRROR_KEY_PASSWORD`: key password.
 
-Generated with OpenSSL (no Android Studio needed):
+With all four set, run `gradle :mirror:assembleRelease`. Missing or partially configured
+credentials fail the release build; the known public certificate is rejected even if copied
+to another path. Verify the produced APK with Android SDK `apksigner verify --verbose
+--print-certs` and compare the certificate SHA-256 to the fingerprint recorded independently
+by the owner. Never trust a fingerprint solely because it appears next to a downloaded APK.
+For Google Play, use Play App Signing, a protected upload key, and the required AAB process.
 
-```bash
-openssl req -x509 -newkey rsa:2048 -sha256 -days 10950 -nodes \
-  -keyout key.pem -out cert.pem \
-  -subj "/CN=Mirror Dash Dev Key/O=Parsa1012/OU=Development/C=DE"
-openssl pkcs12 -export -name mirror -inkey key.pem -in cert.pem \
-  -out mirror-dev.p12 -passout pass:mirror-dash-dev
-```
+A fresh private key **cannot install as an update** over any existing package signed with the
+old public key. Plan a new application ID and safe user-data migration, or a controlled
+uninstall/reinstall with loss of local progress. Do not claim an app is securely upgraded
+while retaining an exposed signing identity. Key rotation from an already compromised key
+requires a separate threat analysis and Android-version compatibility plan.
 
-## Before publishing for real
-
-- Anyone can sign an APK with this key, so it must not be used for a store release or for
-  anything that talks to a server.
-- Generate your own keystore, keep it **outside** the repository (and back it up — losing it
-  means you cannot update the app), pass it to Gradle through environment variables or
-  `~/.gradle/gradle.properties`, and bump `versionCode` for every published build.
-- With Play App Signing you would upload an `.aab` and let Google hold the real key.
+For local regression tests only, the old signer can be explicitly enabled with
+`gradle :mirror:assembleRelease -PallowInsecureDevSigning=true`. The debug variant has a
+separate application ID. Never store a real key in the checkout: ignore rules are only a
+precaution, and do not remove keys already committed or prevent forced additions.

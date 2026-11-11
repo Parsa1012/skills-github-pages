@@ -2,18 +2,36 @@ plugins {
     id 'com.android.application'
 }
 
+def signingNames = ['MIRROR_KEYSTORE_PATH', 'MIRROR_KEYSTORE_PASSWORD', 'MIRROR_KEY_ALIAS', 'MIRROR_KEY_PASSWORD']
+def signingValues = signingNames.collect { System.getenv(it) }
+def anyProductionValue = signingValues.any { it != null && !it.isEmpty() }
+def hasProductionKey = signingValues.every { it != null && !it.isEmpty() }
+def allowPublicTestKey = providers.gradleProperty('allowInsecureDevSigning').orNull == 'true'
+
 android {
     namespace 'io.github.parsa1012.mirrordash'
     compileSdk 34
 
-    /**
-     * A single development key is committed in `signing/` on purpose: every CI run must sign
-     * with the same certificate, otherwise an updated APK cannot be installed over the
-     * previous one ("signature mismatch"). This is a throwaway dev key, not a store key —
-     * see signing/README.md before publishing anywhere.
-     */
+    // The historical key is public and is never a safe production signing identity.
+    // Production signing is explicitly configured from external environment variables.
+    if (anyProductionValue && !hasProductionKey) {
+        throw new GradleException('All four MIRROR_KEYSTORE_* / MIRROR_KEY_* variables must be set together.')
+    }
+    if (hasProductionKey && file(signingValues[0]).canonicalFile == file('signing/mirror-dev.p12').canonicalFile) {
+        throw new GradleException('The public development keystore cannot be a production key.')
+    }
+    if (hasProductionKey) {
+        // Check the certificate too: copying the public file to another path must not bypass the guard.
+        def ks = java.security.KeyStore.getInstance(java.security.KeyStore.defaultType)
+        file(signingValues[0]).withInputStream { ks.load(it, signingValues[1].toCharArray()) }
+        def cert = ks.getCertificate(signingValues[2])
+        if (cert == null || !ks.isKeyEntry(signingValues[2])) throw new GradleException('Signing alias must identify a private key and certificate.')
+        def hash = java.security.MessageDigest.getInstance('SHA-256').digest(cert.encoded).encodeHex().toString()
+        if (hash.equalsIgnoreCase('09228d155ddceb4fbe9897406cf4576db9dfe0a449f4ef391c1aeaaf1227664c'))
+            throw new GradleException('The exposed development certificate cannot sign a production release.')
+    }
     signingConfigs {
-        shared {
+        testKey {
             storeFile file('signing/mirror-dev.p12')
             storePassword 'mirror-dash-dev'
             keyAlias 'mirror'
@@ -22,28 +40,40 @@ android {
             enableV1Signing true
             enableV2Signing true
         }
+        production {
+            if (hasProductionKey) {
+                storeFile file(signingValues[0])
+                storePassword signingValues[1]
+                keyAlias signingValues[2]
+                keyPassword signingValues[3]
+                enableV1Signing true
+                enableV2Signing true
+            }
+        }
     }
 
     defaultConfig {
         applicationId 'io.github.parsa1012.mirrordash'
         minSdk 21
         targetSdk 34
-        versionCode 18
-        versionName '1.9.8'
+        versionCode 19
+        versionName '1.9.9'
     }
 
     buildTypes {
         debug {
             // Same key as release so successive test builds upgrade in place.
-            signingConfig signingConfigs.shared
+            signingConfig signingConfigs.testKey
             applicationIdSuffix '.debug'
             versionNameSuffix '-debug'
         }
         release {
-            // R8 stays off: the app is already ~60 KB and has no reflection to strip.
+            // Explicit, non-debuggable release. Resource names are resolved dynamically.
+            debuggable false
             minifyEnabled false
             shrinkResources false
-            signingConfig signingConfigs.shared
+            if (hasProductionKey) signingConfig signingConfigs.production
+            else if (allowPublicTestKey) signingConfig signingConfigs.testKey
         }
     }
 
@@ -62,3 +92,14 @@ android {
         encoding 'UTF-8'
     }
 }
+
+// Do not silently create an unsigned or publicly signed release for production.
+tasks.register('validateReleaseSigning') {
+    doLast {
+        if (!hasProductionKey && !allowPublicTestKey) {
+            throw new GradleException('Release requires a private keystore; see mirror/signing/README.md. For TEST ONLY use -PallowInsecureDevSigning=true.')
+        }
+        if (allowPublicTestKey && !hasProductionKey) logger.warn('WARNING: release uses PUBLIC DEVELOPMENT KEY; NOT TRUSTWORTHY FOR PRODUCTION.')
+    }
+}
+afterEvaluate { tasks.named('preReleaseBuild').configure { dependsOn('validateReleaseSigning') } }
