@@ -105,6 +105,7 @@ public class GameActivity extends Activity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         GamePrefs.migrate(this);
+        boolean initialStageBonus = GamePrefs.claimInitialStageBonus(this);
         lang = GamePrefs.lang(this);
         strings = Strings.of(lang);
         getWindow().getDecorView().setLayoutDirection(lang.rtl() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
@@ -160,6 +161,7 @@ public class GameActivity extends Activity {
         hideSystemBars();
         refreshLabels();
         refreshSettingChips();
+        if (initialStageBonus) Toast.makeText(this, tr("مرحلهٔ اول باز است: ۲۰ سکه هدیه!", "Stage 1 unlocked: 20 bonus coins!", "المرحلة الأولى مفتوحة: ٢٠ عملة هدية!", "Nivel 1 desbloqueado: ¡20 monedas de regalo!"), Toast.LENGTH_LONG).show();
 
         if (reopenSettingsAfterRecreate) {
             reopenSettingsAfterRecreate = false;
@@ -654,6 +656,8 @@ public class GameActivity extends Activity {
         shopItems.removeAllViews();
         final SkinArt shopArt = new SkinArt(this);
         for (int id = 0; id < BallPalette.COUNT; id++) {
+            // Keep already purchased legacy variants accessible, but do not sell duplicates.
+            if (!BallPalette.available(id) && !GamePrefs.ownsPalette(this, id)) continue;
             final int choice = id;
             boolean owned = GamePrefs.ownsPalette(this, id), selected = GamePrefs.selectedPalette(this) == id;
             LinearLayout item = new LinearLayout(this); item.setOrientation(LinearLayout.VERTICAL);
@@ -673,13 +677,20 @@ public class GameActivity extends Activity {
             item.addView(label(name, 16, true, 0xffffffff), wrapWithTopMargin(7));
             String cost = id == 0 ? tr("رایگان", "Free", "مجاني", "Gratis") : BallPalette.price(id) + tr(" سکه", " coins", " عملات", " monedas");
             String requirement = id == 0 ? "" : "  •  " + tr("رکورد ", "Record ", "رقم ", "Récord ") + difficultyName(BallPalette.requiredDifficulty(id)) + ": " + BallPalette.requiredScore(id);
+            if (!BallPalette.available(id)) name += tr(" (خرید قدیمی)", " (legacy purchase)", " (شراء سابق)", " (compra anterior)");
             String state = selected ? tr(" • انتخاب‌شده", " • Selected", " • مختار", " • Seleccionado") : owned ? tr(" • خریداری‌شده", " • Owned", " • مملوك", " • Adquirido") : "";
             item.addView(label(cost + requirement + state, 13, false, 0xffffda75), wrapWithTopMargin(5));
             item.setContentDescription(name + "، " + cost + requirement + state);
             item.setOnClickListener(v -> {
+                boolean alreadyOwned = GamePrefs.ownsPalette(this, choice);
                 if (GamePrefs.buyOrSelectPalette(this, choice)) {
                     gameView.setBallPalette(GamePrefs.selectedPalette(this));
-                    gameView.playUiClick();
+                    if (alreadyOwned) gameView.playUiClick();
+                    else {
+                        gameView.playWin();
+                        if (!GamePrefs.reducedEffects(this)) confetti.celebrate();
+                        Toast.makeText(this, tr("تبریک! ظاهر جدید خریداری شد ✨", "Congratulations! New appearance purchased ✨", "تهانينا! تم شراء المظهر الجديد ✨", "¡Enhorabuena! Apariencia comprada ✨"), Toast.LENGTH_LONG).show();
+                    }
                     refreshShop(); refreshLabels();
                 } else {
                     Toast.makeText(this, tr("سکه یا رکورد لازم را نداری", "You need the required coins and record", "تحتاج إلى العملات والرقم المطلوبين", "Necesitas las monedas y el récord requeridos"), Toast.LENGTH_LONG).show();
@@ -703,6 +714,7 @@ public class GameActivity extends Activity {
         int index = BallPalette.assetIndex(id);
         String name = (lang == Lang.EN ? en : lang == Lang.AR ? ar : lang == Lang.ES ? es : fa)[index];
         int variant = id < 34 ? (id - 4) / 10 + 1 : id < 46 ? (id - 34) / 6 + 1 : 0;
+        if (id >= 4 && id <= 12) return name;
         return name + (variant > 0 ? " · " + variant : tr(" ✦ دنباله‌دار", " ✦ Trail", " ✦ أثر", " ✦ Estela"));
     }
 
@@ -1177,8 +1189,12 @@ public class GameActivity extends Activity {
         }
         refreshLabels();
         gameView.startRun(mode, selectedStage);
-        if (mode == GameEngine.Mode.STAGES && GamePrefs.stageComplete(this, selectedStage))
-            Toast.makeText(this, tr("مرحلهٔ تکراری: با پیروزی ۳ سکه می‌گیری؛ سکه‌ای در مسیر نیست.", "Replay: win 3 coins; no coins appear during the run.", "الإعادة: اربح ٣ عملات عند الفوز؛ لا تظهر عملات أثناء اللعب.", "Repetición: gana 3 monedas al vencer; no aparecen monedas durante la partida."), Toast.LENGTH_LONG).show();
+        if (mode == GameEngine.Mode.STAGES && GamePrefs.stageComplete(this, selectedStage)) {
+            String message = selectedStage <= 2
+                    ? tr("مرحلهٔ تکراری: جایزهٔ پیروزی ", "Replay victory reward: ", "مكافأة الفوز في الإعادة: ", "Premio por repetir: ") + GameEngine.replayWinReward(selectedStage) + tr(" سکه؛ در مسیر سکه‌ای نیست.", " coins; no pickups on the way.", " عملات؛ لا عملات في المسار.", " monedas; no hay monedas en el camino.")
+                    : tr("مرحلهٔ تکراری: سکه‌های کمی در مسیر ظاهر می‌شوند.", "Replay: a few coins appear along the way.", "الإعادة: تظهر عملات قليلة في المسار.", "Repetición: aparecen pocas monedas en el camino.");
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        }
         if (mode == GameEngine.Mode.PRACTICE) Toast.makeText(this, tr("تمرین: برخورد بازی را تمام نمی‌کند و رکورد ثبت نمی‌شود", "Practice: collisions do not end the run or count towards records", "تدريب: الاصطدام لا ينهي اللعب ولا يسجل رقماً", "Práctica: los choques no terminan la partida ni cuentan para récords"), Toast.LENGTH_LONG).show();
         if (mode == GameEngine.Mode.STAGES) Toast.makeText(this, tr("هدف: عبور از ", "Goal: clear ", "الهدف: تجاوز ", "Objetivo: superar ") + (10 + selectedStage * 5) + tr(" ردیف", " rows", " صفاً", " filas"), Toast.LENGTH_LONG).show();
         gameView.resumeGame();
@@ -1227,7 +1243,8 @@ public class GameActivity extends Activity {
     private void showGameOver(int score, int rowsCleared, long millis) {
         music.setScene(MusicPlayer.Scene.NONE);
         boolean completed = mode == GameEngine.Mode.STAGES && gameView.engine().stageCompleted();
-        if (completed) GamePrefs.completeStage(this, selectedStage);
+        boolean replayed = completed && GamePrefs.stageComplete(this, selectedStage);
+        int unlockBonus = completed ? GamePrefs.completeStage(this, selectedStage) : 0;
         int previousBest = GamePrefs.highestScore(this);
         boolean record = mode == GameEngine.Mode.ENDLESS && GamePrefs.recordRun(this, difficulty, score, rowsCleared, millis);
         int newBest = GamePrefs.highestScore(this);
@@ -1245,9 +1262,12 @@ public class GameActivity extends Activity {
             gameOverScore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             gameOverScore.setTextColor(theme.textSecondary);
             gameOverScore.setText(String.format(java.util.Locale.ROOT, strings.scoreLine, score));
+            String rewards = replayed && selectedStage <= 2
+                    ? "\n+" + GameEngine.replayWinReward(selectedStage) + tr(" سکه جایزه", " reward coins", " عملات مكافأة", " monedas de premio") : "";
+            if (unlockBonus > 0) rewards += "\n+20 " + tr("سکه برای باز شدن مرحلهٔ بعد", "coins for unlocking the next stage", "عملة لفتح المرحلة التالية", "monedas por desbloquear el siguiente nivel");
             gameOverRows.setText(String.format(java.util.Locale.ROOT, strings.rowsLine, rowsCleared)
                     + "\n" + tr("مرحله ", "Stage ", "المرحلة ", "Nivel ") + selectedStage
-                    + " · " + difficultyName(difficulty));
+                    + " · " + difficultyName(difficulty) + rewards);
             gameOverBest.setTextColor(theme.textSecondary);
             gameOverBest.setTypeface(typeRegular);
             gameOverBest.setText(tr("زمان: ", "Time: ", "الوقت: ", "Tiempo: ") + String.format(java.util.Locale.ROOT, "%d:%02d", millis / 60000, (millis / 1000) % 60) + "  •  " + coinLabel());

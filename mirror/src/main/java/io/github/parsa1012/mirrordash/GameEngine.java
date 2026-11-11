@@ -75,6 +75,9 @@ public class GameEngine {
     private int coinEvents, collectedCoins, nextCoinRow;
     private boolean replayStage;
     public void setReplayStage(boolean replay) { replayStage = replay; }
+    public static int replayWinReward(int stage) { return stage == 1 ? 5 : stage == 2 ? 8 : 0; }
+    private boolean hasStageCoins() { return !replayStage || stage >= 3; }
+    private int nextCoinInterval() { return replayStage ? 9 + random.nextInt(4) : 5 + random.nextInt(4); }
     private double worldSeconds;
     public int coinSlots() { return MAX_COINS; }
     public boolean coinVisible(int index) { return index >= 0 && index < MAX_COINS && coinVisible[index]; }
@@ -269,7 +272,7 @@ public class GameEngine {
         java.util.Arrays.fill(coinVisible, false);
         coinEvents = 0;
         collectedCoins = 0;
-        nextCoinRow = 5 + random.nextInt(4);
+        nextCoinRow = nextCoinInterval();
         finishY = Float.NaN;
         stageCompleted = false;
         hitBall = 0;
@@ -487,9 +490,9 @@ public class GameEngine {
                 spawnRow(level);
                 if (mode == Mode.STAGES) {
                     rowsSpawned++;
-                    // Random intervals of 5–8 rows; replay stages pay only on victory.
-                    if (!replayStage && rowsSpawned == nextCoinRow) {
-                        nextCoinRow += 5 + random.nextInt(4);
+                    // Sparse random pickups on new stages, even scarcer on replay 3–5.
+                    if (hasStageCoins() && rowsSpawned == nextCoinRow) {
+                        nextCoinRow += nextCoinInterval();
                         for (int i = 0; i < MAX_COINS; i++) {
                             if (!coinVisible[i]) {
                                 coinVisible[i] = true;

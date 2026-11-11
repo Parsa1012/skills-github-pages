@@ -91,6 +91,15 @@ public final class ModesTest {
         replay.setReplayStage(true); set(replay, "nextCoinRow", 6); set(replay, "rowsSpawned", 5); set(replay, "distanceSinceSpawn", 10000f);
         replay.update(1.0 / 60);
         for (int i = 0; i < replay.coinSlots(); i++) check(!replay.coinVisible(i), "replays have no collectible coins");
+        check(GameEngine.replayWinReward(1) == 5 && GameEngine.replayWinReward(2) == 8, "first two replay victory rewards");
+        for (int number = 3; number <= 5; number++) {
+            GameEngine laterReplay = playing(GameEngine.Mode.STAGES, number);
+            laterReplay.setReplayStage(true); set(laterReplay, "nextCoinRow", 9); set(laterReplay, "rowsSpawned", 8); set(laterReplay, "distanceSinceSpawn", 10000f);
+            laterReplay.update(1.0 / 60);
+            check(laterReplay.coinVisible(0), "later replay spawns coins");
+            check(getInt(laterReplay, "nextCoinRow") >= 18 && getInt(laterReplay, "nextCoinRow") <= 21, "replay coins are sparse");
+            check(GameEngine.replayWinReward(number) == 0, "no extra victory reward for later replays");
+        }
         for (GameEngine.Mode mode : new GameEngine.Mode[]{GameEngine.Mode.ENDLESS, GameEngine.Mode.PRACTICE}) {
             GameEngine noCoins = playing(mode, 1);
             for (int i = 0; i < 8; i++) { set(noCoins, "distanceSinceSpawn", 10000f); noCoins.update(1.0 / 60); }

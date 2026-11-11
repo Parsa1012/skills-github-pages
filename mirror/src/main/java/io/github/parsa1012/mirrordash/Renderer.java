@@ -51,9 +51,7 @@ public class Renderer {
     private final Paint coinTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final RectF rowRect = new RectF();
-    private final RectF gapRect = new RectF();
     private final RectF glowBounds = new RectF();
-    private final Path rowPath = new Path();
 
     private Theme theme = Theme.of(true);
     private Bitmap blueGlow;
@@ -200,7 +198,8 @@ public class Renderer {
             int selected = ballPalette;
             int left = BallPalette.left(selected, theme), right = BallPalette.right(selected, theme);
             blueGlow = makeGlow(left); redGlow = makeGlow(right);
-            blueSphere = makeSphere(left, false); redSphere = makeSphere(right, true);
+            blueSphere = makeSkinSphere(selected, left, false);
+            redSphere = makeSkinSphere(selected, right, true);
             cachedPalette = selected;
         }
         final int width = canvas.getWidth();
@@ -365,7 +364,6 @@ public class Renderer {
      * Drawing the solid pieces separately made the row read as floating pills.
      */
     private void drawRows(Canvas canvas, List<ObstacleRow> rows, int width, boolean darkStage) {
-        float outerCorner = 6f * density;
         for (int i = 0; i < rows.size(); i++) {
             ObstacleRow row = rows.get(i);
             float top = row.y;
@@ -374,30 +372,22 @@ public class Renderer {
                 continue;
             }
 
-            rowPath.reset();
-            rowPath.setFillType(Path.FillType.EVEN_ODD);
-            rowRect.set(0f, top, width, bottom);
-            rowPath.addRoundRect(rowRect, outerCorner, outerCorner, Path.Direction.CW);
-
-            float gapCorner = row.height * 0.5f;
-            for (int g = 0; g < row.gapCount; g++) {
-                float center = row.currentGapCenter(g);
-                float half = row.currentGapWidth(g) * 0.5f;
-                gapRect.set(center - half, top, center + half, bottom);
-                rowPath.addRoundRect(gapRect, gapCorner, gapCorner, Path.Direction.CW);
+            // Draw collision segments directly. Dynamic even-odd paths were repeatedly
+            // tessellated by the GPU as moving rows crossed the screen at high speed.
+            int segmentCount = row.segments(width);
+            for (int k = 0; k < segmentCount; k++) {
+                rowRect.set(row.segmentEdges[2 * k], top, row.segmentEdges[2 * k + 1], bottom);
+                canvas.drawRect(rowRect, rowFillPaint);
+                canvas.drawRect(rowRect, rowEdgePaint);
             }
-
-            canvas.drawPath(rowPath, rowFillPaint);
-            canvas.drawPath(rowPath, rowEdgePaint);
             if ((row.wave || row.pulse) && top > canvas.getHeight() * .30f && top < canvas.getHeight() * .8f) {
                 markerPaint.setColor(0xfffef8d9);
                 canvas.drawLine(0, top - 3f * density, width, top - 3f * density, markerPaint);
                 markerPaint.setColor(darkStage ? Color.WHITE : (theme.night ? 0xFFEAF2FF : 0xFF173861));
             }
             if (row.wave || row.pulse) {
-                int count = row.segments(width);
                 float bestLeft = 0f, bestRight = 0f;
-                for (int k = 0; k < count; k++) {
+                for (int k = 0; k < segmentCount; k++) {
                     float l = row.segmentEdges[2 * k], r = row.segmentEdges[2 * k + 1];
                     if (r - l > bestRight - bestLeft) { bestLeft = l; bestRight = r; }
                 }
@@ -504,12 +494,7 @@ public class Renderer {
         canvas.drawBitmap(glow, null, glowBounds, glowPaint);
 
         glowBounds.set(player.x - player.radius, player.y - player.radius, player.x + player.radius, player.y + player.radius);
-        canvas.save();
-        canvas.clipPath(skinArt.outline(ballPalette, player.x, player.y, player.radius));
         canvas.drawBitmap(sphere, null, glowBounds, glowPaint);
-        skinArt.image(canvas, ballPalette, player.x, player.y, player.radius);
-        canvas.restore();
-        canvas.drawPath(skinArt.outline(ballPalette, player.x, player.y, player.radius), rimPaint);
         int style = ballStyle;
         if (style > 0) {
             skinPaint.setStyle(Paint.Style.STROKE);
@@ -524,6 +509,23 @@ public class Renderer {
                 canvas.drawCircle(player.x, player.y, player.radius * .55f, skinPaint);
             }
         }
+    }
+
+    /** Prepare the masked image once per palette, never clip or tessellate during gameplay. */
+    private Bitmap makeSkinSphere(int id, int color, boolean mirror) {
+        Bitmap sphere = makeSphere(color, mirror);
+        Bitmap result = Bitmap.createBitmap(128, 128, Bitmap.Config.ARGB_8888);
+        Canvas target = new Canvas(result);
+        target.save();
+        target.clipPath(skinArt.outline(id, 64f, 64f, 63f));
+        target.drawBitmap(sphere, 0, 0, glowPaint);
+        skinArt.image(target, id, 64f, 64f, 63f);
+        target.restore();
+        Paint outline = new Paint(Paint.ANTI_ALIAS_FLAG);
+        outline.setStyle(Paint.Style.STROKE); outline.setColor(0x99ffffff); outline.setStrokeWidth(2f);
+        target.drawPath(skinArt.outline(id, 64f, 64f, 63f), outline);
+        sphere.recycle();
+        return result;
     }
 
     private Bitmap makeSphere(int color, boolean mirror) {

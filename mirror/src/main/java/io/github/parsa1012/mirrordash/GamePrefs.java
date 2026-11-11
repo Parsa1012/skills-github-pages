@@ -149,7 +149,7 @@ public final class GamePrefs {
     /** Buy once and select atomically; selecting an owned colour never charges again. */
     public static synchronized boolean buyOrSelectPalette(Context c, int id) {
         int price = BallPalette.price(id);
-        if (price < 0) return false;
+        if (price < 0 || (!BallPalette.available(id) && !ownsPalette(c, id))) return false;
         SharedPreferences p = prefs(c);
         SharedPreferences.Editor edit = p.edit();
         if (!ownsPalette(c, id)) {
@@ -167,11 +167,26 @@ public final class GamePrefs {
         return stage > 0 && stage <= 5 && (stage < unlockedStage(c)
                 || prefs(c).getInt("stage_completed", 0) >= stage);
     }
-    public static void completeStage(Context c, int stage) {
-        if (stage < 1 || stage > 5 || stage > unlockedStage(c)) return;
+    /** Award stage one once, including after upgrading an existing installation. */
+    public static synchronized boolean claimInitialStageBonus(Context c) {
         SharedPreferences p = prefs(c);
-        p.edit().putInt("stage_unlocked", Math.max(unlockedStage(c), Math.min(5, stage + 1)))
-                .putInt("stage_completed", Math.max(p.getInt("stage_completed", 0), stage)).apply();
+        if (p.getBoolean("stage_one_bonus_claimed", false)) return false;
+        int total = (int) Math.min(Integer.MAX_VALUE, (long) coins(c) + 20);
+        p.edit().putBoolean("stage_one_bonus_claimed", true).putInt("coins", total).apply();
+        return true;
+    }
+    /** Progress and the first-unlock reward are persisted in the same edit. */
+    public static synchronized int completeStage(Context c, int stage) {
+        int unlocked = unlockedStage(c);
+        if (stage < 1 || stage > 5 || stage > unlocked) return 0;
+        SharedPreferences p = prefs(c);
+        int next = Math.max(unlocked, Math.min(5, stage + 1));
+        int bonus = next > unlocked ? 20 : 0;
+        int total = (int) Math.min(Integer.MAX_VALUE, (long) coins(c) + bonus);
+        p.edit().putInt("stage_unlocked", next)
+                .putInt("stage_completed", Math.max(p.getInt("stage_completed", 0), stage))
+                .putInt("coins", total).apply();
+        return bonus;
     }
     public static boolean reducedEffects(Context c) { return prefs(c).getBoolean("reduced_effects", false); }
     public static void setReducedEffects(Context c, boolean value) { prefs(c).edit().putBoolean("reduced_effects", value).apply(); }

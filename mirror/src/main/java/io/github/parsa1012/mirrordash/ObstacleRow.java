@@ -78,6 +78,7 @@ public class ObstacleRow {
     }
 
     void updateWave(double elapsedSeconds) {
+        if (!wave && !pulse) return;
         double phase = elapsedSeconds * (2.0 * Math.PI / wavePeriod) + wavePhase;
         float movement = (float) Math.sin(phase);
         waveOffset = wave ? movement * waveAmplitude : 0f;

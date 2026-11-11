@@ -10,8 +10,15 @@ public final class BallPalette {
             "fire", "moon", "star", "diamond", "crown", "planet", "lightning", "crystal"};
     private BallPalette() {}
     public static boolean valid(int id) { return id >= 0 && id < COUNT; }
+    /** Removed animal variants keep their IDs for old purchases, but cannot be bought again. */
+    public static boolean available(int id) {
+        return valid(id) && !(id >= 14 && id < 34 && (id - 4) % 10 < 9);
+    }
     public static int price(int id) {
         if (!valid(id)) return -1;
+        return Math.round(oldPrice(id) * .30f);
+    }
+    private static int oldPrice(int id) {
         if (id == 0) return 0;
         if (id < 4) return 30 + id * 20;
         if (id < 34) return 100 + ((id - 4) / 10) * 90 + ((id - 4) % 10) * 8;
@@ -29,7 +36,7 @@ public final class BallPalette {
         if (id < 4) return id * 50;
         if (id < 34) return 100 + ((id - 4) % 10) * 30 + ((id - 4) / 10) * 100;
         if (id < 46) return 250 + ((id - 34) % 6) * 40 + ((id - 34) / 6) * 150;
-        return 700 + (id - 46) * 100;
+        return (700 + (id - 46) * 100) * 4 / 5;
     }
     public static int assetIndex(int id) {
         if (id >= 4 && id < 34) return (id - 4) % 10;

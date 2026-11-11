@@ -314,7 +314,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
             if (engine.consumeJustDied()) {
                 if (replayRun && engine.mode() == GameEngine.Mode.STAGES && engine.stageCompleted()) {
-                    GamePrefs.addCoins(getContext(), 3);
+                    GamePrefs.addCoins(getContext(), GameEngine.replayWinReward(engine.stageNumber()));
                     replayRun = false;
                 }
                 final int score = engine.score();
