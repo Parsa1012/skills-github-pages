@@ -66,9 +66,10 @@ public final class ModesTest {
         capped.update(1.0 / 60);
         check(capped.rows().isEmpty(), "no obstacles after finish");
         GameEngine coins = playing(GameEngine.Mode.STAGES, 1);
-        set(coins, "rowsSpawned", 3); set(coins, "distanceSinceSpawn", 10000f);
+        set(coins, "rowsSpawned", 5); set(coins, "nextCoinRow", 6); set(coins, "distanceSinceSpawn", 10000f);
         coins.update(1.0 / 60);
-        check(coins.coinVisible(0), "coin spawns after fourth row");
+        check(coins.coinVisible(0), "coin spawns at scheduled random row");
+        check(getInt(coins, "nextCoinRow") >= 11 && getInt(coins, "nextCoinRow") <= 14, "random interval 5 to 8 rows");
         Field xs = GameEngine.class.getDeclaredField("coinX"), ys = GameEngine.class.getDeclaredField("coinY");
         xs.setAccessible(true); ys.setAccessible(true);
         ((float[]) xs.get(coins))[0] = coins.rightPlayer().x;
@@ -79,13 +80,17 @@ public final class ModesTest {
         coins.setPaused(false); coins.update(1.0 / 60);
         check(!coins.coinVisible(0) && coins.collectedCoins() == 1, "right ball collects");
         check(coins.consumeCoinEvents() == 1 && coins.consumeCoinEvents() == 0, "event delivered once");
-        set(coins, "rowsSpawned", 7); set(coins, "distanceSinceSpawn", 10000f); coins.update(1.0 / 60);
+        set(coins, "rowsSpawned", 10); set(coins, "nextCoinRow", 11); set(coins, "distanceSinceSpawn", 10000f); coins.update(1.0 / 60);
         check(coins.coinVisible(0), "next coin spawns");
         ((float[]) xs.get(coins))[0] = coins.leftPlayer().x;
         ((float[]) ys.get(coins))[0] = coins.leftPlayer().y;
         coins.rows().clear(); set(coins, "distanceSinceSpawn", 0f); coins.update(1.0 / 60);
         check(coins.consumeCoinEvents() == 1 && coins.collectedCoins() == 2, "left ball collects");
         coins.startRun(); check(!coins.coinVisible(0) && coins.collectedCoins() == 0, "restart clears transient coins");
+        GameEngine replay = playing(GameEngine.Mode.STAGES, 2);
+        replay.setReplayStage(true); set(replay, "nextCoinRow", 6); set(replay, "rowsSpawned", 5); set(replay, "distanceSinceSpawn", 10000f);
+        replay.update(1.0 / 60);
+        for (int i = 0; i < replay.coinSlots(); i++) check(!replay.coinVisible(i), "replays have no collectible coins");
         for (GameEngine.Mode mode : new GameEngine.Mode[]{GameEngine.Mode.ENDLESS, GameEngine.Mode.PRACTICE}) {
             GameEngine noCoins = playing(mode, 1);
             for (int i = 0; i < 8; i++) { set(noCoins, "distanceSinceSpawn", 10000f); noCoins.update(1.0 / 60); }

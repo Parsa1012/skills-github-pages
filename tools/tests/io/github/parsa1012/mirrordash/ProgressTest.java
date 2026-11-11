@@ -25,6 +25,7 @@ public final class ProgressTest {
         public SharedPreferences getSharedPreferences(String name, int mode) { return store; }
     }
     private static void check(boolean value) { if (!value) throw new AssertionError(); }
+    private static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
     public static void main(String[] args) {
         App c = new App();
         c.store.putBoolean("sound_enabled", false);
@@ -65,14 +66,25 @@ public final class ProgressTest {
         check(GamePrefs.reducedEffects(c) && GamePrefs.clearMarkers(c) && GamePrefs.sensitivity(c) == 150);
         check(GamePrefs.best(c, Difficulty.EASY) == 250);
         GamePrefs.migrate(c); check(!GamePrefs.musicEnabled(c));
+        check(BallPalette.COUNT == 54 && BallPalette.price(-1) == -1);
         check(GamePrefs.coins(c) == 0 && GamePrefs.ownsPalette(c, 0));
         check(!GamePrefs.buyOrSelectPalette(c, 1));
-        GamePrefs.addCoins(c, 12); GamePrefs.addCoins(c, -5);
-        check(GamePrefs.buyOrSelectPalette(c, 1) && GamePrefs.coins(c) == 7);
-        check(GamePrefs.buyOrSelectPalette(c, 1) && GamePrefs.coins(c) == 7);
+        GamePrefs.addCoins(c, 2000); GamePrefs.addCoins(c, -5);
+        check(GamePrefs.buyOrSelectPalette(c, 1) && GamePrefs.coins(c) == 1950);
+        check(GamePrefs.buyOrSelectPalette(c, 1) && GamePrefs.coins(c) == 1950);
         check(GamePrefs.buyOrSelectPalette(c, 0) && GamePrefs.buyOrSelectPalette(c, 1));
-        check(GamePrefs.selectedPalette(c) == 1 && GamePrefs.coins(c) == 7);
-        check(!GamePrefs.buyOrSelectPalette(c, 2) && !GamePrefs.buyOrSelectPalette(c, -1));
+        check(GamePrefs.selectedPalette(c) == 1 && GamePrefs.coins(c) == 1950);
+        check(!GamePrefs.buyOrSelectPalette(c, -1));
+        int normalId = 14, hardId = 24;
+        check(!GamePrefs.buyOrSelectPalette(c, normalId), "normal record is separate from easy/hard");
+        GamePrefs.recordRun(c, Difficulty.NORMAL, BallPalette.requiredScore(normalId), 3, 5000);
+        check(GamePrefs.buyOrSelectPalette(c, normalId), "matching normal record unlocks");
+        check(GamePrefs.buyOrSelectPalette(c, hardId), "existing hard record unlocks");
+        check(!GamePrefs.buyOrSelectPalette(c, 53), "premium requires hard record even with enough coins");
+        for (int i = 0; i < BallPalette.COUNT; i++) {
+            check(BallPalette.valid(i) && BallPalette.price(i) >= 0);
+            check(i < 4 || BallPalette.assetIndex(i) >= 0 && BallPalette.assetIndex(i) < BallPalette.assetCount());
+        }
         check(GamePrefs.appearance(c, false) == 1 && GamePrefs.appearance(c, true) == 2);
         check(GamePrefs.unlockedStage(c) == 5 && GamePrefs.best(c, Difficulty.EASY) == 250);
         System.out.println("Progress, migration and separate settings PASS");

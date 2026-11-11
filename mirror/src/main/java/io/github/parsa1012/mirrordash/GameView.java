@@ -36,6 +36,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private volatile boolean startRequested;
     private volatile GameEngine.Mode requestedMode = GameEngine.Mode.ENDLESS;
     private volatile int requestedStage = 1;
+    private volatile boolean requestedReplay;
+    private boolean replayRun;
     private volatile boolean attractRequested;
     private volatile int pauseRequest;
     private volatile float fps;
@@ -113,6 +115,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     public void startRun(GameEngine.Mode mode, int stage) {
         requestedMode = mode;
         requestedStage = stage;
+        requestedReplay = mode == GameEngine.Mode.STAGES && GamePrefs.stageComplete(getContext(), stage);
         startRequested = true;
     }
 
@@ -220,6 +223,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         if (startRequested) {
             startRequested = false;
             engine.configureRun(requestedMode, requestedStage);
+            replayRun = requestedReplay;
+            engine.setReplayStage(replayRun);
             engine.startRun();
         }
         int request = pauseRequest;
@@ -308,6 +313,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             pumpFeedback();
 
             if (engine.consumeJustDied()) {
+                if (replayRun && engine.mode() == GameEngine.Mode.STAGES && engine.stageCompleted()) {
+                    GamePrefs.addCoins(getContext(), 3);
+                    replayRun = false;
+                }
                 final int score = engine.score();
                 final int cleared = engine.rowsCleared();
                 final long millis = engine.runMillis();

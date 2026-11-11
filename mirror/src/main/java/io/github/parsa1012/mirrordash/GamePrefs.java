@@ -154,7 +154,7 @@ public final class GamePrefs {
         SharedPreferences.Editor edit = p.edit();
         if (!ownsPalette(c, id)) {
             int balance = coins(c);
-            if (balance < price) return false;
+            if (balance < price || best(c, BallPalette.requiredDifficulty(id)) < BallPalette.requiredScore(id)) return false;
             edit.putInt("coins", balance - price).putBoolean("palette_owned_" + id, true);
         }
         edit.putInt("palette_selected", id).apply();

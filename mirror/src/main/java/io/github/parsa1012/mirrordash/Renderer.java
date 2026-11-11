@@ -26,6 +26,7 @@ public class Renderer {
     private static final int GLOW_SIZE_PX = 160;
     private static final float COUNTDOWN_SIZE_DP = 84f;
 
+    private final SkinArt skinArt;
     private final Typeface typeBold;
     private final Typeface typeRegular;
 
@@ -92,6 +93,7 @@ public class Renderer {
     private String fpsText = "";
 
     public Renderer(Context context) {
+        skinArt = new SkinArt(context);
         resources = context.getResources();
         nightScene = BitmapFactory.decodeResource(context.getResources(), R.drawable.scene_night);
         dayScene = BitmapFactory.decodeResource(context.getResources(), R.drawable.scene_day);
@@ -486,8 +488,12 @@ public class Renderer {
                 continue;
             }
             trailPaint.setColor(withAlpha(player.color, alpha));
-            canvas.drawCircle(player.trailX[index], player.trailY[index],
-                    player.radius * (0.55f + 0.35f * fade), trailPaint);
+            float radius = player.radius * (BallPalette.premium(ballPalette) ? .35f : .55f + .35f * fade);
+            canvas.drawCircle(player.trailX[index], player.trailY[index], radius, trailPaint);
+            if (BallPalette.premium(ballPalette) && i % 3 == 0) {
+                trailPaint.setColor(withAlpha(0xffffffff, alpha * 2));
+                canvas.drawCircle(player.trailX[index], player.trailY[index] - player.radius * .45f, radius * .3f, trailPaint);
+            }
         }
     }
 
@@ -498,8 +504,12 @@ public class Renderer {
         canvas.drawBitmap(glow, null, glowBounds, glowPaint);
 
         glowBounds.set(player.x - player.radius, player.y - player.radius, player.x + player.radius, player.y + player.radius);
+        canvas.save();
+        canvas.clipPath(skinArt.outline(ballPalette, player.x, player.y, player.radius));
         canvas.drawBitmap(sphere, null, glowBounds, glowPaint);
-        canvas.drawCircle(player.x, player.y, player.radius, rimPaint);
+        skinArt.image(canvas, ballPalette, player.x, player.y, player.radius);
+        canvas.restore();
+        canvas.drawPath(skinArt.outline(ballPalette, player.x, player.y, player.radius), rimPaint);
         int style = ballStyle;
         if (style > 0) {
             skinPaint.setStyle(Paint.Style.STROKE);

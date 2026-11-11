@@ -557,8 +557,6 @@ public class GameActivity extends Activity {
         LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT);
         gridParams.topMargin = dp(24);
         centre.addView(stageGrid, gridParams);
-        TextView coinInfo = label(tr("بعد از هر چهار مانع یک سکه ظاهر می‌شود؛ با یکی از توپ‌ها آن را جمع کن. سکه‌ها حتی پس از باخت ذخیره می‌شوند.", "A coin appears after every four obstacles. Collect it with either ball; coins remain even if you lose.", "تظهر عملة بعد كل أربعة عوائق. اجمعها بأي كرة وتبقى حتى عند الخسارة.", "Aparece una moneda cada cuatro obstáculos. Recógela con cualquiera de las bolas; se conserva aunque pierdas."), 12, false, theme.textSecondary);
-        centre.addView(coinInfo, wrapWithTopMargin(14));
         TextView back = secondaryAction(strings.back);
         LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(width, dp(50));
         backParams.topMargin = dp(20);
@@ -632,11 +630,12 @@ public class GameActivity extends Activity {
         content.addView(label("◉  " + tr("ظاهر توپ‌ها", "Ball appearance", "مظهر الكرات", "Aspecto de las bolas"), 25, true, theme.textPrimary));
         shopBalance = label("", 16, true, 0xffffcc53);
         content.addView(shopBalance, wrapWithTopMargin(12));
-        content.addView(label(tr("با سکه رنگ دلخواهت را بخر؛ ظاهرها دائمی هستند.", "Buy a colour pair with coins; purchases are permanent.", "اشترِ الألوان بالعملات؛ المشتريات دائمة.", "Compra colores con monedas; son permanentes."), 13, false, theme.textSecondary), wrapWithTopMargin(8));
+        content.addView(label(tr("برای هر خرید، هم سکه و هم رکورد درجهٔ مشخص‌شده لازم است. خریدها دائمی‌اند.", "Each purchase requires both coins and the specified difficulty record. Purchases are permanent.", "يتطلب الشراء العملات والرقم المحدد في درجة الصعوبة. المشتريات دائمة.", "Cada compra requiere monedas y el récord de la dificultad indicada. Las compras son permanentes."), 13, false, theme.textSecondary), wrapWithTopMargin(8));
         shopItems = new LinearLayout(this); shopItems.setOrientation(LinearLayout.VERTICAL);
         int width = Math.max(dp(180), Math.min(dp(380), getResources().getDisplayMetrics().widthPixels - dp(48)));
         LinearLayout.LayoutParams itemsParams = new LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT);
         itemsParams.topMargin = dp(18); content.addView(shopItems, itemsParams);
+        content.addView(label("Twemoji artwork © Twitter, Inc. and contributors · CC BY 4.0\nhttps://twemoji.twitter.com/", 11, false, theme.textSecondary), wrapWithTopMargin(18));
         TextView back = secondaryAction(strings.back);
         LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(width, dp(50)); backParams.topMargin = dp(20);
         content.addView(back, backParams);
@@ -653,10 +652,7 @@ public class GameActivity extends Activity {
     private void refreshShop() {
         shopBalance.setText(coinLabel());
         shopItems.removeAllViews();
-        String[] names = {tr("کلاسیک", "Classic", "كلاسيكي", "Clásico"),
-                tr("بنفش و فیروزه‌ای", "Violet & mint", "بنفسجي وتركوازي", "Violeta y menta"),
-                tr("سبز و صورتی", "Emerald & pink", "أخضر ووردي", "Verde y rosa"),
-                tr("طلایی و بنفش", "Amber & violet", "ذهبي وبنفسجي", "Ámbar y violeta")};
+        final SkinArt shopArt = new SkinArt(this);
         for (int id = 0; id < BallPalette.COUNT; id++) {
             final int choice = id;
             boolean owned = GamePrefs.ownsPalette(this, id), selected = GamePrefs.selectedPalette(this) == id;
@@ -664,36 +660,50 @@ public class GameActivity extends Activity {
             item.setGravity(Gravity.CENTER); item.setPadding(dp(14), dp(12), dp(14), dp(12));
             item.setClickable(true); item.setFocusable(true);
             item.setBackground(tileBackground(0xff293e61, 0xff1e293f, selected ? 0xffffd45c : 0xff607b9e));
-            LinearLayout pair = new LinearLayout(this); pair.setGravity(Gravity.CENTER);
-            for (int color : new int[]{BallPalette.left(id, theme), BallPalette.right(id, theme)}) {
-                View ball = new View(this);
-                GradientDrawable shape = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                        new int[]{0xffffffff, color, color});
-                shape.setShape(GradientDrawable.OVAL); shape.setStroke(dp(1), 0x99ffffff);
-                ball.setBackground(shape);
-                LinearLayout.LayoutParams ballParams = new LinearLayout.LayoutParams(dp(38), dp(38));
-                ballParams.setMargins(dp(5), 0, dp(5), 0); pair.addView(ball, ballParams);
-            }
-            item.addView(pair);
-            TextView name = label(names[id], 16, true, 0xffffffff);
-            item.addView(name, wrapWithTopMargin(7));
+            View preview = new View(this) {
+                @Override protected void onDraw(android.graphics.Canvas canvas) {
+                    super.onDraw(canvas);
+                    float x = getWidth() / 2f, y = getHeight() / 2f, r = dp(25);
+                    shopArt.preview(canvas, choice, x - dp(34), y, r, BallPalette.left(choice, theme));
+                    shopArt.preview(canvas, choice, x + dp(34), y, r, BallPalette.right(choice, theme));
+                }
+            };
+            item.addView(preview, new LinearLayout.LayoutParams(dp(180), dp(62)));
+            String name = skinName(id);
+            item.addView(label(name, 16, true, 0xffffffff), wrapWithTopMargin(7));
             String cost = id == 0 ? tr("رایگان", "Free", "مجاني", "Gratis") : BallPalette.price(id) + tr(" سکه", " coins", " عملات", " monedas");
+            String requirement = id == 0 ? "" : "  •  " + tr("رکورد ", "Record ", "رقم ", "Récord ") + difficultyName(BallPalette.requiredDifficulty(id)) + ": " + BallPalette.requiredScore(id);
             String state = selected ? tr(" • انتخاب‌شده", " • Selected", " • مختار", " • Seleccionado") : owned ? tr(" • خریداری‌شده", " • Owned", " • مملوك", " • Adquirido") : "";
-            item.addView(label(cost + state, 13, false, 0xffffda75), wrapWithTopMargin(5));
-            item.setContentDescription(names[id] + "، " + cost + state);
+            item.addView(label(cost + requirement + state, 13, false, 0xffffda75), wrapWithTopMargin(5));
+            item.setContentDescription(name + "، " + cost + requirement + state);
             item.setOnClickListener(v -> {
                 if (GamePrefs.buyOrSelectPalette(this, choice)) {
                     gameView.setBallPalette(GamePrefs.selectedPalette(this));
                     gameView.playUiClick();
                     refreshShop(); refreshLabels();
                 } else {
-                    Toast.makeText(this, tr("سکهٔ کافی نداری", "Not enough coins", "العملات غير كافية", "No tienes suficientes monedas"), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, tr("سکه یا رکورد لازم را نداری", "You need the required coins and record", "تحتاج إلى العملات والرقم المطلوبين", "Necesitas las monedas y el récord requeridos"), Toast.LENGTH_LONG).show();
                 }
             });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             if (id > 0) lp.topMargin = dp(10);
             shopItems.addView(item, lp);
         }
+    }
+
+    private String skinName(int id) {
+        if (id == 0) return tr("کلاسیک", "Classic", "كلاسيكي", "Clásico");
+        if (id == 1) return tr("بنفش و فیروزه‌ای", "Violet & mint", "بنفسجي وتركوازي", "Violeta y menta");
+        if (id == 2) return tr("سبز و صورتی", "Emerald & pink", "أخضر ووردي", "Verde y rosa");
+        if (id == 3) return tr("طلایی و بنفش", "Amber & violet", "ذهبي وبنفسجي", "Ámbar y violeta");
+        String[] fa = {"اژدها", "شیر", "پلنگ", "گربه", "ببر", "گرگ", "روباه", "پاندا", "خرس", "خرگوش", "فوتبال", "والیبال", "تنیس", "بسکتبال", "بیس‌بال", "بیلیارد", "آتش", "ماه", "ستاره", "الماس", "تاج", "سیاره", "آذرخش", "گوی بلورین"};
+        String[] en = {"Dragon", "Lion", "Leopard", "Cat", "Tiger", "Wolf", "Fox", "Panda", "Bear", "Rabbit", "Football", "Volleyball", "Tennis", "Basketball", "Baseball", "Billiards", "Fire", "Moon", "Star", "Diamond", "Crown", "Planet", "Lightning", "Crystal"};
+        String[] ar = {"تنين", "أسد", "نمر مرقط", "قطة", "ببر", "ذئب", "ثعلب", "باندا", "دب", "أرنب", "كرة القدم", "كرة الطائرة", "تنس", "سلة", "بيسبول", "بلياردو", "نار", "قمر", "نجمة", "ألماس", "تاج", "كوكب", "برق", "بلورة"};
+        String[] es = {"Dragón", "León", "Leopardo", "Gato", "Tigre", "Lobo", "Zorro", "Panda", "Oso", "Conejo", "Fútbol", "Voleibol", "Tenis", "Baloncesto", "Béisbol", "Billar", "Fuego", "Luna", "Estrella", "Diamante", "Corona", "Planeta", "Rayo", "Cristal"};
+        int index = BallPalette.assetIndex(id);
+        String name = (lang == Lang.EN ? en : lang == Lang.AR ? ar : lang == Lang.ES ? es : fa)[index];
+        int variant = id < 34 ? (id - 4) / 10 + 1 : id < 46 ? (id - 34) / 6 + 1 : 0;
+        return name + (variant > 0 ? " · " + variant : tr(" ✦ دنباله‌دار", " ✦ Trail", " ✦ أثر", " ✦ Estela"));
     }
 
     private void applyAccessibility() {
@@ -1167,6 +1177,8 @@ public class GameActivity extends Activity {
         }
         refreshLabels();
         gameView.startRun(mode, selectedStage);
+        if (mode == GameEngine.Mode.STAGES && GamePrefs.stageComplete(this, selectedStage))
+            Toast.makeText(this, tr("مرحلهٔ تکراری: با پیروزی ۳ سکه می‌گیری؛ سکه‌ای در مسیر نیست.", "Replay: win 3 coins; no coins appear during the run.", "الإعادة: اربح ٣ عملات عند الفوز؛ لا تظهر عملات أثناء اللعب.", "Repetición: gana 3 monedas al vencer; no aparecen monedas durante la partida."), Toast.LENGTH_LONG).show();
         if (mode == GameEngine.Mode.PRACTICE) Toast.makeText(this, tr("تمرین: برخورد بازی را تمام نمی‌کند و رکورد ثبت نمی‌شود", "Practice: collisions do not end the run or count towards records", "تدريب: الاصطدام لا ينهي اللعب ولا يسجل رقماً", "Práctica: los choques no terminan la partida ni cuentan para récords"), Toast.LENGTH_LONG).show();
         if (mode == GameEngine.Mode.STAGES) Toast.makeText(this, tr("هدف: عبور از ", "Goal: clear ", "الهدف: تجاوز ", "Objetivo: superar ") + (10 + selectedStage * 5) + tr(" ردیف", " rows", " صفاً", " filas"), Toast.LENGTH_LONG).show();
         gameView.resumeGame();
@@ -1238,7 +1250,7 @@ public class GameActivity extends Activity {
                     + " · " + difficultyName(difficulty));
             gameOverBest.setTextColor(theme.textSecondary);
             gameOverBest.setTypeface(typeRegular);
-            gameOverBest.setText(tr("زمان: ", "Time: ", "الوقت: ", "Tiempo: ") + String.format(java.util.Locale.ROOT, "%d:%02d", millis / 60000, (millis / 1000) % 60));
+            gameOverBest.setText(tr("زمان: ", "Time: ", "الوقت: ", "Tiempo: ") + String.format(java.util.Locale.ROOT, "%d:%02d", millis / 60000, (millis / 1000) % 60) + "  •  " + coinLabel());
             gameView.playWin();
             if (!GamePrefs.reducedEffects(this)) confetti.celebrate();
         } else {

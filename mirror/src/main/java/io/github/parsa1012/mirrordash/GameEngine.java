@@ -72,7 +72,9 @@ public class GameEngine {
     private static final int MAX_COINS = 10;
     private final boolean[] coinVisible = new boolean[MAX_COINS];
     private final float[] coinX = new float[MAX_COINS], coinY = new float[MAX_COINS];
-    private int coinEvents, collectedCoins;
+    private int coinEvents, collectedCoins, nextCoinRow;
+    private boolean replayStage;
+    public void setReplayStage(boolean replay) { replayStage = replay; }
     private double worldSeconds;
     public int coinSlots() { return MAX_COINS; }
     public boolean coinVisible(int index) { return index >= 0 && index < MAX_COINS && coinVisible[index]; }
@@ -267,6 +269,7 @@ public class GameEngine {
         java.util.Arrays.fill(coinVisible, false);
         coinEvents = 0;
         collectedCoins = 0;
+        nextCoinRow = 5 + random.nextInt(4);
         finishY = Float.NaN;
         stageCompleted = false;
         hitBall = 0;
@@ -484,8 +487,9 @@ public class GameEngine {
                 spawnRow(level);
                 if (mode == Mode.STAGES) {
                     rowsSpawned++;
-                    // One optional coin after every four generated obstacles, between rows.
-                    if (rowsSpawned % 4 == 0) {
+                    // Random intervals of 5–8 rows; replay stages pay only on victory.
+                    if (!replayStage && rowsSpawned == nextCoinRow) {
+                        nextCoinRow += 5 + random.nextInt(4);
                         for (int i = 0; i < MAX_COINS; i++) {
                             if (!coinVisible[i]) {
                                 coinVisible[i] = true;
