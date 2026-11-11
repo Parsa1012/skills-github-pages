@@ -293,6 +293,10 @@ public class GameActivity extends Activity {
         modes.addView(stages, secondMode);
         stages.setOnClickListener(v -> chooseStage());
 
+        TextView appearance = secondaryAction("◉  " + tr("ظاهر", "Appearance", "المظهر", "Apariencia"));
+        content.addView(appearance, fullWidthButtonParams(10));
+        appearance.setOnClickListener(v -> showShop());
+
         TextView practice = secondaryAction(tr("تمرین", "Practice", "تدريب", "Práctica"));
         content.addView(practice, fullWidthButtonParams(10));
         practice.setOnClickListener(v -> { mode = GameEngine.Mode.PRACTICE; startGame(); });
@@ -308,10 +312,6 @@ public class GameActivity extends Activity {
                 showSettings();
             }
         });
-
-        TextView appearance = secondaryAction("◉  " + tr("ظاهر", "Appearance", "المظهر", "Apariencia"));
-        content.addView(appearance, fullWidthButtonParams(10));
-        appearance.setOnClickListener(v -> showShop());
 
         // Reserve the top corner for the vertical tools; scroll on short displays or with
         // large system text instead of overlapping the logo and actions.
@@ -459,55 +459,44 @@ public class GameActivity extends Activity {
                 Math.min(dp(340), screenWidth - dp(40)),
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        TextView title = label(strings.settings, 20, true, theme.textPrimary);
+        TextView title = label("⚙  " + strings.settings, 24, true, theme.textPrimary);
         card.addView(title);
+        card.addView(label(tr("بازی را برای خودت تنظیم کن", "Make the game yours", "اضبط اللعبة كما تحب", "Personaliza tu juego"), 12, false, theme.textMuted), wrapWithTopMargin(4));
 
-        chipEasy = chipLabel(strings.easy);
-        chipNormal = chipLabel(strings.normal);
-        chipHard = chipLabel(strings.hard);
-        card.addView(sectionLabel(strings.difficulty), wrapWithTopMargin(16));
-        card.addView(chipRow(chipEasy, chipNormal, chipHard), wrapWithTopMargin(8));
+        LinearLayout difficultyGroup = settingsSection(card, "◈  " + strings.difficulty);
+        chipEasy = chipLabel(strings.easy); chipNormal = chipLabel(strings.normal); chipHard = chipLabel(strings.hard);
+        difficultyGroup.addView(chipRow(chipEasy, chipNormal, chipHard), matchWidthWithTopMargin(8));
 
-        chipNight = chipLabel(strings.night);
-        chipDay = chipLabel(strings.day);
-        card.addView(sectionLabel(strings.appearance), wrapWithTopMargin(16));
-        card.addView(chipRow(chipNight, chipDay), wrapWithTopMargin(8));
+        LinearLayout appearanceGroup = settingsSection(card, "◐  " + strings.appearance);
+        chipNight = chipLabel(strings.night); chipDay = chipLabel(strings.day);
+        appearanceGroup.addView(chipRow(chipNight, chipDay), matchWidthWithTopMargin(8));
 
-        chipSoundOn = chipLabel(strings.on);
-        chipSoundOff = chipLabel(strings.off);
-        card.addView(sectionLabel(strings.sound), wrapWithTopMargin(16));
-        card.addView(chipRow(chipSoundOn, chipSoundOff), wrapWithTopMargin(8));
-        addVolumeControl(card, false);
+        LinearLayout audioGroup = settingsSection(card, "♫  " + tr("صدا و موسیقی", "SOUND & MUSIC", "الصوت والموسيقى", "SONIDO Y MÚSICA"));
+        chipSoundOn = chipLabel(strings.on); chipSoundOff = chipLabel(strings.off);
+        audioGroup.addView(sectionLabel(strings.sound), wrapWithTopMargin(8));
+        audioGroup.addView(chipRow(chipSoundOn, chipSoundOff), matchWidthWithTopMargin(8));
+        addVolumeControl(audioGroup, false);
+        chipMusicOn = chipLabel(strings.on); chipMusicOff = chipLabel(strings.off);
+        audioGroup.addView(sectionLabel(strings.music), wrapWithTopMargin(12));
+        audioGroup.addView(chipRow(chipMusicOn, chipMusicOff), matchWidthWithTopMargin(8));
+        addVolumeControl(audioGroup, true);
 
-        chipMusicOn = chipLabel(strings.on);
-        chipMusicOff = chipLabel(strings.off);
-        card.addView(sectionLabel(strings.music), wrapWithTopMargin(16));
-        card.addView(chipRow(chipMusicOn, chipMusicOff), wrapWithTopMargin(8));
-        addVolumeControl(card, true);
+        LinearLayout accessGroup = settingsSection(card, "✦  " + tr("نمایش و کنترل", "DISPLAY & CONTROL", "العرض والتحكم", "PANTALLA Y CONTROL"));
+        addAccessibilityControls(accessGroup);
 
-        addAccessibilityControls(card);
-
-        card.addView(sectionLabel(strings.records), wrapWithTopMargin(16));
+        LinearLayout recordsGroup = settingsSection(card, "◆  " + strings.records);
         recordsText = label("", 13, false, theme.textSecondary);
-        card.addView(recordsText, wrapWithTopMargin(8));
+        recordsGroup.addView(recordsText, wrapWithTopMargin(8));
         TextView statistics = secondaryAction(strings.statistics);
-        card.addView(statistics, fullWidthButtonParams(16));
+        recordsGroup.addView(statistics, fullWidthButtonParams(12));
         statistics.setOnClickListener(v -> showStatistics());
         TextView collection = secondaryAction(strings.collection);
-        card.addView(collection, fullWidthButtonParams(10));
+        recordsGroup.addView(collection, fullWidthButtonParams(8));
         collection.setOnClickListener(v -> showCollection());
 
         TextView back = primaryAction(strings.back);
-        LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(50));
-        backParams.topMargin = dp(22);
-        card.addView(back, backParams);
-        back.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hideSettings();
-            }
-        });
+        card.addView(back, fullWidthButtonParams(20));
+        back.setOnClickListener(v -> hideSettings());
 
         chipEasy.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -701,8 +690,7 @@ public class GameActivity extends Activity {
         shopItems.removeAllViews();
         final SkinArt shopArt = new SkinArt(this);
         for (int id = 0; id < BallPalette.COUNT; id++) {
-            // Keep already purchased legacy variants accessible, but do not sell duplicates.
-            if (!BallPalette.available(id) && !GamePrefs.ownsPalette(this, id)) continue;
+            if (!BallPalette.available(id)) continue;
             final int choice = id;
             boolean owned = GamePrefs.ownsPalette(this, id), selected = GamePrefs.selectedPalette(this) == id;
             LinearLayout item = new LinearLayout(this); item.setOrientation(LinearLayout.VERTICAL);
@@ -727,7 +715,6 @@ public class GameActivity extends Activity {
             item.addView(label(name, 16, true, 0xffffffff), wrapWithTopMargin(7));
             String cost = id == 0 ? tr("رایگان", "Free", "مجاني", "Gratis") : BallPalette.price(id) + tr(" سکه", " coins", " عملات", " monedas");
             String requirement = id == 0 ? "" : "  •  " + tr("رکورد ", "Record ", "رقم ", "Récord ") + difficultyName(BallPalette.requiredDifficulty(id)) + ": " + BallPalette.requiredScore(id);
-            if (!BallPalette.available(id)) name += tr(" (خرید قدیمی)", " (legacy purchase)", " (شراء سابق)", " (compra anterior)");
             String state = selected ? tr(" • انتخاب‌شده", " • Selected", " • مختار", " • Seleccionado") : owned ? tr(" • خریداری‌شده", " • Owned", " • مملوك", " • Adquirido") : "";
             item.addView(label(cost + requirement + state, 13, false, 0xffffda75), wrapWithTopMargin(5));
             item.setContentDescription(name + "، " + cost + requirement + state);
@@ -763,9 +750,7 @@ public class GameActivity extends Activity {
         String[] es = {"Dragón", "León", "Leopardo", "Gato", "Tigre", "Lobo", "Zorro", "Panda", "Oso", "Conejo", "Fútbol", "Voleibol", "Tenis", "Baloncesto", "Béisbol", "Billar", "Fuego", "Luna", "Estrella", "Diamante", "Corona", "Planeta", "Rayo", "Cristal"};
         int index = BallPalette.assetIndex(id);
         String name = (lang == Lang.EN ? en : lang == Lang.AR ? ar : lang == Lang.ES ? es : fa)[index];
-        int variant = id < 34 ? (id - 4) / 10 + 1 : id < 46 ? (id - 34) / 6 + 1 : 0;
-        if (id >= 4 && id <= 12) return name;
-        return name + (variant > 0 ? " · " + variant : tr(" ✦ دنباله‌دار", " ✦ Trail", " ✦ أثر", " ✦ Estela"));
+        return name;
     }
 
     private void applyAccessibility() {
@@ -774,7 +759,7 @@ public class GameActivity extends Activity {
     }
 
     private void addAccessibilityControls(LinearLayout card) {
-        card.addView(sectionLabel(tr("دسترس‌پذیری", "Accessibility", "إمكانية الوصول", "Accesibilidad")), wrapWithTopMargin(16));
+
         android.widget.Switch effects = new android.widget.Switch(this);
         settingsEffects = effects;
         effects.setText(tr("کاهش جلوه‌های تصویری", "Reduce visual effects", "تقليل المؤثرات البصرية", "Reducir efectos visuales"));
@@ -996,6 +981,7 @@ public class GameActivity extends Activity {
     private void buildPausePanel() {
         LinearLayout panel = card(theme, dp(340));
         panel.setVisibility(View.VISIBLE);
+        panel.setAlpha(1f); // card() starts invisible; the wrapper is animated, not its child.
         TextView title = label(strings.pausedTitle, 24, true, theme.textPrimary);
         panel.addView(title);
         panel.addView(label(tr("تنظیمات سریع", "QUICK SETTINGS", "إعدادات سريعة", "AJUSTES RÁPIDOS"), 12, true, theme.playerBlue), wrapWithTopMargin(12));
@@ -1219,6 +1205,25 @@ public class GameActivity extends Activity {
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
+    private LinearLayout settingsSection(LinearLayout parent, String title) {
+        LinearLayout group = new LinearLayout(this);
+        group.setOrientation(LinearLayout.VERTICAL);
+        group.setGravity(Gravity.CENTER_HORIZONTAL);
+        group.setPadding(dp(14), dp(12), dp(14), dp(14));
+        GradientDrawable shape = new GradientDrawable();
+        shape.setCornerRadius(dp(17)); shape.setColor(theme.chipBackground); shape.setStroke(dp(1), theme.panelStroke);
+        group.setBackground(shape);
+        TextView heading = label(title, 13, true, theme.playerBlue);
+        heading.setGravity(Gravity.START);
+        group.addView(heading, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        parent.addView(group, matchWidthWithTopMargin(12));
+        return group;
+    }
+    private LinearLayout.LayoutParams matchWidthWithTopMargin(int margin) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(margin); return params;
+    }
+
     private LinearLayout.LayoutParams fullWidthButtonParams(int topMarginDp) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(50));
@@ -1304,10 +1309,7 @@ public class GameActivity extends Activity {
     }
 
     private void showPause() {
-        GameEngine.State state = gameView.engine().state();
-        if (state != GameEngine.State.PLAYING && state != GameEngine.State.COUNTDOWN) {
-            return;
-        }
+        if (!gameView.canPause()) return;
         if (gameOverPanel.getVisibility() == View.VISIBLE) {
             return;
         }

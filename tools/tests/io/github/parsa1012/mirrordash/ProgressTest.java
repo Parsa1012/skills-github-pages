@@ -92,7 +92,7 @@ public final class ProgressTest {
         check(GamePrefs.buyOrSelectPalette(wallet, 0) && GamePrefs.buyOrSelectPalette(wallet, 1));
         check(GamePrefs.selectedPalette(wallet) == 1 && GamePrefs.coins(wallet) == 1985);
         check(!GamePrefs.buyOrSelectPalette(wallet, -1));
-        int normalId = 34, hardId = 40;
+        int normalId = 34, hardId = 37;
         check(!GamePrefs.buyOrSelectPalette(wallet, normalId), "normal record is separate from easy");
         GamePrefs.recordRun(wallet, Difficulty.NORMAL, BallPalette.requiredScore(normalId), 3, 5000);
         check(GamePrefs.buyOrSelectPalette(wallet, normalId), "matching normal record unlocks");
@@ -101,11 +101,26 @@ public final class ProgressTest {
         check(GamePrefs.buyOrSelectPalette(wallet, hardId), "matching hard record unlocks");
         check(!GamePrefs.buyOrSelectPalette(wallet, 53), "premium requires hard record");
         check(!GamePrefs.buyOrSelectPalette(wallet, 14), "removed variant cannot be newly purchased");
-        wallet.store.putBoolean("palette_owned_14", true);
-        check(GamePrefs.buyOrSelectPalette(wallet, 14) && GamePrefs.selectedPalette(wallet) == 14, "legacy purchases stay selectable");
+        App legacy = new App();
+        legacy.store.putInt("coins", 10);
+        legacy.store.putBoolean("palette_owned_14", true);
+        legacy.store.putBoolean("palette_owned_24", true);
+        legacy.store.putBoolean("palette_owned_40", true);
+        legacy.store.putBoolean("palette_owned_46", true);
+        legacy.store.putInt("palette_selected", 40);
+        GamePrefs.migrate(legacy);
+        check(GamePrefs.ownsPalette(legacy, 4) && GamePrefs.ownsPalette(legacy, 34), "duplicate ownership maps to one item");
+        check(GamePrefs.selectedPalette(legacy) == 34, "selected item migrated");
+        int expected = 10 + BallPalette.price(24) + BallPalette.price(46);
+        check(GamePrefs.coins(legacy) == expected, "duplicate and removed premium refunded");
+        check(!GamePrefs.buyOrSelectPalette(legacy, 14) && !GamePrefs.buyOrSelectPalette(legacy, 46), "removed items cannot be selected");
+        GamePrefs.migrate(legacy); check(GamePrefs.coins(legacy) == expected, "migration runs only once");
+        App selectedPremium = new App(); selectedPremium.store.putBoolean("palette_owned_47", true);
+        selectedPremium.store.putInt("palette_selected", 47); GamePrefs.migrate(selectedPremium);
+        check(GamePrefs.selectedPalette(selectedPremium) == 0 && GamePrefs.coins(selectedPremium) == BallPalette.price(47), "selected premium refunded and reset");
         for (int i = 0; i < BallPalette.COUNT; i++) {
             check(BallPalette.valid(i) && BallPalette.price(i) >= 0);
-            check(i < 4 || BallPalette.assetIndex(i) >= 0 && BallPalette.assetIndex(i) < BallPalette.assetCount());
+            check(!BallPalette.available(i) || i < 4 || BallPalette.assetIndex(i) >= 0 && BallPalette.assetIndex(i) < BallPalette.assetCount());
         }
         check(GamePrefs.appearance(c, false) == 1 && GamePrefs.appearance(c, true) == 2);
         check(GamePrefs.unlockedStage(c) == 5 && GamePrefs.best(c, Difficulty.EASY) == 250);

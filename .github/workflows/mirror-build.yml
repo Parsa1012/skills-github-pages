@@ -32,6 +32,7 @@ jobs:
         with:
           gradle-version: '8.7'
       - run: sh tools/test_engine.sh
+      - run: python3 tools/test_ui_contracts.py
       - run: gradle :mirror:assembleDebug :mirror:assembleRelease
       - name: Verify release identity and signature
         shell: bash
@@ -42,7 +43,7 @@ jobs:
           "$tools/apksigner" verify --verbose --print-certs "$apk" | tee /tmp/signature.txt
           grep -qi '09228d155ddceb4fbe9897406cf4576db9dfe0a449f4ef391c1aeaaf1227664c' /tmp/signature.txt
           "$tools/aapt" dump badging "$apk" | tee /tmp/badging.txt
-          grep -q "package: name='io.github.parsa1012.mirrordash' versionCode='17' versionName='1.9.7'" /tmp/badging.txt
+          grep -q "package: name='io.github.parsa1012.mirrordash' versionCode='18' versionName='1.9.8'" /tmp/badging.txt
       - uses: actions/upload-artifact@v4
         with:
           name: twin-balls-apks
@@ -52,7 +53,7 @@ jobs:
   # Publishes only the specifically requested build; ordinary pushes and PRs stay read-only.
   publish:
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/arena/323dcaf0-skills-github-pages' && startsWith(github.event.head_commit.message, 'Publish Twin Balls 1.9.7')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/arena/323dcaf0-skills-github-pages' && startsWith(github.event.head_commit.message, 'Publish Twin Balls 1.9.8')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -66,6 +67,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release create v1.9.7 'apks/release/mirror-release.apk#mirror-dash-1.9.7.apk' \
-            --target "$GITHUB_SHA" --title 'توپ‌های همزاد ۱٫۹٫۷' \
-            --notes 'راهنمای تازه، توقف پیشرفته و تصویرهای سه‌بعدی آیتم‌ها. نسخهٔ انتشار با امضای قبلی ساخته شده است.'
+          set -euo pipefail
+          cp apks/release/mirror-release.apk twin-balls-1.9.8-install.apk
+          cp apks/release/mirror-release.apk twin-balls-1.9.8-update.apk
+          cmp twin-balls-1.9.8-install.apk twin-balls-1.9.8-update.apk
+          gh release create v1.9.8 twin-balls-1.9.8-install.apk twin-balls-1.9.8-update.apk \
+            --target "$GITHUB_SHA" --title 'توپ‌های همزاد ۱٫۹٫۸' \
+            --notes 'اصلاح پنل توقف، فروشگاه ساده‌تر و کاهش حجم. نسخهٔ انتشار با امضای قبلی ساخته شده است.'

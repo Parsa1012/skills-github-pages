@@ -25,6 +25,7 @@ public final class GamePrefs {
      */
     public static void migrate(Context context) {
         SharedPreferences prefs = prefs(context);
+        migrateShop(context);
         // A truly new install sees the guide; existing installs are not interrupted.
         if (!prefs.contains("help_seen")) {
             prefs.edit().putBoolean("help_seen", prefs.getBoolean(KEY_MIGRATED, false)).apply();
@@ -146,17 +147,38 @@ public final class GamePrefs {
         int total = (int) Math.min(Integer.MAX_VALUE, (long) coins(c) + amount);
         prefs(c).edit().putInt("coins", total).apply();
     }
+    /** Collapse duplicate purchases to their canonical item; refund redundant and removed skins.
+     * The last published price is used because older installations did not store purchase prices. */
+    private static synchronized void migrateShop(Context c) {
+        SharedPreferences p = prefs(c);
+        if (p.getBoolean("shop_dedup_v1", false)) return;
+        boolean[] owned = new boolean[BallPalette.COUNT];
+        for (int i = 0; i < owned.length; i++) owned[i] = i == 0 || p.getBoolean("palette_owned_" + i, false);
+        SharedPreferences.Editor edit = p.edit();
+        long refund = 0;
+        for (int id = 1; id < owned.length; id++) {
+            if (!owned[id] || BallPalette.available(id)) continue;
+            int canonical = BallPalette.replacement(id);
+            if (id >= 46 || owned[canonical]) refund += BallPalette.price(id);
+            else { owned[canonical] = true; edit.putBoolean("palette_owned_" + canonical, true); }
+        }
+        int selected = p.getInt("palette_selected", 0);
+        if (BallPalette.valid(selected) && !BallPalette.available(selected))
+            edit.putInt("palette_selected", BallPalette.replacement(selected));
+        edit.putInt("coins", (int) Math.min(Integer.MAX_VALUE, (long) coins(c) + refund));
+        edit.putBoolean("shop_dedup_v1", true).apply();
+    }
     public static synchronized boolean ownsPalette(Context c, int id) {
         return BallPalette.valid(id) && (id == 0 || prefs(c).getBoolean("palette_owned_" + id, false));
     }
     public static synchronized int selectedPalette(Context c) {
         int id = prefs(c).getInt("palette_selected", 0);
-        return ownsPalette(c, id) ? id : 0;
+        return BallPalette.available(id) && ownsPalette(c, id) ? id : 0;
     }
     /** Buy once and select atomically; selecting an owned colour never charges again. */
     public static synchronized boolean buyOrSelectPalette(Context c, int id) {
         int price = BallPalette.price(id);
-        if (price < 0 || (!BallPalette.available(id) && !ownsPalette(c, id))) return false;
+        if (price < 0 || !BallPalette.available(id)) return false;
         SharedPreferences p = prefs(c);
         SharedPreferences.Editor edit = p.edit();
         if (!ownsPalette(c, id)) {

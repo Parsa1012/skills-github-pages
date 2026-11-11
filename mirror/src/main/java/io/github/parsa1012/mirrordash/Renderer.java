@@ -508,12 +508,8 @@ public class Renderer {
                 continue;
             }
             trailPaint.setColor(withAlpha(player.color, alpha));
-            float radius = player.radius * (BallPalette.premium(ballPalette) ? .35f : .55f + .35f * fade);
-            canvas.drawCircle(player.trailX[index], player.trailY[index], radius, trailPaint);
-            if (BallPalette.premium(ballPalette) && i % 3 == 0) {
-                trailPaint.setColor(withAlpha(0xffffffff, alpha * 2));
-                canvas.drawCircle(player.trailX[index], player.trailY[index] - player.radius * .45f, radius * .3f, trailPaint);
-            }
+            canvas.drawCircle(player.trailX[index], player.trailY[index],
+                    player.radius * (.55f + .35f * fade), trailPaint);
         }
     }
 

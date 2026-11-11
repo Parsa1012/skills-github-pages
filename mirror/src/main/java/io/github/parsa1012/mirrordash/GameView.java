@@ -124,6 +124,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         attractRequested = true;
     }
 
+    /** Also accepts a pause pressed before the render thread applies a newly requested run. */
+    public boolean canPause() {
+        GameEngine.State state = engine.state();
+        return startRequested || state == GameEngine.State.PLAYING || state == GameEngine.State.COUNTDOWN;
+    }
+
     public void pauseGame() {
         pauseRequest = 1;
     }
