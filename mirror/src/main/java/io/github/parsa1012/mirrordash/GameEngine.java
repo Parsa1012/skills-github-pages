@@ -69,34 +69,19 @@ public class GameEngine {
     private volatile boolean reducedEffects;
     private volatile float sensitivity = 1f;
     private float impactX, impactY, impactTimer;
-    public static final int POWER_SHIELD = 1, POWER_SLOW = 2, POWER_GUIDE = 3;
-    private final boolean[] powerUsed = new boolean[4];
-    private float shieldRemaining, slowRemaining, guideRemaining;
-    private int pickupEvent;
-    private final boolean[] pickupVisible = new boolean[4];
-    private final float[] pickupX = new float[4], pickupY = new float[4];
-    /** One optional orb per available type; all move at the current world speed. */
-    public boolean pickupVisible(int type) { return type >= 1 && type <= 3 && pickupVisible[type]; }
-    public float pickupX(int type) { return pickupX[type]; }
-    public float pickupY(int type) { return pickupY[type]; }
-    public float pickupRadius() { return 10f * density; }
-    public float shieldRemaining() { return shieldRemaining; }
-    public int consumePickupEvent() { int event = pickupEvent; pickupEvent = 0; return event; }
+    private static final int MAX_COINS = 10;
+    private final boolean[] coinVisible = new boolean[MAX_COINS];
+    private final float[] coinX = new float[MAX_COINS], coinY = new float[MAX_COINS];
+    private int coinEvents, collectedCoins;
     private double worldSeconds;
-    public boolean shieldArmed() { return shieldRemaining > 0f; }
-    public float slowRemaining() { return slowRemaining; }
-    public float guideRemaining() { return guideRemaining; }
+    public int coinSlots() { return MAX_COINS; }
+    public boolean coinVisible(int index) { return index >= 0 && index < MAX_COINS && coinVisible[index]; }
+    public float coinX(int index) { return coinX[index]; }
+    public float coinY(int index) { return coinY[index]; }
+    public float coinRadius() { return 11f * density; }
+    public int collectedCoins() { return collectedCoins; }
+    public int consumeCoinEvents() { int count = coinEvents; coinEvents = 0; return count; }
     public int stageNumber() { return stage; }
-    /** Only collected stage orbs can activate these powers. Each type appears at most once. */
-    public boolean activatePower(int power) {
-        if (mode != Mode.STAGES || state != State.PLAYING || paused || power < 1 || power > 3
-                || power > stage || powerUsed[power]) return false;
-        powerUsed[power] = true;
-        if (power == POWER_SHIELD) shieldRemaining = 3f;
-        if (power == POWER_SLOW) slowRemaining = 3f;
-        if (power == POWER_GUIDE) guideRemaining = 3f;
-        return true;
-    }
     private volatile int hitBall;
     public int hitBall() { return hitBall; }
     public Mode mode() { return mode; }
@@ -239,6 +224,7 @@ public class GameEngine {
         leftPlayer.color = theme.playerBlue;
         rightPlayer.color = theme.playerRed;
     }
+    public void setBallColors(int first, int second) { leftPlayer.color = first; rightPlayer.color = second; }
 
     public void setPaused(boolean paused) {
         this.paused = paused;
@@ -278,12 +264,9 @@ public class GameEngine {
         rowsCleared = 0;
         rowsSpawned = 0;
         worldSeconds = 0;
-        java.util.Arrays.fill(powerUsed, false);
-        shieldRemaining = 0;
-        slowRemaining = 0;
-        guideRemaining = 0;
-        java.util.Arrays.fill(pickupVisible, false);
-        pickupEvent = 0;
+        java.util.Arrays.fill(coinVisible, false);
+        coinEvents = 0;
+        collectedCoins = 0;
         finishY = Float.NaN;
         stageCompleted = false;
         hitBall = 0;
@@ -402,13 +385,7 @@ public class GameEngine {
                 previousLeftX = leftPlayer.x;
                 previousRightX = rightPlayer.x;
                 updatePlayers(dt);
-                // The power runs in real game time; it slows world translation and gap motion,
-                // but never the player's finger or elapsed-time score.
-                float worldDt = slowRemaining > 0f ? dt * .55f : dt;
-                shieldRemaining = Math.max(0f, shieldRemaining - dt);
-                slowRemaining = Math.max(0f, slowRemaining - dt);
-                guideRemaining = Math.max(0f, guideRemaining - dt);
-                updateWorld(worldDt, true);
+                updateWorld(dt, true);
                 break;
             case DYING:
                 dyingTimer -= dt;
@@ -477,22 +454,21 @@ public class GameEngine {
             }
         }
 
-        for (int type = 1; type <= 3; type++) {
-            if (!pickupVisible[type]) continue;
-            float previousY = pickupY[type];
-            pickupY[type] += speed * dt;
-            float reach = pickupRadius() + leftPlayer.radius;
-            // Sweep relative motion of both orb and player, including fast horizontal swipes.
-            float oldY = leftPlayer.y - previousY, newY = leftPlayer.y - pickupY[type];
-            boolean leftTouch = sweptCircle(previousLeftX - pickupX[type], oldY,
-                    leftPlayer.x - pickupX[type], newY, reach);
-            boolean rightTouch = sweptCircle(previousRightX - pickupX[type], oldY,
-                    rightPlayer.x - pickupX[type], newY, reach);
+        for (int i = 0; i < MAX_COINS; i++) {
+            if (!coinVisible[i]) continue;
+            float previousY = coinY[i];
+            coinY[i] += speed * dt;
+            float reach = coinRadius() + leftPlayer.radius;
+            float oldY = leftPlayer.y - previousY, newY = leftPlayer.y - coinY[i];
+            boolean leftTouch = sweptCircle(previousLeftX - coinX[i], oldY, leftPlayer.x - coinX[i], newY, reach);
+            boolean rightTouch = sweptCircle(previousRightX - coinX[i], oldY, rightPlayer.x - coinX[i], newY, reach);
             if (lethal && (leftTouch || rightTouch)) {
-                pickupVisible[type] = false;
-                if (activatePower(type)) pickupEvent = type;
-            } else if (pickupY[type] > height + reach) {
-                pickupVisible[type] = false;
+                coinVisible[i] = false;
+                coinEvents++;
+                collectedCoins++;
+                if (!reducedEffects) burstCoin(coinX[i], coinY[i]);
+            } else if (coinY[i] > height + reach) {
+                coinVisible[i] = false;
             }
         }
         if (!Float.isNaN(finishY)) finishY += speed * dt;
@@ -508,13 +484,16 @@ public class GameEngine {
                 spawnRow(level);
                 if (mode == Mode.STAGES) {
                     rowsSpawned++;
-                    // An optional orb halfway between this row and the next. It follows
-                    // the last row's feasible centre; it never changes obstacle geometry.
-                    int type = rowsSpawned == 3 ? POWER_SHIELD : rowsSpawned == 7 ? POWER_SLOW : rowsSpawned == 11 ? POWER_GUIDE : 0;
-                    if (type > 0 && type <= stage) {
-                        pickupVisible[type] = true;
-                        pickupX[type] = clamp(lastWindowCenter, pickupRadius(), width - pickupRadius());
-                        pickupY[type] = -LevelConfig.rowHeight(density) - spacing * .5f;
+                    // One optional coin after every four generated obstacles, between rows.
+                    if (rowsSpawned % 4 == 0) {
+                        for (int i = 0; i < MAX_COINS; i++) {
+                            if (!coinVisible[i]) {
+                                coinVisible[i] = true;
+                                coinX[i] = clamp(lastWindowCenter, coinRadius(), width - coinRadius());
+                                coinY[i] = -LevelConfig.rowHeight(density) - spacing * .5f;
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -523,7 +502,7 @@ public class GameEngine {
         if (lethal && collides()) {
             impactTimer = mode == Mode.PRACTICE ? 0.8f : 3f;
             impactEvent = true;
-            if (!(mode == Mode.STAGES && shieldArmed()) && mode != Mode.PRACTICE) die();
+            if (mode != Mode.PRACTICE) die();
         }
         if (lethal && state == State.PLAYING && mode == Mode.STAGES && rowsCleared >= stageGoal()
                 && !Float.isNaN(finishY) && finishY > leftPlayer.y + leftPlayer.radius) {
@@ -599,6 +578,18 @@ public class GameEngine {
             if (flash < 0.01f) {
                 flash = 0f;
             }
+        }
+    }
+
+    private void burstCoin(float x, float y) {
+        for (int i = 0; i < 12 && particleCount < MAX_PARTICLES; i++) {
+            float angle = i * 6.2831855f / 12f;
+            int k = particleCount++;
+            particleX[k] = x; particleY[k] = y;
+            particleVx[k] = (float) Math.cos(angle) * 95f * density;
+            particleVy[k] = (float) Math.sin(angle) * 95f * density;
+            particleLife[k] = particleMaxLife[k] = .42f;
+            particleRadius[k] = 2.4f * density; particleColor[k] = 0xffffd454;
         }
     }
 
@@ -932,7 +923,7 @@ public class GameEngine {
 
         for (int i = 0; i < rows.size(); i++) {
             ObstacleRow row = rows.get(i);
-            if ((mode == Mode.PRACTICE || mode == Mode.STAGES) && practiceHitRows.contains(row)) continue;
+            if (mode == Mode.PRACTICE && practiceHitRows.contains(row)) continue;
             float top = row.y;
             float bottom = row.y + row.height;
             if (bottom < playerTop || top > playerBottom) {
@@ -964,33 +955,6 @@ public class GameEngine {
         float t = length2 > 0f ? clamp(-(x0 * dx + y0 * dy) / length2, 0f, 1f) : 0f;
         float x = x0 + t * dx, y = y0 + t * dy;
         return x * x + y * y <= radius * radius;
-    }
-
-    /** Current, not predicted, safe intersection for the nearest upcoming row. */
-    public boolean guideWindow(float[] out) {
-        if (guideRemaining <= 0 || out == null || out.length < 2) return false;
-        ObstacleRow nearest = null;
-        for (ObstacleRow row : rows) {
-            if (row.y > leftPlayer.y + leftPlayer.radius || practiceHitRows.contains(row)) continue;
-            if (nearest == null || row.y > nearest.y) nearest = row;
-        }
-        if (nearest == null) return false;
-        float radius = leftPlayer.radius; // visible radius: conservative compared to collision radius
-        float best = Float.MAX_VALUE, loBest = 0, hiBest = 0;
-        for (int a = 0; a < nearest.gapCount; a++) for (int b = 0; b < nearest.gapCount; b++) {
-            float aHalf = nearest.currentGapWidth(a) * .5f - radius;
-            float bHalf = nearest.currentGapWidth(b) * .5f - radius;
-            if (aHalf < 0 || bHalf < 0) continue;
-            float ca = nearest.currentGapCenter(a), cb = width - nearest.currentGapCenter(b);
-            float lo = Math.max(radius, Math.max(ca - aHalf, cb - bHalf));
-            float hi = Math.min(width - radius, Math.min(ca + aHalf, cb + bHalf));
-            if (lo > hi) continue;
-            float distance = Math.abs((lo + hi) * .5f - leftPlayer.x);
-            if (distance < best) { best = distance; loBest = lo; hiBest = hi; }
-        }
-        if (best == Float.MAX_VALUE) return false;
-        out[0] = loBest; out[1] = hiBest;
-        return true;
     }
 
     /**

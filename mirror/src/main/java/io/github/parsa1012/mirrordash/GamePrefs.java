@@ -132,6 +132,35 @@ public final class GamePrefs {
         prefs(context).edit().putString(KEY_LANG, lang.name()).apply();
     }
 
+    /** Wallet and purchases share a lock so collection and purchase cannot lose updates. */
+    public static synchronized int coins(Context c) { return Math.max(0, prefs(c).getInt("coins", 0)); }
+    public static synchronized void addCoins(Context c, int amount) {
+        if (amount <= 0) return;
+        int total = (int) Math.min(Integer.MAX_VALUE, (long) coins(c) + amount);
+        prefs(c).edit().putInt("coins", total).apply();
+    }
+    public static synchronized boolean ownsPalette(Context c, int id) {
+        return BallPalette.valid(id) && (id == 0 || prefs(c).getBoolean("palette_owned_" + id, false));
+    }
+    public static synchronized int selectedPalette(Context c) {
+        int id = prefs(c).getInt("palette_selected", 0);
+        return ownsPalette(c, id) ? id : 0;
+    }
+    /** Buy once and select atomically; selecting an owned colour never charges again. */
+    public static synchronized boolean buyOrSelectPalette(Context c, int id) {
+        int price = BallPalette.price(id);
+        if (price < 0) return false;
+        SharedPreferences p = prefs(c);
+        SharedPreferences.Editor edit = p.edit();
+        if (!ownsPalette(c, id)) {
+            int balance = coins(c);
+            if (balance < price) return false;
+            edit.putInt("coins", balance - price).putBoolean("palette_owned_" + id, true);
+        }
+        edit.putInt("palette_selected", id).apply();
+        return true;
+    }
+
     public static int unlockedStage(Context c) { return Math.max(1, Math.min(5, prefs(c).getInt("stage_unlocked", 1))); }
     public static boolean stageComplete(Context c, int stage) {
         // Older 1.9 installations only stored the highest unlocked stage.

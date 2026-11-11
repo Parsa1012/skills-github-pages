@@ -13,7 +13,7 @@ public class SoundPlayer {
     private final SoundPool pool;
     private final int tickId;
     private final int crashId;
-    private final int clickId, menuId, unlockId;
+    private final int clickId, menuId, unlockId, coinId, winId;
     private volatile boolean enabled = true;
     private volatile float volume = 1f;
 
@@ -31,6 +31,8 @@ public class SoundPlayer {
         clickId = pool.load(context, R.raw.ui_click, 1);
         menuId = pool.load(context, R.raw.ui_menu, 1);
         unlockId = pool.load(context, R.raw.ui_unlock, 1);
+        coinId = pool.load(context, R.raw.coin, 1);
+        winId = pool.load(context, R.raw.win, 1);
     }
 
     public void setEnabled(boolean enabled) {
@@ -55,6 +57,8 @@ public class SoundPlayer {
         }
     }
 
+    public void playCoin() { if (enabled) pool.play(coinId, .55f * volume, .55f * volume, 1, 0, 1f); }
+    public void playWin() { if (enabled) pool.play(winId, .8f * volume, .8f * volume, 2, 0, 1f); }
     public void playClick() { playUi(clickId); }
     public void playMenu() { playUi(menuId); }
     public void playUnlock() { playUi(unlockId); }

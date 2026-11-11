@@ -47,9 +47,7 @@ public class Renderer {
     private final Paint flashPaint = new Paint();
     private final Paint debugPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint orbPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint orbSymbolPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Path orbPath = new Path();
-    private final RectF orbArc = new RectF();
+    private final Paint coinTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final RectF rowRect = new RectF();
     private final RectF gapRect = new RectF();
@@ -63,14 +61,15 @@ public class Renderer {
     private Bitmap redSphere;
     private volatile boolean clearMarkers;
     public void setClearMarkers(boolean value) { clearMarkers = value; }
+    private volatile int ballPalette;
+    private int cachedPalette = -1;
+    public void setBallPalette(int id) { ballPalette = BallPalette.valid(id) ? id : 0; }
     private volatile int ballStyle;
     private volatile int sceneStyle;
     private int cachedSceneStyle = -1;
     private int cachedStage = -1;
     private final android.content.res.Resources resources;
     private Bitmap stageScene;
-    private final float[] guideBounds = new float[2];
-    private final Paint guidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Bitmap nightScene;
     private final Bitmap dayScene;
     /**
@@ -183,10 +182,7 @@ public class Renderer {
         debugPaint.setTextSize(11f * density);
         debugPaint.setTypeface(typeRegular);
 
-        blueGlow = makeGlow(theme.playerBlue);
-        redGlow = makeGlow(theme.playerRed);
-        blueSphere = makeSphere(theme.playerBlue, false);
-        redSphere = makeSphere(theme.playerRed, true);
+        cachedPalette = -1;
         backgroundPaint.setFilterBitmap(false);
         backgroundPaint.setDither(false);
         // Dropped, not recycled: the render thread may still be painting with the old bitmap.
@@ -197,6 +193,13 @@ public class Renderer {
     public void draw(Canvas canvas, GameEngine engine, float fps, boolean showDebug) {
         if (!ready) {
             init();
+        }
+        if (cachedPalette != ballPalette) {
+            int selected = ballPalette;
+            int left = BallPalette.left(selected, theme), right = BallPalette.right(selected, theme);
+            blueGlow = makeGlow(left); redGlow = makeGlow(right);
+            blueSphere = makeSphere(left, false); redSphere = makeSphere(right, true);
+            cachedPalette = selected;
         }
         final int width = canvas.getWidth();
         final int height = canvas.getHeight();
@@ -214,11 +217,6 @@ public class Renderer {
         canvas.save();
         canvas.translate(engine.shakeX(), engine.shakeY());
 
-        if (engine.guideWindow(guideBounds)) {
-            guidePaint.setColor(0x554fffd0);
-            canvas.drawRect(guideBounds[0], 0, guideBounds[1], height, guidePaint);
-            canvas.drawRect(width-guideBounds[1], 0, width-guideBounds[0], height, guidePaint);
-        }
         int rowColor = stage == 2 ? 0xff745036 : stage == 3 ? 0xff204d6b : stage == 4 ? 0xff583b76 : stage == 5 ? 0xff304a82 : theme.rowFill;
         rowFillPaint.setColor(rowColor);
         boolean darkStage = stage >= 2;
@@ -227,21 +225,14 @@ public class Renderer {
         markerPaint.setStrokeWidth((clearMarkers ? 3.5f : 1.6f) * density);
         drawRows(canvas, engine.rows(), width, darkStage);
         drawFinishLine(canvas, engine, width);
-        drawPowerPickups(canvas, engine);
+        drawCoins(canvas, engine);
         if (!engine.reducedEffects()) drawParticles(canvas, engine);
 
         Player left = engine.leftPlayer();
         Player right = engine.rightPlayer();
         if (!engine.reducedEffects()) { drawTrail(canvas, left); drawTrail(canvas, right); }
-        drawBody(canvas, left, blueGlow);
-        drawBody(canvas, right, redGlow);
-        if (engine.shieldArmed()) {
-            markerPaint.setColor(0xff8fffe5); markerPaint.setStrokeWidth(3f * density);
-            canvas.drawCircle(left.x, left.y, left.radius + 6f * density, markerPaint);
-            canvas.drawCircle(right.x, right.y, right.radius + 6f * density, markerPaint);
-            markerPaint.setColor(theme.night ? 0xFFEAF2FF : 0xFF173861);
-        }
-
+        drawBody(canvas, left, blueGlow, blueSphere);
+        drawBody(canvas, right, redGlow, redSphere);
         if (!engine.reducedEffects()) drawFloaters(canvas, engine);
         if (engine.impactTimer() > 0) {
             markerPaint.setColor(Color.WHITE);
@@ -265,7 +256,6 @@ public class Renderer {
             debugPaint.setTextSize(15f * density);
             canvas.drawText(engine.rowsCleared() + " / " + engine.stageGoal(), 12f * density, height - 40f * density, debugPaint);
         }
-        drawPowerTimers(canvas, engine, width);
         countdownPaint.setColor(stage >= 2 ? Color.WHITE : theme.scoreText);
         drawCountdown(canvas, engine, width, height);
 
@@ -279,56 +269,25 @@ public class Renderer {
         }
     }
 
-    private void drawPowerPickups(Canvas canvas, GameEngine engine) {
-        for (int type = 1; type <= 3; type++) {
-            if (!engine.pickupVisible(type)) continue;
-            float x = engine.pickupX(type), y = engine.pickupY(type), r = engine.pickupRadius();
-            if (y < -3 * r || y > canvas.getHeight() + 3 * r) continue;
+    /** Gold coin with a high-contrast dollar sign; never affects obstacle geometry. */
+    private void drawCoins(Canvas canvas, GameEngine engine) {
+        for (int i = 0; i < engine.coinSlots(); i++) {
+            if (!engine.coinVisible(i)) continue;
+            float x = engine.coinX(i), y = engine.coinY(i), r = engine.coinRadius();
+            if (y < -r * 3 || y > canvas.getHeight() + r * 3) continue;
             if (!engine.reducedEffects()) {
-                orbPaint.setColor(0x33ffe45c); canvas.drawCircle(x, y, r * 2, orbPaint);
-                orbPaint.setColor(0x66fff078); canvas.drawCircle(x, y, r * 1.45f, orbPaint);
+                orbPaint.setColor(0x44ffce33); canvas.drawCircle(x, y, r * 1.8f, orbPaint);
             }
-            drawPowerSymbol(canvas, type, x, y, r);
-        }
-    }
-
-    private void drawPowerTimers(Canvas canvas, GameEngine engine, int width) {
-        if (engine.mode() != GameEngine.Mode.STAGES || engine.state() != GameEngine.State.PLAYING) return;
-        float x = width * .5f - 30f * density, y = 104f * density, r = 9f * density;
-        for (int type = 1; type <= 3; type++) {
-            float remaining = type == GameEngine.POWER_SHIELD ? engine.shieldRemaining()
-                    : type == GameEngine.POWER_SLOW ? engine.slowRemaining() : engine.guideRemaining();
-            if (remaining <= 0) continue;
-            float cx = x + (type - 1) * 30f * density;
-            drawPowerSymbol(canvas, type, cx, y, r);
-            orbSymbolPaint.setColor(0xffffffff);
-            orbSymbolPaint.setStyle(Paint.Style.STROKE);
-            orbSymbolPaint.setStrokeWidth(2f * density);
-            orbArc.set(cx-r-3*density, y-r-3*density, cx+r+3*density, y+r+3*density);
-            canvas.drawArc(orbArc, -90, 360f * Math.min(1f, remaining / 3f), false, orbSymbolPaint);
-        }
-    }
-
-    /** Circle = shield, hourglass = slow, diamond = current-path guide. */
-    private void drawPowerSymbol(Canvas canvas, int type, float x, float y, float r) {
-        orbPaint.setStyle(Paint.Style.FILL);
-        orbPaint.setColor(0xffffd948); canvas.drawCircle(x, y, r, orbPaint);
-        orbSymbolPaint.setStyle(Paint.Style.STROKE);
-        orbSymbolPaint.setStrokeWidth(Math.max(1.4f, 1.6f * density));
-        orbSymbolPaint.setColor(0xff573b00);
-        if (type == GameEngine.POWER_SHIELD) {
-            canvas.drawCircle(x, y, r * .48f, orbSymbolPaint);
-        } else {
-            orbPath.reset();
-            if (type == GameEngine.POWER_SLOW) {
-                orbPath.moveTo(x-r*.45f, y-r*.5f); orbPath.lineTo(x+r*.45f, y-r*.5f);
-                orbPath.lineTo(x-r*.45f, y+r*.5f); orbPath.lineTo(x+r*.45f, y+r*.5f);
-                orbPath.close();
-            } else {
-                orbPath.moveTo(x, y-r*.55f); orbPath.lineTo(x+r*.48f, y);
-                orbPath.lineTo(x, y+r*.55f); orbPath.lineTo(x-r*.48f, y); orbPath.close();
-            }
-            canvas.drawPath(orbPath, orbSymbolPaint);
+            orbPaint.setColor(0xffffd34b); canvas.drawCircle(x, y, r, orbPaint);
+            orbPaint.setStyle(Paint.Style.STROKE);
+            orbPaint.setStrokeWidth(Math.max(1f, density));
+            orbPaint.setColor(0xffa66a08); canvas.drawCircle(x, y, r * .82f, orbPaint);
+            orbPaint.setStyle(Paint.Style.FILL);
+            coinTextPaint.setColor(0xff6d4300);
+            coinTextPaint.setTypeface(Typeface.DEFAULT_BOLD);
+            coinTextPaint.setTextAlign(Paint.Align.CENTER);
+            coinTextPaint.setTextSize(r * 1.45f);
+            canvas.drawText("$", x, y - (coinTextPaint.ascent() + coinTextPaint.descent()) / 2f, coinTextPaint);
         }
     }
 
@@ -532,14 +491,14 @@ public class Renderer {
         }
     }
 
-    private void drawBody(Canvas canvas, Player player, Bitmap glow) {
+    private void drawBody(Canvas canvas, Player player, Bitmap glow, Bitmap sphere) {
         float glowRadius = player.radius * 3.1f;
         glowBounds.set(player.x - glowRadius, player.y - glowRadius,
                 player.x + glowRadius, player.y + glowRadius);
         canvas.drawBitmap(glow, null, glowBounds, glowPaint);
 
         glowBounds.set(player.x - player.radius, player.y - player.radius, player.x + player.radius, player.y + player.radius);
-        canvas.drawBitmap(player.color == theme.playerBlue ? blueSphere : redSphere, null, glowBounds, glowPaint);
+        canvas.drawBitmap(sphere, null, glowBounds, glowPaint);
         canvas.drawCircle(player.x, player.y, player.radius, rimPaint);
         int style = ballStyle;
         if (style > 0) {

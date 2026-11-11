@@ -39,9 +39,16 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private volatile boolean attractRequested;
     private volatile int pauseRequest;
     private volatile float fps;
-    private PowerListener powerListener;
-    public interface PowerListener { void onPowerCollected(int type); }
-    public void setPowerListener(PowerListener listener) { powerListener = listener; }
+    private Runnable coinListener;
+    private volatile int requestedPalette;
+    private volatile boolean paletteDirty;
+    private Theme activeTheme = Theme.of(true);
+    public void setCoinListener(Runnable listener) { coinListener = listener; }
+    public void setBallPalette(int palette) {
+        requestedPalette = BallPalette.valid(palette) ? palette : 0;
+        renderer.setBallPalette(requestedPalette);
+        paletteDirty = true;
+    }
 
     private Runnable firstTouchListener;
     private GameOverListener gameOverListener;
@@ -84,6 +91,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     public void playUiClick() { sound.playClick(); }
     public void playUiMenu() { sound.playMenu(); }
     public void playUiUnlock() { sound.playUnlock(); }
+    public void playWin() { sound.playWin(); }
 
     public void setSoundVolume(int percent) { sound.setVolume(percent); }
     public void setClearMarkers(boolean value) { renderer.setClearMarkers(value); }
@@ -91,8 +99,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     /** Switches the palette used by both the canvas and the bodies. */
     public void setTheme(Theme theme) {
+        activeTheme = theme;
         renderer.setTheme(theme);
         engine.applyTheme(theme);
+        paletteDirty = true;
     }
 
     public void setDifficulty(Difficulty difficulty) {
@@ -198,6 +208,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void applyPendingCommands() {
+        if (paletteDirty) {
+            paletteDirty = false;
+            int id = requestedPalette;
+            engine.setBallColors(BallPalette.left(id, activeTheme), BallPalette.right(id, activeTheme));
+        }
         if (attractRequested) {
             attractRequested = false;
             engine.enterAttract();
@@ -215,10 +230,12 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     }
 
     private void pumpFeedback() {
-        final int power = engine.consumePickupEvent();
-        if (power != 0) {
-            sound.playUnlock();
-            post(() -> { if (powerListener != null) powerListener.onPowerCollected(power); });
+        int coins = engine.consumeCoinEvents();
+        if (coins > 0) {
+            // Credit before posting UI work, so pausing, exiting or losing cannot drop coins.
+            GamePrefs.addCoins(getContext(), coins);
+            sound.playCoin();
+            post(() -> { if (coinListener != null) coinListener.run(); });
         }
         if (engine.consumeImpact()) {
             sound.playCrash();

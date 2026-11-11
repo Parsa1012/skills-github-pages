@@ -65,6 +65,16 @@ public final class ProgressTest {
         check(GamePrefs.reducedEffects(c) && GamePrefs.clearMarkers(c) && GamePrefs.sensitivity(c) == 150);
         check(GamePrefs.best(c, Difficulty.EASY) == 250);
         GamePrefs.migrate(c); check(!GamePrefs.musicEnabled(c));
+        check(GamePrefs.coins(c) == 0 && GamePrefs.ownsPalette(c, 0));
+        check(!GamePrefs.buyOrSelectPalette(c, 1));
+        GamePrefs.addCoins(c, 12); GamePrefs.addCoins(c, -5);
+        check(GamePrefs.buyOrSelectPalette(c, 1) && GamePrefs.coins(c) == 7);
+        check(GamePrefs.buyOrSelectPalette(c, 1) && GamePrefs.coins(c) == 7);
+        check(GamePrefs.buyOrSelectPalette(c, 0) && GamePrefs.buyOrSelectPalette(c, 1));
+        check(GamePrefs.selectedPalette(c) == 1 && GamePrefs.coins(c) == 7);
+        check(!GamePrefs.buyOrSelectPalette(c, 2) && !GamePrefs.buyOrSelectPalette(c, -1));
+        check(GamePrefs.appearance(c, false) == 1 && GamePrefs.appearance(c, true) == 2);
+        check(GamePrefs.unlockedStage(c) == 5 && GamePrefs.best(c, Difficulty.EASY) == 250);
         System.out.println("Progress, migration and separate settings PASS");
     }
 }

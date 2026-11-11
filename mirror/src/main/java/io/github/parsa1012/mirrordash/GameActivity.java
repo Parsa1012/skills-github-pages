@@ -65,6 +65,10 @@ public class GameActivity extends Activity {
     private View menuOverlay;
     private TextView menuBest;
     private TextView menuDifficulty;
+    private TextView menuCoins;
+    private View shopOverlay;
+    private LinearLayout shopItems;
+    private TextView shopBalance;
 
     private View settingsOverlay;
     private View stageOverlay;
@@ -128,6 +132,7 @@ public class GameActivity extends Activity {
         gameView.setSoundEnabled(soundEnabled);
         gameView.setSoundVolume(GamePrefs.volume(this, false));
         gameView.setAppearance(GamePrefs.appearance(this, false), GamePrefs.appearance(this, true));
+        gameView.setBallPalette(GamePrefs.selectedPalette(this));
         root.addView(gameView, matchParent());
 
         buildHud();
@@ -135,18 +140,14 @@ public class GameActivity extends Activity {
         buildScrim();
         buildMenu();
         buildStageMenu();
+        buildShop();
         buildSettings();
         confetti = new VictoryConfetti(this);
         root.addView(confetti, matchParent());
         buildPausePanel();
         buildGameOverPanel();
 
-        gameView.setPowerListener(power -> {
-            String name = power == GameEngine.POWER_SHIELD ? tr("سپر", "Shield", "درع", "Escudo")
-                    : power == GameEngine.POWER_SLOW ? tr("کندی زمان", "Slow motion", "إبطاء", "Cámara lenta")
-                    : tr("راهنمای مسیر فعلی", "Current-path guide", "دليل المسار الحالي", "Guía actual");
-            Toast.makeText(this, name + tr(" — ۳ ثانیه", " — 3 seconds", " — ٣ ثوانٍ", " — 3 segundos"), Toast.LENGTH_SHORT).show();
-        });
+        gameView.setCoinListener(() -> refreshLabels());
 
         gameView.setGameOverListener(new GameView.GameOverListener() {
             @Override
@@ -261,6 +262,9 @@ public class GameActivity extends Activity {
         menuBest = label(strings.bestLine, 14, true, theme.playerRed);
         content.addView(menuBest, wrapWithTopMargin(16));
 
+        menuCoins = label("", 14, true, 0xffffcc53);
+        content.addView(menuCoins, wrapWithTopMargin(8));
+
         menuDifficulty = label(strings.difficultyLine, 12, false, theme.textMuted);
         content.addView(menuDifficulty, wrapWithTopMargin(6));
 
@@ -297,6 +301,10 @@ public class GameActivity extends Activity {
                 showSettings();
             }
         });
+
+        TextView appearance = secondaryAction("◉  " + tr("ظاهر", "Appearance", "المظهر", "Apariencia"));
+        content.addView(appearance, fullWidthButtonParams(10));
+        appearance.setOnClickListener(v -> showShop());
 
         // Reserve the top corner for the vertical tools; scroll on short displays or with
         // large system text instead of overlapping the logo and actions.
@@ -549,8 +557,8 @@ public class GameActivity extends Activity {
         LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT);
         gridParams.topMargin = dp(24);
         centre.addView(stageGrid, gridParams);
-        TextView powerInfo = label(tr("گوی زرد اختیاری را با یکی از توپ‌ها بگیر؛ هر قدرت ۳ ثانیه است. ○ سپر (از مرحلهٔ ۱)، ⧖ کندی (از ۲)، ◇ راهنمای مسیر فعلی (از ۳). شکاف‌های متحرک تغییر می‌کنند.", "Collect an optional yellow orb with either ball. Each power lasts 3 seconds: ○ shield (stage 1+), ⧖ slow (2+), ◇ current-path guide (3+). Moving gaps change.", "التقط الكرة الصفراء بإحدى الكرتين. كل قوة تدوم ٣ ثوانٍ: ○ الدرع من ١، ⧖ الإبطاء من ٢، ◇ الدليل من ٣. الفتحات المتحركة تتغير.", "Recoge el orbe amarillo con una bola. Cada poder dura 3 segundos: ○ escudo (nivel 1+), ⧖ lento (2+), ◇ guía actual (3+). Los huecos móviles cambian."), 12, false, theme.textSecondary);
-        centre.addView(powerInfo, wrapWithTopMargin(14));
+        TextView coinInfo = label(tr("بعد از هر چهار مانع یک سکه ظاهر می‌شود؛ با یکی از توپ‌ها آن را جمع کن. سکه‌ها حتی پس از باخت ذخیره می‌شوند.", "A coin appears after every four obstacles. Collect it with either ball; coins remain even if you lose.", "تظهر عملة بعد كل أربعة عوائق. اجمعها بأي كرة وتبقى حتى عند الخسارة.", "Aparece una moneda cada cuatro obstáculos. Recógela con cualquiera de las bolas; se conserva aunque pierdas."), 12, false, theme.textSecondary);
+        centre.addView(coinInfo, wrapWithTopMargin(14));
         TextView back = secondaryAction(strings.back);
         LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(width, dp(50));
         backParams.topMargin = dp(20);
@@ -605,6 +613,87 @@ public class GameActivity extends Activity {
     private void closeStageMenu() {
         gameView.playUiClick();
         stageOverlay.setVisibility(View.GONE);
+    }
+
+    private String coinLabel() {
+        return tr("سکه‌ها: ", "Coins: ", "العملات: ", "Monedas: ") + GamePrefs.coins(this) + " $";
+    }
+
+    /** Separate, scrollable shop; the existing record-unlocked patterns remain in settings. */
+    private void buildShop() {
+        FrameLayout overlay = new FrameLayout(this);
+        overlay.setBackground(menuBackground()); overlay.setClickable(true); overlay.setVisibility(View.GONE);
+        shopOverlay = overlay;
+        ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL); content.setGravity(Gravity.CENTER_HORIZONTAL);
+        content.setPadding(dp(24), dp(34), dp(24), dp(32));
+        scroll.addView(content);
+        content.addView(label("◉  " + tr("ظاهر توپ‌ها", "Ball appearance", "مظهر الكرات", "Aspecto de las bolas"), 25, true, theme.textPrimary));
+        shopBalance = label("", 16, true, 0xffffcc53);
+        content.addView(shopBalance, wrapWithTopMargin(12));
+        content.addView(label(tr("با سکه رنگ دلخواهت را بخر؛ ظاهرها دائمی هستند.", "Buy a colour pair with coins; purchases are permanent.", "اشترِ الألوان بالعملات؛ المشتريات دائمة.", "Compra colores con monedas; son permanentes."), 13, false, theme.textSecondary), wrapWithTopMargin(8));
+        shopItems = new LinearLayout(this); shopItems.setOrientation(LinearLayout.VERTICAL);
+        int width = Math.max(dp(180), Math.min(dp(380), getResources().getDisplayMetrics().widthPixels - dp(48)));
+        LinearLayout.LayoutParams itemsParams = new LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT);
+        itemsParams.topMargin = dp(18); content.addView(shopItems, itemsParams);
+        TextView back = secondaryAction(strings.back);
+        LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(width, dp(50)); backParams.topMargin = dp(20);
+        content.addView(back, backParams);
+        back.setOnClickListener(v -> closeShop());
+        overlay.addView(scroll, matchParent()); root.addView(overlay, matchParent());
+    }
+
+    private void showShop() {
+        gameView.playUiMenu();
+        shopOverlay.setVisibility(View.VISIBLE);
+        refreshShop();
+    }
+    private void closeShop() { gameView.playUiClick(); shopOverlay.setVisibility(View.GONE); refreshLabels(); }
+    private void refreshShop() {
+        shopBalance.setText(coinLabel());
+        shopItems.removeAllViews();
+        String[] names = {tr("کلاسیک", "Classic", "كلاسيكي", "Clásico"),
+                tr("بنفش و فیروزه‌ای", "Violet & mint", "بنفسجي وتركوازي", "Violeta y menta"),
+                tr("سبز و صورتی", "Emerald & pink", "أخضر ووردي", "Verde y rosa"),
+                tr("طلایی و بنفش", "Amber & violet", "ذهبي وبنفسجي", "Ámbar y violeta")};
+        for (int id = 0; id < BallPalette.COUNT; id++) {
+            final int choice = id;
+            boolean owned = GamePrefs.ownsPalette(this, id), selected = GamePrefs.selectedPalette(this) == id;
+            LinearLayout item = new LinearLayout(this); item.setOrientation(LinearLayout.VERTICAL);
+            item.setGravity(Gravity.CENTER); item.setPadding(dp(14), dp(12), dp(14), dp(12));
+            item.setClickable(true); item.setFocusable(true);
+            item.setBackground(tileBackground(0xff293e61, 0xff1e293f, selected ? 0xffffd45c : 0xff607b9e));
+            LinearLayout pair = new LinearLayout(this); pair.setGravity(Gravity.CENTER);
+            for (int color : new int[]{BallPalette.left(id, theme), BallPalette.right(id, theme)}) {
+                View ball = new View(this);
+                GradientDrawable shape = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                        new int[]{0xffffffff, color, color});
+                shape.setShape(GradientDrawable.OVAL); shape.setStroke(dp(1), 0x99ffffff);
+                ball.setBackground(shape);
+                LinearLayout.LayoutParams ballParams = new LinearLayout.LayoutParams(dp(38), dp(38));
+                ballParams.setMargins(dp(5), 0, dp(5), 0); pair.addView(ball, ballParams);
+            }
+            item.addView(pair);
+            TextView name = label(names[id], 16, true, 0xffffffff);
+            item.addView(name, wrapWithTopMargin(7));
+            String cost = id == 0 ? tr("رایگان", "Free", "مجاني", "Gratis") : BallPalette.price(id) + tr(" سکه", " coins", " عملات", " monedas");
+            String state = selected ? tr(" • انتخاب‌شده", " • Selected", " • مختار", " • Seleccionado") : owned ? tr(" • خریداری‌شده", " • Owned", " • مملوك", " • Adquirido") : "";
+            item.addView(label(cost + state, 13, false, 0xffffda75), wrapWithTopMargin(5));
+            item.setContentDescription(names[id] + "، " + cost + state);
+            item.setOnClickListener(v -> {
+                if (GamePrefs.buyOrSelectPalette(this, choice)) {
+                    gameView.setBallPalette(GamePrefs.selectedPalette(this));
+                    gameView.playUiClick();
+                    refreshShop(); refreshLabels();
+                } else {
+                    Toast.makeText(this, tr("سکهٔ کافی نداری", "Not enough coins", "العملات غير كافية", "No tienes suficientes monedas"), Toast.LENGTH_SHORT).show();
+                }
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            if (id > 0) lp.topMargin = dp(10);
+            shopItems.addView(item, lp);
+        }
     }
 
     private void applyAccessibility() {
@@ -1054,6 +1143,7 @@ public class GameActivity extends Activity {
         gameView.playUiClick();
         confetti.stop();
         stageOverlay.setVisibility(View.GONE);
+        shopOverlay.setVisibility(View.GONE);
         music.setGameStage(mode == GameEngine.Mode.STAGES ? selectedStage : 0);
         music.setScene(MusicPlayer.Scene.GAME);
         music.setPaused(false);
@@ -1086,6 +1176,7 @@ public class GameActivity extends Activity {
         gameView.playUiMenu();
         confetti.stop();
         stageOverlay.setVisibility(View.GONE);
+        shopOverlay.setVisibility(View.GONE);
         music.setScene(MusicPlayer.Scene.MENU);
         hud.setVisibility(View.GONE);
         hint.setVisibility(View.GONE);
@@ -1148,7 +1239,7 @@ public class GameActivity extends Activity {
             gameOverBest.setTextColor(theme.textSecondary);
             gameOverBest.setTypeface(typeRegular);
             gameOverBest.setText(tr("زمان: ", "Time: ", "الوقت: ", "Tiempo: ") + String.format(java.util.Locale.ROOT, "%d:%02d", millis / 60000, (millis / 1000) % 60));
-            gameView.playUiUnlock();
+            gameView.playWin();
             if (!GamePrefs.reducedEffects(this)) confetti.celebrate();
         } else {
             gameOverTitle.getPaint().setShader(null);
@@ -1160,8 +1251,8 @@ public class GameActivity extends Activity {
             gameOverScore.setText(String.format(java.util.Locale.ROOT, strings.scoreLine, score));
             int hit = gameView.engine().hitBall();
             String collision = hit == 3 ? tr("هر دو توپ برخورد کردند", "Both balls collided", "اصطدمت الكرتان", "Chocaron ambas bolas")
-                : hit == 1 ? tr("توپ آبی برخورد کرد", "Blue ball collided", "اصطدمت الكرة الزرقاء", "Chocó la bola azul")
-                : tr("توپ قرمز برخورد کرد", "Red ball collided", "اصطدمت الكرة الحمراء", "Chocó la bola roja");
+                : hit == 1 ? tr("توپ اول برخورد کرد", "First ball collided", "اصطدمت الكرة الأولى", "Chocó la primera bola")
+                : tr("توپ دوم برخورد کرد", "Second ball collided", "اصطدمت الكرة الثانية", "Chocó la segunda bola");
             gameOverRows.setText(String.format(java.util.Locale.ROOT, strings.rowsLine, rowsCleared) + "\n" + collision);
             gameOverBest.setTextColor(theme.playerRed);
             gameOverBest.setTypeface(typeBold);
@@ -1211,8 +1302,9 @@ public class GameActivity extends Activity {
         if (menuBest != null) {
             menuBest.setText(String.format(java.util.Locale.ROOT, strings.bestLine, best));
         }
+        if (menuCoins != null) menuCoins.setText(coinLabel());
         if (hudBest != null) {
-            hudBest.setText(String.format(java.util.Locale.ROOT, strings.bestLine, best));
+            hudBest.setText(mode == GameEngine.Mode.STAGES ? coinLabel() : String.format(java.util.Locale.ROOT, strings.bestLine, best));
         }
         if (menuDifficulty != null) {
             menuDifficulty.setText(String.format(java.util.Locale.ROOT, strings.difficultyLine, difficultyName(difficulty)));
@@ -1286,6 +1378,10 @@ public class GameActivity extends Activity {
     public void onBackPressed() {
         if (settingsOverlay.getVisibility() == View.VISIBLE) {
             hideSettings();
+            return;
+        }
+        if (shopOverlay.getVisibility() == View.VISIBLE) {
+            closeShop();
             return;
         }
         if (stageOverlay.getVisibility() == View.VISIBLE) {
