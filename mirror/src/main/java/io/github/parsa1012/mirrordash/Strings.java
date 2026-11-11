@@ -36,6 +36,24 @@ public final class Strings {
     public String day;
     public String sound;
     public String music;
+    public String volume;
+    public String statistics;
+    public String statisticsNote;
+    public String runs;
+    public String totalRows;
+    public String bestRows;
+    public String bestTime;
+    public String bestLevel;
+    public String collection;
+    public String ballStyle;
+    public String backgroundStyle;
+    public String styleClassic;
+    public String styleOne;
+    public String styleTwo;
+    public String backgroundOne;
+    public String backgroundTwo;
+    public String unlockAt;
+    public String selected;
     public String on;
     public String off;
 
@@ -84,6 +102,24 @@ public final class Strings {
 
     private static Strings persian() {
         Strings s = new Strings();
+        s.volume = "بلندی";
+        s.statistics = "آمار بازی";
+        s.statisticsNote = "این آمار از نسخه ۱٫۷ و فقط برای بازی‌های پایان‌یافته ذخیره می‌شود؛ رکوردهای قدیمی حفظ شده‌اند.";
+        s.runs = "تعداد بازی";
+        s.totalRows = "مجموع ردیف‌ها";
+        s.bestRows = "بیشترین ردیف";
+        s.bestTime = "بهترین زمان (ثانیه)";
+        s.bestLevel = "بالاترین سطح";
+        s.collection = "ظاهرهای بازشدنی";
+        s.ballStyle = "ظاهر گوی‌ها";
+        s.backgroundStyle = "پس‌زمینه بازی";
+        s.styleClassic = "اصلی";
+        s.styleOne = "حلقه";
+        s.styleTwo = "مدار";
+        s.backgroundOne = "آبی";
+        s.backgroundTwo = "بنفش";
+        s.unlockAt = "باز شدن با رکورد %1$d در هر درجه";
+        s.selected = "انتخاب‌شده";
         s.appName = "توپهای همزاد";
         s.tagline = "یک انگشت، دو نیمه";
 
@@ -164,6 +200,24 @@ public final class Strings {
 
     private static Strings english() {
         Strings s = new Strings();
+        s.volume = "Volume";
+        s.statistics = "Statistics";
+        s.statisticsNote = "These statistics count completed runs from version 1.7 onward; old best scores are preserved.";
+        s.runs = "Completed runs";
+        s.totalRows = "Total rows";
+        s.bestRows = "Most rows";
+        s.bestTime = "Best time (seconds)";
+        s.bestLevel = "Highest level";
+        s.collection = "Unlockable styles";
+        s.ballStyle = "Ball style";
+        s.backgroundStyle = "Game background";
+        s.styleClassic = "Original";
+        s.styleOne = "Halo";
+        s.styleTwo = "Orbit";
+        s.backgroundOne = "Azure";
+        s.backgroundTwo = "Violet";
+        s.unlockAt = "Unlock at a score of %1$d on any difficulty";
+        s.selected = "Selected";
         s.appName = "Twin Balls";
         s.tagline = "One finger, two halves";
 
@@ -245,6 +299,24 @@ public final class Strings {
 
     private static Strings arabic() {
         Strings s = new Strings();
+        s.volume = "مستوى الصوت";
+        s.statistics = "إحصاءات اللعبة";
+        s.statisticsNote = "تُحفظ هذه الإحصاءات للجولات المكتملة منذ الإصدار ١٫٧؛ تبقى الأرقام القياسية السابقة محفوظة.";
+        s.runs = "الجولات المكتملة";
+        s.totalRows = "مجموع الصفوف";
+        s.bestRows = "أكثر الصفوف";
+        s.bestTime = "أفضل وقت (ثانية)";
+        s.bestLevel = "أعلى مستوى";
+        s.collection = "المظاهر القابلة للفتح";
+        s.ballStyle = "مظهر الكرتين";
+        s.backgroundStyle = "خلفية اللعب";
+        s.styleClassic = "الأصلي";
+        s.styleOne = "هالة";
+        s.styleTwo = "مدار";
+        s.backgroundOne = "أزرق";
+        s.backgroundTwo = "بنفسجي";
+        s.unlockAt = "يُفتح برقم %1$d في أي درجة صعوبة";
+        s.selected = "المحدد";
         s.appName = "كرات التوأم";
         s.tagline = "إصبع واحد، نصفان";
 
@@ -322,6 +394,24 @@ public final class Strings {
 
     private static Strings spanish() {
         Strings s = new Strings();
+        s.volume = "Volumen";
+        s.statistics = "Estadísticas";
+        s.statisticsNote = "Estas estadísticas cuentan partidas terminadas desde la versión 1.7; se conservan los récords anteriores.";
+        s.runs = "Partidas terminadas";
+        s.totalRows = "Filas totales";
+        s.bestRows = "Máximo de filas";
+        s.bestTime = "Mejor tiempo (segundos)";
+        s.bestLevel = "Nivel más alto";
+        s.collection = "Estilos desbloqueables";
+        s.ballStyle = "Estilo de bolas";
+        s.backgroundStyle = "Fondo del juego";
+        s.styleClassic = "Original";
+        s.styleOne = "Halo";
+        s.styleTwo = "Órbita";
+        s.backgroundOne = "Azul";
+        s.backgroundTwo = "Violeta";
+        s.unlockAt = "Se desbloquea con %1$d puntos en cualquier dificultad";
+        s.selected = "Seleccionado";
         s.appName = "Bolas Gemelas";
         s.tagline = "Un dedo, dos mitades";
 

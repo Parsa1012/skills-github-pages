@@ -33,6 +33,7 @@ public class Renderer {
     private final Paint axisPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rowFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rowEdgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint skinPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint corePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint trailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -55,6 +56,9 @@ public class Renderer {
     private Bitmap redGlow;
     private Bitmap blueSphere;
     private Bitmap redSphere;
+    private volatile int ballStyle;
+    private volatile int sceneStyle;
+    private int cachedSceneStyle = -1;
     private final Bitmap nightScene;
     private final Bitmap dayScene;
     /**
@@ -98,6 +102,11 @@ public class Renderer {
         if (density > 0f) {
             init();
         }
+    }
+
+    public void setAppearance(int ball, int scene) {
+        ballStyle = Math.max(0, Math.min(2, ball));
+        sceneStyle = Math.max(0, Math.min(2, scene));
     }
 
     public Theme theme() {
@@ -219,11 +228,12 @@ public class Renderer {
     /** Blits the cached background, rebuilding it when the surface or the theme changes. */
     private void drawBackground(Canvas canvas, int width, int height) {
         if (background == null || backgroundWidth != width || backgroundHeight != height
-                || backgroundNight != theme.night) {
+                || backgroundNight != theme.night || cachedSceneStyle != sceneStyle) {
             background = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
             backgroundWidth = width;
             backgroundHeight = height;
             backgroundNight = theme.night;
+            cachedSceneStyle = sceneStyle;
             Canvas target = new Canvas(background);
             target.drawColor(theme.background);
             Bitmap scene = theme.night ? nightScene : dayScene;
@@ -232,6 +242,18 @@ public class Renderer {
                 target.drawBitmap(scene, null, new RectF(0, 0, width, height), backdropPaint);
             } else {
                 drawGrid(target, width, height);
+            }
+            if (cachedSceneStyle > 0) {
+                Paint accent = new Paint(Paint.ANTI_ALIAS_FLAG);
+                int color = cachedSceneStyle == 1 ? 0xFF5595FF : 0xFFBD6EF5;
+                int alpha = theme.night ? 56 : 35;
+                float radius = width * 0.8f;
+                for (int side = 0; side < 2; side++) {
+                    float cx = side == 0 ? 0 : width;
+                    accent.setShader(new RadialGradient(cx, height * .45f, radius,
+                            new int[]{withAlpha(color, alpha), withAlpha(color, 0)}, null, Shader.TileMode.CLAMP));
+                    target.drawCircle(cx, height * .45f, radius, accent);
+                }
             }
         }
         canvas.drawBitmap(background, 0f, 0f, backgroundPaint);
@@ -365,6 +387,20 @@ public class Renderer {
         glowBounds.set(player.x - player.radius, player.y - player.radius, player.x + player.radius, player.y + player.radius);
         canvas.drawBitmap(player.color == theme.playerBlue ? blueSphere : redSphere, null, glowBounds, glowPaint);
         canvas.drawCircle(player.x, player.y, player.radius, rimPaint);
+        int style = ballStyle;
+        if (style > 0) {
+            skinPaint.setStyle(Paint.Style.STROKE);
+            skinPaint.setColor(Color.argb(style == 1 ? 125 : 180, 255, 255, 255));
+            skinPaint.setStrokeWidth(Math.max(1f, density));
+            if (style == 1) {
+                canvas.drawCircle(player.x, player.y, player.radius * .74f, skinPaint);
+            } else {
+                glowBounds.set(player.x - player.radius * .79f, player.y - player.radius * .42f,
+                        player.x + player.radius * .79f, player.y + player.radius * .42f);
+                canvas.drawOval(glowBounds, skinPaint);
+                canvas.drawCircle(player.x, player.y, player.radius * .55f, skinPaint);
+            }
+        }
     }
 
     private Bitmap makeSphere(int color, boolean mirror) {

@@ -47,6 +47,50 @@ public final class GamePrefs {
         return true;
     }
 
+    private static String statKey(Difficulty d, String stat) {
+        return "stats_" + d.name() + "_" + stat;
+    }
+
+    /** Only completed runs are included; older score records remain untouched. */
+    public static boolean recordRun(Context context, Difficulty d, int score, int rows, long millis) {
+        SharedPreferences p = prefs(context);
+        int safeScore = Math.max(0, score), safeRows = Math.max(0, rows);
+        long safeTime = Math.max(0, millis);
+        boolean record = safeScore > best(context, d);
+        SharedPreferences.Editor edit = p.edit();
+        if (record) edit.putInt(bestKey(d), safeScore);
+        edit.putInt(statKey(d, "runs"), p.getInt(statKey(d, "runs"), 0) + 1);
+        edit.putLong(statKey(d, "total_rows"), p.getLong(statKey(d, "total_rows"), 0) + safeRows);
+        edit.putInt(statKey(d, "best_rows"), Math.max(p.getInt(statKey(d, "best_rows"), 0), safeRows));
+        edit.putLong(statKey(d, "best_time"), Math.max(p.getLong(statKey(d, "best_time"), 0), safeTime));
+        edit.putInt(statKey(d, "best_level"), Math.max(p.getInt(statKey(d, "best_level"), 0), 1 + safeRows / LevelConfig.ROWS_PER_LEVEL));
+        edit.apply();
+        return record;
+    }
+
+    public static int runs(Context c, Difficulty d) { return prefs(c).getInt(statKey(d, "runs"), 0); }
+    public static long totalRows(Context c, Difficulty d) { return prefs(c).getLong(statKey(d, "total_rows"), 0); }
+    public static int bestRows(Context c, Difficulty d) { return prefs(c).getInt(statKey(d, "best_rows"), 0); }
+    public static long bestTime(Context c, Difficulty d) { return prefs(c).getLong(statKey(d, "best_time"), 0); }
+    public static int bestLevel(Context c, Difficulty d) { return prefs(c).getInt(statKey(d, "best_level"), 0); }
+    public static int highestScore(Context c) {
+        int highest = 0;
+        for (Difficulty d : Difficulty.values()) highest = Math.max(highest, best(c, d));
+        return highest;
+    }
+    public static int volume(Context c, boolean music) {
+        return Math.max(0, Math.min(100, prefs(c).getInt(music ? "volume_music" : "volume_sound", 100)));
+    }
+    public static void setVolume(Context c, boolean music, int value) {
+        prefs(c).edit().putInt(music ? "volume_music" : "volume_sound", Math.max(0, Math.min(100, value))).apply();
+    }
+    public static int appearance(Context c, boolean background) {
+        return Progress.validStyle(prefs(c).getInt(background ? "style_background" : "style_ball", 0), highestScore(c));
+    }
+    public static void setAppearance(Context c, boolean background, int style) {
+        prefs(c).edit().putInt(background ? "style_background" : "style_ball", Progress.validStyle(style, highestScore(c))).apply();
+    }
+
     public static boolean soundEnabled(Context context) {
         return prefs(context).getBoolean(KEY_SOUND, true);
     }

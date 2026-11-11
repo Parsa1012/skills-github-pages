@@ -46,7 +46,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     private boolean lastPaused;
 
     public interface GameOverListener {
-        void onGameOver(int score, int rowsCleared);
+        void onGameOver(int score, int rowsCleared, long millis);
     }
 
     public GameView(Context context) {
@@ -75,6 +75,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     public void setSoundEnabled(boolean enabled) {
         sound.setEnabled(enabled);
     }
+
+    public void setSoundVolume(int percent) { sound.setVolume(percent); }
+    public void setAppearance(int ball, int background) { renderer.setAppearance(ball, background); }
 
     /** Switches the palette used by both the canvas and the bodies. */
     public void setTheme(Theme theme) {
@@ -272,12 +275,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
             if (engine.consumeJustDied()) {
                 final int score = engine.score();
                 final int cleared = engine.rowsCleared();
+                final long millis = engine.runMillis();
                 post(new Runnable() {
                     @Override
                     public void run() {
                         GameOverListener listener = gameOverListener;
                         if (listener != null) {
-                            listener.onGameOver(score, cleared);
+                            listener.onGameOver(score, cleared, millis);
                         }
                     }
                 });

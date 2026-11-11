@@ -18,6 +18,7 @@ final class MusicPlayer implements AudioManager.OnAudioFocusChangeListener {
     private boolean paused;
     private boolean hasFocus;
     private boolean transientLoss;
+    private float volume = 1f;
 
     MusicPlayer(Context context, boolean enabled) {
         this.context = context.getApplicationContext();
@@ -37,6 +38,14 @@ final class MusicPlayer implements AudioManager.OnAudioFocusChangeListener {
     void setEnabled(boolean value) {
         enabled = value;
         update();
+    }
+
+    void setVolume(int percent) {
+        volume = Math.max(0, Math.min(100, percent)) / 100f;
+        if (player != null) {
+            try { player.setVolume(0.55f * volume, 0.55f * volume); }
+            catch (IllegalStateException e) { releasePlayer(); abandonFocus(); }
+        }
     }
 
     void setForeground(boolean value) {
@@ -71,7 +80,7 @@ final class MusicPlayer implements AudioManager.OnAudioFocusChangeListener {
                     return;
                 }
                 player.setLooping(true);
-                player.setVolume(0.55f, 0.55f);
+                player.setVolume(0.55f * volume, 0.55f * volume);
                 player.setOnErrorListener((mp, what, extra) -> {
                     Log.w("TwinBallsMusic", "Playback error " + what + "/" + extra);
                     releasePlayer();

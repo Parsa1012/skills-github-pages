@@ -141,6 +141,8 @@ public class GameEngine {
         return rowsCleared;
     }
 
+    public long runMillis() { return (long) (runSeconds * 1000.0); }
+
     public float level() {
         return LevelConfig.levelOf(rowsCleared);
     }

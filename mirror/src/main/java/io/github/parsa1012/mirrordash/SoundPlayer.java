@@ -14,6 +14,7 @@ public class SoundPlayer {
     private final int tickId;
     private final int crashId;
     private volatile boolean enabled = true;
+    private volatile float volume = 1f;
 
     public SoundPlayer(Context context) {
         AudioAttributes attributes = new AudioAttributes.Builder()
@@ -32,19 +33,21 @@ public class SoundPlayer {
         this.enabled = enabled;
     }
 
+    public void setVolume(int percent) { volume = Math.max(0, Math.min(100, percent)) / 100f; }
+
     public boolean isEnabled() {
         return enabled;
     }
 
     public void playTick() {
         if (enabled) {
-            pool.play(tickId, 0.35f, 0.35f, 1, 0, 1f);
+            pool.play(tickId, 0.35f * volume, 0.35f * volume, 1, 0, 1f);
         }
     }
 
     public void playCrash() {
         if (enabled) {
-            pool.play(crashId, 0.9f, 0.9f, 2, 0, 1f);
+            pool.play(crashId, 0.9f * volume, 0.9f * volume, 2, 0, 1f);
         }
     }
 

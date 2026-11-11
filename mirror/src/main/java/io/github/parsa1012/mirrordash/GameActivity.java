@@ -16,6 +16,8 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
+import android.widget.Toast;
 import android.widget.TextView;
 
 /**
@@ -98,6 +100,7 @@ public class GameActivity extends Activity {
         soundEnabled = GamePrefs.soundEnabled(this);
         musicEnabled = GamePrefs.musicEnabled(this);
         music = new MusicPlayer(this, musicEnabled);
+        music.setVolume(GamePrefs.volume(this, true));
         music.setScene(MusicPlayer.Scene.MENU);
         difficulty = GamePrefs.difficulty(this);
         theme = Theme.of(nightMode);
@@ -113,6 +116,8 @@ public class GameActivity extends Activity {
         gameView.setTheme(theme);
         gameView.setDifficulty(difficulty);
         gameView.setSoundEnabled(soundEnabled);
+        gameView.setSoundVolume(GamePrefs.volume(this, false));
+        gameView.setAppearance(GamePrefs.appearance(this, false), GamePrefs.appearance(this, true));
         root.addView(gameView, matchParent());
 
         buildHud();
@@ -125,8 +130,8 @@ public class GameActivity extends Activity {
 
         gameView.setGameOverListener(new GameView.GameOverListener() {
             @Override
-            public void onGameOver(int score, int rowsCleared) {
-                showGameOver(score, rowsCleared);
+            public void onGameOver(int score, int rowsCleared, long millis) {
+                showGameOver(score, rowsCleared, millis);
             }
         });
 
@@ -372,15 +377,24 @@ public class GameActivity extends Activity {
         chipSoundOff = chipLabel(strings.off);
         card.addView(sectionLabel(strings.sound), wrapWithTopMargin(16));
         card.addView(chipRow(chipSoundOn, chipSoundOff), wrapWithTopMargin(8));
+        addVolumeControl(card, false);
 
         chipMusicOn = chipLabel(strings.on);
         chipMusicOff = chipLabel(strings.off);
         card.addView(sectionLabel(strings.music), wrapWithTopMargin(16));
         card.addView(chipRow(chipMusicOn, chipMusicOff), wrapWithTopMargin(8));
+        addVolumeControl(card, true);
 
         card.addView(sectionLabel(strings.records), wrapWithTopMargin(16));
         recordsText = label("", 13, false, theme.textSecondary);
         card.addView(recordsText, wrapWithTopMargin(8));
+        TextView statistics = secondaryAction(strings.statistics);
+        card.addView(statistics, fullWidthButtonParams(16));
+        statistics.setOnClickListener(v -> showStatistics());
+        TextView collection = secondaryAction(strings.collection);
+        card.addView(collection, fullWidthButtonParams(10));
+        collection.setOnClickListener(v -> showCollection());
+
         TextView back = primaryAction(strings.back);
         LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(50));
@@ -441,6 +455,74 @@ public class GameActivity extends Activity {
 
         overlay.addView(scroller, matchParent());
         root.addView(overlay, matchParent());
+    }
+
+    private void addVolumeControl(LinearLayout card, boolean isMusic) {
+        TextView caption = label("", 12, false, theme.textSecondary);
+        int initial = GamePrefs.volume(this, isMusic);
+        caption.setText(strings.volume + ": " + initial + "%");
+        card.addView(caption, wrapWithTopMargin(8));
+        SeekBar bar = new SeekBar(this);
+        bar.setMax(100);
+        bar.setProgress(initial);
+        bar.setContentDescription((isMusic ? strings.music : strings.sound) + " — " + strings.volume);
+        card.addView(bar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+        bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar seekBar, int value, boolean fromUser) {
+                caption.setText(strings.volume + ": " + value + "%");
+                if (!fromUser) return;
+                GamePrefs.setVolume(GameActivity.this, isMusic, value);
+                if (isMusic) music.setVolume(value); else gameView.setSoundVolume(value);
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+    }
+
+    private void showStatistics() {
+        StringBuilder body = new StringBuilder(strings.statisticsNote);
+        for (Difficulty d : Difficulty.values()) {
+            body.append("\n\n").append(difficultyName(d)).append("\n")
+                .append(strings.runs).append(": ").append(GamePrefs.runs(this, d)).append("\n")
+                .append(strings.bestLine.replace("%1$d", Integer.toString(GamePrefs.best(this, d)))).append("\n")
+                .append(strings.totalRows).append(": ").append(GamePrefs.totalRows(this, d)).append("\n")
+                .append(strings.bestRows).append(": ").append(GamePrefs.bestRows(this, d)).append("\n")
+                .append(strings.bestTime).append(": ").append(GamePrefs.bestTime(this, d) / 1000).append("\n")
+                .append(strings.bestLevel).append(": ").append(GamePrefs.bestLevel(this, d));
+        }
+        showTextDialog(strings.statistics, body.toString());
+    }
+
+    private void showCollection() {
+        new android.app.AlertDialog.Builder(this, android.app.AlertDialog.THEME_DEVICE_DEFAULT_LIGHT)
+                .setTitle(strings.collection).setItems(new String[]{strings.ballStyle, strings.backgroundStyle},
+                        (dialog, which) -> showStyleChoices(which == 1))
+                .setNegativeButton(strings.close, (dialog, which) -> {}).show();
+    }
+
+    private void showStyleChoices(boolean background) {
+        String[] names = {strings.styleClassic, background ? strings.backgroundOne : strings.styleOne,
+                background ? strings.backgroundTwo : strings.styleTwo};
+        String[] choices = new String[names.length];
+        int selected = GamePrefs.appearance(this, background);
+        int score = GamePrefs.highestScore(this);
+        for (int i = 0; i < names.length; i++) {
+            String extra = score < Progress.threshold(i)
+                    ? String.format(java.util.Locale.ROOT, strings.unlockAt, Progress.threshold(i))
+                    : (selected == i ? strings.selected : "");
+            choices[i] = names[i] + (extra.isEmpty() ? "" : " — " + extra);
+        }
+        new android.app.AlertDialog.Builder(this, android.app.AlertDialog.THEME_DEVICE_DEFAULT_LIGHT)
+                .setTitle(background ? strings.backgroundStyle : strings.ballStyle)
+                .setItems(choices, (dialog, which) -> {
+                    if (score < Progress.threshold(which)) {
+                        Toast.makeText(this, String.format(java.util.Locale.ROOT, strings.unlockAt,
+                                Progress.threshold(which)), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    GamePrefs.setAppearance(this, background, which);
+                    gameView.setAppearance(GamePrefs.appearance(this, false), GamePrefs.appearance(this, true));
+                }).setNegativeButton(strings.close, (dialog, which) -> {}).show();
     }
 
     private TextView sectionLabel(String textRes) {
@@ -810,9 +892,9 @@ public class GameActivity extends Activity {
         gameView.resumeGame();
     }
 
-    private void showGameOver(int score, int rowsCleared) {
+    private void showGameOver(int score, int rowsCleared, long millis) {
         music.setScene(MusicPlayer.Scene.NONE);
-        boolean record = GamePrefs.submitBest(this, difficulty, score);
+        boolean record = GamePrefs.recordRun(this, difficulty, score, rowsCleared, millis);
         gameOverTitle.setText(record ? strings.newRecord : strings.gameOver);
         gameOverScore.setText(String.format(java.util.Locale.ROOT, strings.scoreLine, score));
         gameOverRows.setText(String.format(java.util.Locale.ROOT, strings.rowsLine, rowsCleared));
