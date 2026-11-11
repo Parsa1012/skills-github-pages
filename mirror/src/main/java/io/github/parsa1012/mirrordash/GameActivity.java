@@ -279,7 +279,7 @@ public class GameActivity extends Activity {
         addTool(tools, "i", strings.infoDescription, () -> showTextDialog(strings.helpTitle, strings.helpBody));
         addTool(tools, "A", strings.languageDescription, () -> showLanguageDialog());
         addTool(tools, "@", strings.aboutDescription, () -> showTextDialog(strings.aboutTitle,
-                strings.creatorLabel + ": " + strings.creatorName + "\n" + strings.emailLabel + ":\n" + strings.creatorEmail + "\n\n" + strings.aboutBody + "\n\n" + strings.versionLabel + ": 1.5"));
+                strings.creatorLabel + ": " + strings.creatorName + "\n" + strings.emailLabel + ":\n" + strings.creatorEmail + "\n\n" + strings.aboutBody + "\n\n" + strings.versionLabel + ": " + BuildConfig.VERSION_NAME));
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.END);
         overlay.addView(tools, lp);
     }

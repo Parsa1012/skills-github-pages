@@ -22,8 +22,8 @@ public final class LevelConfig {
     private static final float SPACING_PER_LEVEL_DP = -15f;
     private static final float GAP_PER_LEVEL_DP = -3f;
 
-    private static final float SPEED_CAP_DP = 600f;
-    private static final float SPACING_FLOOR_DP = 170f;
+    private static final float SPEED_CAP_DP = 470f;
+    private static final float SPACING_FLOOR_DP = 230f;
     private static final float GAP_FLOOR_DP = 78f;
 
     /** Geometry shared by every row. */

@@ -35,6 +35,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Test real game generator
+        run: |
+          tools/test_engine.sh
+          python3 tools/simulate_generation.py
+
       - name: Install Android SDK packages
         run: |
           set -eu
@@ -109,7 +114,7 @@ jobs:
             unzip -l "dist/$name" | tail -n 4 >> "$STATUS" || true
           }
 
-          publish "mirror/build/outputs/apk/release/mirror-release.apk" "mirror-dash-1.5.apk"
+          publish "mirror/build/outputs/apk/release/mirror-release.apk" "mirror-dash-1.6.apk"
           publish "mirror/build/outputs/apk/debug/mirror-debug.apk" "mirror-dash-debug.apk"
 
           echo "--- dist ---" >> "$STATUS"
@@ -131,22 +136,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          FILES="dist/mirror-dash-1.5.apk dist/mirror-dash-debug.apk"
+          FILES="dist/mirror-dash-1.6.apk dist/mirror-dash-debug.apk"
           for f in $FILES; do
             if [ ! -f "$f" ]; then
               echo "missing $f, skipping release"
               exit 0
             fi
           done
-          TAG="v1.5"
+          TAG="v1.6"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             gh release upload "$TAG" $FILES --clobber --repo "$GITHUB_REPOSITORY"
           else
             gh release create "$TAG" $FILES \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "توپهای همزاد ۱٫۵ — Twin Balls" \
-              --notes "نسخه ۱٫۵: کنترل مستقل موسیقی و جلوه‌های صوتی، پس‌زمینه و آیکون تازه، و دکمه‌های عمودی. فایل نسخهٔ انتشار را بدون حذف نسخهٔ قبلی نصب کنید."
+              --title "توپهای همزاد ۱٫۶ — Twin Balls" \
+              --notes "نسخه ۱٫۶: ردیف‌های بازتر، تصحیح مسیرهای متحرک و تنظیم منصفانه‌تر سرعت در هر سه درجه. فایل نسخهٔ انتشار را بدون حذف نسخهٔ قبلی نصب کنید."
           fi
 
       - name: Commit published files

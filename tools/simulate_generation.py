@@ -35,7 +35,7 @@ SPACING_TABLE = [300, 280, 260, 240, 220]
 GAP_TABLE = [96, 92, 88, 84, 80]
 
 # A quick swipe, used to keep the required between-row travel honest (GameEngine).
-HUMAN_SWIPE_DP_PER_SECOND = 1100.0
+HUMAN_SWIPE_DP_PER_SECOND = 850.0
 
 # Mirrors Difficulty.java.
 DIFFICULTIES = {
@@ -81,11 +81,11 @@ def sample(table, level, per_level, bound, cap):
 
 
 def speed(level):
-    return sample(SPEED_TABLE, level, 50, 600, True) * ACTIVE["speed"]
+    return sample(SPEED_TABLE, level, 50, 470, True) * ACTIVE["speed"]
 
 
 def spacing(level):
-    return sample(SPACING_TABLE, level, -15, 170, False) * ACTIVE["spacing"]
+    return sample(SPACING_TABLE, level, -15, 230, False) * ACTIVE["spacing"]
 
 
 def gap_width(level):
@@ -97,14 +97,13 @@ def single_gap_width(level):
 
 
 def min_window():
-    return max(20.0, MIN_WINDOW + ACTIVE["min_window_bonus"])
+    return 50.0 + ACTIVE["min_window_bonus"]
 
 
 def max_mismatch(level):
-    budget = gap_width(level) - min_window()
-    if budget <= 0:
-        return 0.0
-    raw = budget * (0.35 + 0.65 * clamp01((level - 1) / 5.0))
+    budget = max(0.0, gap_width(level) - min_window())
+    base_gap = sample(GAP_TABLE, level, -3, 78, False)
+    raw = max(0.0, base_gap - MIN_WINDOW) * (0.35 + 0.65 * clamp01((level - 1) / 5.0))
     return min(budget, raw * ACTIVE["mismatch"])
 
 
@@ -118,7 +117,7 @@ def switch_chance(level):
 
 
 def max_travel(level):
-    return max(WIDTH * 0.30, HUMAN_SWIPE_DP_PER_SECOND * spacing(level) / max(1.0, speed(level)))
+    return HUMAN_SWIPE_DP_PER_SECOND * max(0.0, (spacing(level) - ROW_HEIGHT - 2 * PLAYER_RADIUS) / max(1.0, speed(level)) - 0.10)
 
 
 def apart_max_offset(level):
@@ -174,14 +173,17 @@ class Generator:
 
     def try_together(self, row, level):
         gw = single_gap_width(level)
-        if gw >= WIDTH - 2 * EDGE_MARGIN:
+        together_min = 80.0 + 2 * max(0.0, ACTIVE["min_window_bonus"] + 4.0)
+        if self.last_window_center >= 0 and abs(self.last_window_center - WIDTH / 2) > max_travel(level):
             return False
-        max_offset = max(0.0, (gw - min_window()) / 2)
+        if gw >= WIDTH - 2 * EDGE_MARGIN or gw < together_min:
+            return False
+        max_offset = max(0.0, (gw - together_min) / 2)
         max_offset = min(max_offset, max(0.0, WIDTH / 2 - gw / 2 - MIN_SLIVER))
         for _ in range(48):
             center = WIDTH / 2 + self.rng.uniform(-1, 1) * max_offset
             window_width = gw - abs(2 * center - WIDTH)
-            if window_width < min_window():
+            if window_width < together_min:
                 continue
             row.gaps = [(center, gw)]
             row.window_center = WIDTH / 2
@@ -222,9 +224,11 @@ class Generator:
             row.gaps = [(first, gw), (second, gw)]
             row.window_center = window_center
             row.window_width = window_width
-            if window_width >= MOVING_MIN_WINDOW and self.rng.random() < moving_chance(level):
+            safe_amp = min(WAVE_AMPLITUDE, (window_width - min_window()) / 2,
+                           first - edge, WIDTH - edge - first, second - edge, WIDTH - edge - second)
+            if window_width >= MOVING_MIN_WINDOW and safe_amp >= 2 and self.rng.random() < moving_chance(level):
                 row.wave = True
-                row.wave_amp = WAVE_AMPLITUDE
+                row.wave_amp = safe_amp
                 row.wave_phase = self.rng.random() * 6.2831855
             return True
         return False
@@ -347,7 +351,8 @@ def simulate(seed, skill, max_seconds=600.0, log=False,
     x = WIDTH * 0.3
     vmax = 4000.0 if skill == "perfect" else vmax_human
     radius = PLAYER_RADIUS * COLLISION_FORGIVENESS
-    scheduled = {}          # id(row) -> time the player will know its position
+    observed = None
+    ready_at = 0.0
     known_target = WIDTH * 0.5
 
     while elapsed < max_seconds:
@@ -360,20 +365,18 @@ def simulate(seed, skill, max_seconds=600.0, log=False,
             relevant = [r for r in rows if r.y <= PLAYER_Y + PLAYER_RADIUS]
             if relevant:
                 nearest = max(relevant, key=lambda r: r.y)
-                target = nearest.window_center + nearest.offset
+                target = nearest.window_center
             else:
                 target = WIDTH / 2
         else:
             live = [r for r in rows if r.y + r.height >= PLAYER_Y - sight
                     and r.y <= PLAYER_Y + PLAYER_RADIUS]
-            if live:
-                nearest = max(live, key=lambda r: r.y)
-                if id(nearest) not in scheduled:
-                    scheduled[id(nearest)] = elapsed + reaction
-            for key in list(scheduled):
-                if scheduled[key] <= elapsed:
-                    del scheduled[key]
-                    known_target = nearest.window_center + nearest.offset if live else WIDTH / 2
+            nearest = max(live, key=lambda r: r.y) if live else None
+            if nearest is not observed:
+                observed = nearest
+                ready_at = elapsed + reaction
+            if nearest is not None and elapsed >= ready_at:
+                known_target = nearest.window_center
             target = known_target
         target = clamp(target, PLAYER_RADIUS, WIDTH - PLAYER_RADIUS)
 
@@ -401,7 +404,8 @@ def simulate(seed, skill, max_seconds=600.0, log=False,
             if bottom < PLAYER_Y - radius or top > PLAYER_Y + radius:
                 continue
             for left, right in row.segments():
-                if circle_hits_rect(x, PLAYER_Y, radius, left, top, right, bottom):
+                if (circle_hits_rect(x, PLAYER_Y, radius, left, top, right, bottom)
+                        or circle_hits_rect(WIDTH - x, PLAYER_Y, radius, left, top, right, bottom)):
                     if log:
                         print(f"  death: t={elapsed:.2f}s level={level:.2f} rows={rows_cleared}")
                     return rows_cleared, elapsed

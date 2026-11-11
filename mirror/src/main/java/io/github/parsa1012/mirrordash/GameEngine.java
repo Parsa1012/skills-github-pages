@@ -41,7 +41,8 @@ public class GameEngine {
     private static final int SPREAD_APART = 1;
 
     /** Model of a quick swipe, used to keep the required between-row travel honest. */
-    private static final float HUMAN_SWIPE_DP_PER_SECOND = 1100f;
+    private static final float HUMAN_SWIPE_DP_PER_SECOND = 850f;
+    private static final float REACTION_MARGIN_SECONDS = 0.10f;
     private static final int BREATHER_EVERY_ROWS = 7;
 
     private static final int POINTS_PER_SECOND = 10;
@@ -525,8 +526,9 @@ public class GameEngine {
     }
 
     private float minWindowFor() {
-        return Math.max(20f * density, LevelConfig.minWindow(density)
-                + difficulty.minWindowBonus(density));
+        // Window width includes both visible radii; leave usable room instead of a
+        // mathematically non-empty slit that requires pixel-perfect touch input.
+        return (50f * density) + difficulty.minWindowBonus(density);
     }
 
     private float mismatchFor(float level, float gapWidth) {
@@ -551,8 +553,10 @@ public class GameEngine {
      * humanly reachable: a fast swipe (~1100 dp/s) for the time the rows are apart.
      */
     private float maxTravelFor(float level) {
-        float seconds = spacingFor(level) / Math.max(1f, speedFor(level));
-        return Math.max(width * 0.30f, HUMAN_SWIPE_DP_PER_SECOND * density * seconds);
+        float clearDistance = Math.max(0f, spacingFor(level)
+                - LevelConfig.rowHeight(density) - 2f * PLAYER_RADIUS_DP * density);
+        float seconds = clearDistance / Math.max(1f, speedFor(level)) - REACTION_MARGIN_SECONDS;
+        return HUMAN_SWIPE_DP_PER_SECOND * density * Math.max(0f, seconds);
     }
 
     /** How far from the centre line an "apart" row may sit, in the x of the left body. */
@@ -615,16 +619,22 @@ public class GameEngine {
     }
 
     /**
-     * "Together" row: a single opening wide enough for both bodies, so the only feasible
-     * position is the screen centre (the two bodies overlap there). The opening is nudged off
-     * centre a little to eat into the safe window, which raises the precision requirement
-     * without changing where the player has to be.
+     * A shared opening with enough room for the full visible balls to pass without touching.
+     * Width here includes both ball radii; the remaining half-width determines how far from
+     * the centre either ball can sit. A modest offset retains asymmetry without tight pinches.
      */
     private boolean tryTogetherGap(ObstacleRow row, float level) {
         float gapWidth = singleGapFor(level);
-        float minWindow = minWindowFor();
+        // At least 24 dp from the axis (plus visible radius), even on Hard. Easier
+        // presets allow a wider non-overlapping placement and more finger tolerance.
+        float minWindow = (80f * density) + 2f * Math.max(0f,
+                difficulty.minWindowBonus(density) + 4f * density);
         float margin = LevelConfig.EDGE_MARGIN_DP * density;
-        if (gapWidth >= width - 2f * margin) {
+        if (lastWindowCenter >= 0f
+                && Math.abs(lastWindowCenter - width * 0.5f) > maxTravelFor(level)) {
+            return false;
+        }
+        if (gapWidth >= width - 2f * margin || gapWidth < minWindow) {
             return false;
         }
         float sliver = LevelConfig.minSliver(density);
@@ -704,8 +714,14 @@ public class GameEngine {
             row.setGap(1, second, gapWidth);
             row.windowCenter = windowCenter;
             row.windowWidth = windowWidth;
-            if (windowWidth >= movingMinWindow && random.nextFloat() < movingChance) {
-                row.enableWave(amplitude, LevelConfig.WAVE_PERIOD_SECONDS,
+            // Both gaps shift in the same direction. The mirrored intersection can shrink
+            // by 2*amplitude, not zero: reserve the full visible-body window at every phase.
+            float safeAmplitude = Math.min(amplitude, (windowWidth - minWindow) * 0.5f);
+            safeAmplitude = Math.min(safeAmplitude, Math.min(Math.min(first - edge,
+                    width - edge - first), Math.min(second - edge, width - edge - second)));
+            if (windowWidth >= movingMinWindow && safeAmplitude >= 2f * density
+                    && random.nextFloat() < movingChance) {
+                row.enableWave(safeAmplitude, LevelConfig.WAVE_PERIOD_SECONDS,
                         random.nextFloat() * 6.2831855f);
             }
             return true;
