@@ -1,0 +1,64 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.parsa1012.mirrordash'
+    compileSdk 34
+
+    /**
+     * A single development key is committed in `signing/` on purpose: every CI run must sign
+     * with the same certificate, otherwise an updated APK cannot be installed over the
+     * previous one ("signature mismatch"). This is a throwaway dev key, not a store key —
+     * see signing/README.md before publishing anywhere.
+     */
+    signingConfigs {
+        shared {
+            storeFile file('signing/mirror-dev.p12')
+            storePassword 'mirror-dash-dev'
+            keyAlias 'mirror'
+            keyPassword 'mirror-dash-dev'
+            storeType 'PKCS12'
+            enableV1Signing true
+            enableV2Signing true
+        }
+    }
+
+    defaultConfig {
+        applicationId 'io.github.parsa1012.mirrordash'
+        minSdk 21
+        targetSdk 34
+        versionCode 10
+        versionName '1.9'
+    }
+
+    buildTypes {
+        debug {
+            // Same key as release so successive test builds upgrade in place.
+            signingConfig signingConfigs.shared
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            // R8 stays off: the app is already ~60 KB and has no reflection to strip.
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.shared
+        }
+    }
+
+    aaptOptions {
+        // Typeface.createFromAsset() needs the fonts uncompressed in the APK.
+        noCompress 'ttf'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        encoding 'UTF-8'
+    }
+}

@@ -1,0 +1,41 @@
+name: Build and test Twin Balls
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'mirror/**'
+      - 'tools/**'
+      - 'app/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - '.github/workflows/mirror-build.yml'
+  pull_request:
+    paths:
+      - 'mirror/**'
+      - 'tools/**'
+      - 'app/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - '.github/workflows/mirror-build.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - run: sh tools/test_engine.sh
+      - run: gradle :mirror:assembleDebug :mirror:assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: twin-balls-apks
+          path: |
+            mirror/build/outputs/apk/debug/*.apk
+            mirror/build/outputs/apk/release/*.apk

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">توپهای همزاد</string>
+    <string name="tagline">یک انگشت، دو نیمه</string>
+
+    <string name="start_game">شروع</string>
+    <string name="settings">تنظیمات</string>
+    <string name="back">بازگشت</string>
+    <string name="hint">برای حرکت، انگشت را بکشید</string>
+    <string name="how_to">انگشت را بکشید تا هر دو دایره با هم حرکت کنند.\nاگر یکی از آن‌ها بمیرد، بازی تمام است.</string>
+
+    <string name="difficulty">درجه سختی</string>
+    <string name="difficulty_easy">آسان</string>
+    <string name="difficulty_normal">متوسط</string>
+    <string name="difficulty_hard">دشوار</string>
+    <string name="difficulty_line">سختی: %1$s</string>
+
+    <string name="appearance">حالت نمایش</string>
+    <string name="theme_night">شب</string>
+    <string name="theme_day">روز</string>
+
+    <string name="sound">صدا</string>
+    <string name="settings_footer">تنظیمات به‌صورت خودکار ذخیره می‌شود</string>
+    <string name="on">روشن</string>
+    <string name="off">خاموش</string>
+
+    <string name="paused_title">توقف</string>
+    <string name="resume">ادامه</string>
+    <string name="restart">شروع دوباره</string>
+    <string name="menu">منو</string>
+    <string name="game_over">بازی تمام شد</string>
+    <string name="new_record">رکورد جدید!</string>
+    <string name="score_line">امتیاز  %1$d</string>
+    <string name="best_line">رکورد  %1$d</string>
+    <string name="rows_line">ردیف عبورشده  %1$d</string>
+    <string name="play_again">دوباره</string>
+
+    <string name="pause_description">توقف بازی</string>
+    <string name="logo_description">لوگوی بازی</string>
+</resources>
