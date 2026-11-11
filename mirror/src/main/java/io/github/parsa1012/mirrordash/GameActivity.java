@@ -1018,7 +1018,7 @@ public class GameActivity extends Activity {
     protected void onResume() {
         super.onResume();
         if (gameView != null) {
-            gameView.start();
+            gameView.setActivityActive(true);
         }
         if (pauseOnResume) {
             pauseOnResume = false;
@@ -1036,7 +1036,7 @@ public class GameActivity extends Activity {
                 gameView.pauseGame();
                 pauseOnResume = true;
             }
-            gameView.stop();
+            gameView.setActivityActive(false);
         }
         super.onPause();
     }

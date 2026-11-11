@@ -15,15 +15,20 @@ Run from the repo root (needs network the first time):
     python3 tools/make_fonts.py
 """
 
+import base64
+import hashlib
 import io
 import os
 import subprocess
 import sys
 import tarfile
+import tempfile
 import urllib.request
 
 NPM_TARBALL = "https://registry.npmjs.org/vazirmatn/-/vazirmatn-33.0.3.tgz"
-CACHE = "/tmp/package/fonts/ttf"
+INTEGRITY = "fbjNc0CMjazZpIegWzz9OHGzI1APFboT+x7ZecXlUCtDe/nkyx7gtCTZnWS/+eeXG7fbfXymCPKJI8EsnM3iqw=="
+MAX_DOWNLOAD = 30 * 1024 * 1024
+MAX_MEMBER = 5 * 1024 * 1024
 OUT = "mirror/src/main/assets/fonts"
 
 UNICODES = ",".join([
@@ -45,38 +50,49 @@ UNICODES = ",".join([
 ])
 
 
-def ensure_source():
-    if os.path.isdir(CACHE):
-        return
+def download_source(destination):
+    """Fetch an integrity-pinned archive and copy only three regular files; never extract paths."""
     print("downloading Vazirmatn from npm ...")
     with urllib.request.urlopen(NPM_TARBALL, timeout=60) as response:
-        payload = response.read()
-    with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as tar:
-        for member in tar.getmembers():
-            if member.name.endswith(".ttf") or member.name.endswith("OFL.txt"):
-                tar.extract(member, path="/tmp")
+        payload = response.read(MAX_DOWNLOAD + 1)
+    if len(payload) > MAX_DOWNLOAD:
+        raise ValueError("font archive too large")
+    digest = base64.b64encode(hashlib.sha512(payload).digest()).decode("ascii")
+    if digest != INTEGRITY:
+        raise ValueError("font archive integrity mismatch")
+    required = {
+        "package/fonts/ttf/Vazirmatn-Regular.ttf": "Vazirmatn-Regular.ttf",
+        "package/fonts/ttf/Vazirmatn-Bold.ttf": "Vazirmatn-Bold.ttf",
+        "package/OFL.txt": "OFL.txt",
+    }
+    with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as archive:
+        for name, output in required.items():
+            member = archive.getmember(name)
+            if not member.isfile() or member.size > MAX_MEMBER:
+                raise ValueError("unsafe font archive member: " + name)
+            source = archive.extractfile(member)
+            if source is None:
+                raise ValueError("missing font archive member: " + name)
+            with source, open(os.path.join(destination, output), "wb") as target:
+                target.write(source.read(MAX_MEMBER + 1))
 
 
 def main():
-    ensure_source()
     os.makedirs(OUT, exist_ok=True)
-    for weight in ("Regular", "Bold"):
-        src = os.path.join(CACHE, f"Vazirmatn-{weight}.ttf")
-        dst = os.path.join(OUT, f"Vazirmatn-{weight}.ttf")
-        subprocess.run([
-            sys.executable, "-m", "fontTools.subset", src,
-            f"--unicodes={UNICODES}",
-            "--layout-features=*",
-            "--no-hinting",
-            "--name-IDs=1,2,3,4,6",
-            "--drop-tables+=DSIG,FFTM",
-            f"--output-file={dst}",
-        ], check=True)
-        print(f"{dst} {os.path.getsize(dst)} B")
-
-    licence = os.path.join("/tmp/package", "OFL.txt")
-    if os.path.exists(licence):
-        with open(licence, "rb") as src, open(os.path.join(OUT, "OFL.txt"), "wb") as dst:
+    # Private temporary directory avoids trusting a pre-existing shared /tmp/package cache.
+    with tempfile.TemporaryDirectory(prefix="twin-fonts-") as source_dir:
+        download_source(source_dir)
+        for weight in ("Regular", "Bold"):
+            src = os.path.join(source_dir, f"Vazirmatn-{weight}.ttf")
+            dst = os.path.join(OUT, f"Vazirmatn-{weight}.ttf")
+            subprocess.run([
+                sys.executable, "-m", "fontTools.subset", src,
+                f"--unicodes={UNICODES}", "--layout-features=*", "--no-hinting",
+                "--name-IDs=1,2,3,4,6", "--drop-tables+=DSIG,FFTM",
+                f"--output-file={dst}",
+            ], check=True)
+            print(f"{dst} {os.path.getsize(dst)} B")
+        with open(os.path.join(source_dir, "OFL.txt"), "rb") as src, open(os.path.join(OUT, "OFL.txt"), "wb") as dst:
             dst.write(src.read())
 
     # Prove the four languages are actually covered by the shipped file.

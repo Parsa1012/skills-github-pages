@@ -1,41 +1,9 @@
-# Development signing key
+# Release signing
 
-`mirror-dev.p12` is a **throwaway development key** that is committed on purpose.
+The historical development key has been compromised. It must never be used to sign new releases. Removing it from the current tree does not erase the key from Git history or other copies.
 
-## Why is a keystore in the repository?
+A new PKCS#12 keystore must be generated and backed up securely outside the repository by the owner. Set the GitHub Actions secrets `MIRROR_KEYSTORE_BASE64`, `MIRROR_STORE_PASSWORD`, `MIRROR_KEY_ALIAS`, and `MIRROR_KEY_PASSWORD`; set the repository variable `MIRROR_CERT_SHA256` to the expected SHA-256 fingerprint of the new public certificate. Restrict who can edit workflows, branches, secrets, and actions, and use protected deployment environments where appropriate. Never paste private keys or passwords into chat or commit them. Back up the keystore and credentials separately and securely; losing them can prevent updates.
 
-Android refuses to install an update whose signing certificate differs from the installed
-one. GitHub-hosted runners start with no key and generate a random debug key per job, so
-every CI build would have a different signature and every new APK would require uninstalling
-the previous one. Committing one fixed key makes `mirror-dash-debug.apk` and
-`mirror-dash-1.0.apk` upgradable in place, and makes builds reproducible.
+The manual workflow requires these values, rejects the known compromised certificate, signs v1/v2/v3, and verifies the APK before uploading an Actions artifact. Fingerprints identify a certificate but do not by themselves establish trust in a compromised build environment. This pipeline has not yet been tested with real credentials.
 
-## Details
-
-| Field | Value |
-|---|---|
-| File | `mirror-dev.p12` (PKCS#12) |
-| Alias | `mirror` |
-| Store / key password | `mirror-dash-dev` |
-| Subject | `CN=Mirror Dash Dev Key, O=Parsa1012, OU=Development, C=DE` |
-| Key | RSA 2048, SHA-256, valid for 30 years |
-| SHA-256 fingerprint | `09:22:8D:15:5D:DC:EB:4F:BE:98:97:40:6C:F4:57:6D:B9:DF:E0:A4:49:F4:EF:39:1C:1A:EA:AF:12:27:66:4C` |
-
-Generated with OpenSSL (no Android Studio needed):
-
-```bash
-openssl req -x509 -newkey rsa:2048 -sha256 -days 10950 -nodes \
-  -keyout key.pem -out cert.pem \
-  -subj "/CN=Mirror Dash Dev Key/O=Parsa1012/OU=Development/C=DE"
-openssl pkcs12 -export -name mirror -inkey key.pem -in cert.pem \
-  -out mirror-dev.p12 -passout pass:mirror-dash-dev
-```
-
-## Before publishing for real
-
-- Anyone can sign an APK with this key, so it must not be used for a store release or for
-  anything that talks to a server.
-- Generate your own keystore, keep it **outside** the repository (and back it up — losing it
-  means you cannot update the app), pass it to Gradle through environment variables or
-  `~/.gradle/gradle.properties`, and bump `versionCode` for every published build.
-- With Play App Signing you would upload an `.aab` and let Google hold the real key.
+The published 1.8 APK used the old key. A newly signed APK with the same application ID will not normally install over it. Uninstalling can erase local scores and settings. Signature rotation/lineage has Android-version and distribution constraints and cannot restore trust in a compromised old signer. Decide on migration before issuing a new key or distributing a replacement.

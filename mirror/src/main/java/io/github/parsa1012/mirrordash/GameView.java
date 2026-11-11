@@ -33,6 +33,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
 
     private Thread loopThread;
     private volatile boolean running;
+    private volatile boolean activityActive;
     private volatile boolean startRequested;
     private volatile boolean attractRequested;
     private volatile int pauseRequest;
@@ -114,7 +115,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         forceFrame = true;
-        start();
+        if (activityActive) start();
     }
 
     @Override
@@ -128,8 +129,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         stop();
     }
 
+    public void setActivityActive(boolean active) {
+        activityActive = active;
+        if (active) start(); else stop();
+    }
+
     public void start() {
-        if (running) {
+        if (!activityActive || !surfaceHolder.getSurface().isValid() || running) {
             return;
         }
         running = true;
