@@ -76,6 +76,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Run
         sound.setEnabled(enabled);
     }
 
+    public void playUiClick() { sound.playClick(); }
+    public void playUiMenu() { sound.playMenu(); }
+    public void playUiUnlock() { sound.playUnlock(); }
+
     public void setSoundVolume(int percent) { sound.setVolume(percent); }
     public void setAppearance(int ball, int background) { renderer.setAppearance(ball, background); }
 

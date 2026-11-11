@@ -222,6 +222,8 @@ public class GameEngine {
         runSeconds = 0.0;
         score = 0;
         lastWindowCenter = -1f;
+        lastSpread = -1;
+        spreadRun = 0;
         touchActive = false;
         countdown = COUNTDOWN_SECONDS;
         dyingTimer = 0f;
@@ -653,6 +655,16 @@ public class GameEngine {
             row.setGap(0, center, gapWidth);
             row.windowCenter = width * 0.5f;
             row.windowWidth = windowWidth;
+            // Breathing shared openings are a new, gentle variation. Even at their
+            // narrowest, they retain the full separated-ball safety window.
+            float edgeSpace = Math.min(center - gapWidth * .5f - margin,
+                    width - margin - center - gapWidth * .5f);
+            float pulseAmplitude = Math.min(12f * density,
+                    Math.min(windowWidth - minWindow, 2f * edgeSpace));
+            if (lastWindowCenter >= 0f && level >= 3f && pulseAmplitude >= 3f * density
+                    && random.nextFloat() < 0.28f) {
+                row.enablePulse(pulseAmplitude, 3.2f, random.nextFloat() * 6.2831855f);
+            }
             return true;
         }
         return false;
@@ -725,6 +737,16 @@ public class GameEngine {
                     && random.nextFloat() < movingChance) {
                 row.enableWave(safeAmplitude, LevelConfig.WAVE_PERIOD_SECONDS,
                         random.nextFloat() * 6.2831855f);
+            } else if (level >= 4f) {
+                // Second variant: two gaps breathe together, never combined with sideways
+                // movement. Reserve the full safe window, edge clearance and solid sliver.
+                float edgeRoom = 2f * Math.min(Math.min(first - edge, width - edge - first),
+                        Math.min(second - edge, width - edge - second));
+                float pulseRoom = Math.min(12f * density, Math.min(windowWidth - minWindow,
+                        Math.min(edgeRoom, Math.abs(first - second) - gapWidth - sliver)));
+                if (pulseRoom >= 3f * density && random.nextFloat() < 0.22f) {
+                    row.enablePulse(pulseRoom, 3.2f, random.nextFloat() * 6.2831855f);
+                }
             }
             return true;
         }

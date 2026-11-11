@@ -135,11 +135,14 @@ class Row:
         self.wave_amp = 0.0
         self.wave_phase = 0.0
         self.offset = 0.0
+        self.pulse_amp = 0.0
+        self.pulse_offset = 0.0
+        self.pulse_phase = 0.0
         self.scored = False
         self.mode = TOGETHER
 
     def segments(self):
-        gaps = sorted(((c + self.offset, w) for c, w in self.gaps))
+        gaps = sorted(((c + self.offset, w + self.pulse_offset) for c, w in self.gaps))
         out = []
         cursor = 0.0
         for center, width in gaps:
@@ -188,6 +191,11 @@ class Generator:
             row.gaps = [(center, gw)]
             row.window_center = WIDTH / 2
             row.window_width = window_width
+            edge_space = min(center - gw / 2 - EDGE_MARGIN, WIDTH - EDGE_MARGIN - center - gw / 2)
+            pulse = min(12.0, window_width - together_min, 2 * edge_space)
+            if self.last_window_center >= 0 and level >= 3 and pulse >= 3 and self.rng.random() < 0.28:
+                row.pulse_amp = pulse
+                row.pulse_phase = self.rng.random() * 6.2831855
             return True
         return False
 
@@ -230,6 +238,13 @@ class Generator:
                 row.wave = True
                 row.wave_amp = safe_amp
                 row.wave_phase = self.rng.random() * 6.2831855
+            elif level >= 4:
+                edge_room = 2 * min(first - edge, WIDTH - edge - first, second - edge, WIDTH - edge - second)
+                pulse = min(12.0, window_width - min_window(), edge_room,
+                            abs(first - second) - gw - MIN_SLIVER)
+                if pulse >= 3 and self.rng.random() < 0.22:
+                    row.pulse_amp = pulse
+                    row.pulse_phase = self.rng.random() * 6.2831855
             return True
         return False
 
@@ -389,6 +404,8 @@ def simulate(seed, skill, max_seconds=600.0, log=False,
             row.y += sp * dt
             if row.wave:
                 row.offset = math.sin(elapsed * 2 * math.pi / WAVE_PERIOD + row.wave_phase) * row.wave_amp
+            if row.pulse_amp:
+                row.pulse_offset = math.sin(elapsed * 2 * math.pi / 3.2 + row.pulse_phase) * row.pulse_amp
             if not row.scored and row.y > PLAYER_Y + PLAYER_RADIUS:
                 row.scored = True
                 rows_cleared += 1

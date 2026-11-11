@@ -114,7 +114,7 @@ jobs:
             unzip -l "dist/$name" | tail -n 4 >> "$STATUS" || true
           }
 
-          publish "mirror/build/outputs/apk/release/mirror-release.apk" "mirror-dash-1.7.apk"
+          publish "mirror/build/outputs/apk/release/mirror-release.apk" "mirror-dash-1.8.apk"
           publish "mirror/build/outputs/apk/debug/mirror-debug.apk" "mirror-dash-debug.apk"
 
           echo "--- dist ---" >> "$STATUS"
@@ -136,22 +136,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          FILES="dist/mirror-dash-1.7.apk dist/mirror-dash-debug.apk"
+          FILES="dist/mirror-dash-1.8.apk dist/mirror-dash-debug.apk"
           for f in $FILES; do
             if [ ! -f "$f" ]; then
               echo "missing $f, skipping release"
               exit 0
             fi
           done
-          TAG="v1.7"
+          TAG="v1.8"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             gh release upload "$TAG" $FILES --clobber --repo "$GITHUB_REPOSITORY"
           else
             gh release create "$TAG" $FILES \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
-              --title "توپهای همزاد ۱٫۷ — Twin Balls" \
-              --notes "نسخه ۱٫۷: آمار جداگانه، ظاهرهای بازشدنی و کنترل مستقل بلندی موسیقی و جلوه‌های صوتی. فایل نسخهٔ انتشار را بدون حذف نسخهٔ قبلی نصب کنید."
+              --title "توپهای همزاد ۱٫۸ — Twin Balls" \
+              --notes "نسخه ۱٫۸: موانع تازه، نشانه‌های حرکت، افکت‌های صوتی رابط و اعلام ظاهرهای تازه. فایل نسخهٔ انتشار را بدون حذف نسخهٔ قبلی نصب کنید."
           fi
 
       - name: Commit published files

@@ -15,7 +15,7 @@ public final class GameEngineFairnessTest {
         Method maxTravel = GameEngine.class.getDeclaredMethod("maxTravelFor", float.class);
         Field rng = GameEngine.class.getDeclaredField("random");
         spawn.setAccessible(true); maxTravel.setAccessible(true); rng.setAccessible(true);
-        long count = 0, waves = 0, together = 0;
+        long count = 0, waves = 0, together = 0, pulseSingle = 0, pulseDouble = 0;
         for (Difficulty d : Difficulty.values()) {
             for (int widthDp : new int[]{280, 320, 360, 411, 600}) {
                 for (float density : new float[]{1f, 2f, 3f}) {
@@ -34,8 +34,13 @@ public final class GameEngineFairnessTest {
                             prev = row.windowCenter;
                             if (row.gapCount == 1) together++;
                             if (row.wave) waves++;
-                            for (float offset : new float[]{-row.waveAmplitude, 0, row.waveAmplitude}) {
-                                row.waveOffset = offset;
+                            if (row.pulse && row.gapCount == 1) pulseSingle++;
+                            if (row.pulse && row.gapCount == 2) pulseDouble++;
+                            check(!(row.wave && row.pulse), "combined movement " + where);
+                            for (float phase : new float[]{-1f, 0, 1f}) {
+                                row.waveOffset = phase * row.waveAmplitude;
+                                row.pulseOffset = phase * row.pulseAmplitude;
+                                float offset = row.waveOffset + row.pulseOffset;
                                 int n = row.segments(width);
                                 // Shared openings permit two visibly separated balls, not only overlapping ones.
                                 float x = row.gapCount == 1 ? width / 2f - 24f * density : row.windowCenter;
@@ -53,7 +58,7 @@ public final class GameEngineFairnessTest {
                 }
             }
         }
-        check(waves > 0 && together > 0, "missing pattern coverage");
-        System.out.println("Real Java generator PASS: " + count + " rows; shared=" + together + ", moving=" + waves);
+        check(waves > 0 && together > 0 && pulseSingle > 0 && pulseDouble > 0, "missing pattern coverage");
+        System.out.println("Real Java generator PASS: " + count + " rows; shared=" + together + ", sliding=" + waves + ", breathing single=" + pulseSingle + ", breathing double=" + pulseDouble);
     }
 }

@@ -268,10 +268,23 @@ public class GameActivity extends Activity {
             }
         });
 
+        // Reserve the top corner for the vertical tools; scroll on short displays or with
+        // large system text instead of overlapping the logo and actions.
+        ScrollView menuScroll = new ScrollView(this);
+        menuScroll.setFillViewport(true);
+        menuScroll.setClipToPadding(false);
+        LinearLayout menuCentre = new LinearLayout(this);
+        menuCentre.setOrientation(LinearLayout.VERTICAL);
+        menuCentre.setGravity(Gravity.CENTER);
+        int availableWidth = Math.max(dp(180), getResources().getDisplayMetrics().widthPixels - dp(32));
+        menuCentre.addView(content, new LinearLayout.LayoutParams(
+                Math.min(dp(340), availableWidth), ViewGroup.LayoutParams.WRAP_CONTENT));
+        menuScroll.addView(menuCentre, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         FrameLayout.LayoutParams contentParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        contentParams.gravity = Gravity.CENTER;
-        overlay.addView(content, contentParams);
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        contentParams.topMargin = dp(176);
+        overlay.addView(menuScroll, contentParams);
 
         addMenuTools(overlay);
         root.addView(overlay, matchParent());
@@ -301,6 +314,7 @@ public class GameActivity extends Activity {
     }
 
     private void showTextDialog(String title, String body) {
+        gameView.playUiMenu();
         TextView message = label(body, 15, false, android.graphics.Color.rgb(30, 35, 45));
         message.setGravity(Gravity.START);
         message.setTextDirection(lang.rtl() ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
@@ -314,6 +328,7 @@ public class GameActivity extends Activity {
     }
 
     private void showLanguageDialog() {
+        gameView.playUiMenu();
         Lang[] languages = Lang.values();
         String[] names = new String[languages.length];
         for (int i = 0; i < languages.length; i++) names[i] = languages[i].nativeName();
@@ -494,6 +509,7 @@ public class GameActivity extends Activity {
     }
 
     private void showCollection() {
+        gameView.playUiMenu();
         new android.app.AlertDialog.Builder(this, android.app.AlertDialog.THEME_DEVICE_DEFAULT_LIGHT)
                 .setTitle(strings.collection).setItems(new String[]{strings.ballStyle, strings.backgroundStyle},
                         (dialog, which) -> showStyleChoices(which == 1))
@@ -501,6 +517,7 @@ public class GameActivity extends Activity {
     }
 
     private void showStyleChoices(boolean background) {
+        gameView.playUiMenu();
         String[] names = {strings.styleClassic, background ? strings.backgroundOne : strings.styleOne,
                 background ? strings.backgroundTwo : strings.styleTwo};
         String[] choices = new String[names.length];
@@ -520,6 +537,7 @@ public class GameActivity extends Activity {
                                 Progress.threshold(which)), Toast.LENGTH_LONG).show();
                         return;
                     }
+                    gameView.playUiClick();
                     GamePrefs.setAppearance(this, background, which);
                     gameView.setAppearance(GamePrefs.appearance(this, false), GamePrefs.appearance(this, true));
                 }).setNegativeButton(strings.close, (dialog, which) -> {}).show();
@@ -582,6 +600,7 @@ public class GameActivity extends Activity {
     }
 
     private void selectDifficulty(Difficulty value) {
+        gameView.playUiClick();
         difficulty = value;
         GamePrefs.setDifficulty(this, value);
         gameView.setDifficulty(value);
@@ -590,6 +609,7 @@ public class GameActivity extends Activity {
     }
 
     private void selectSound(boolean enabled) {
+        gameView.playUiClick();
         soundEnabled = enabled;
         GamePrefs.setSoundEnabled(this, enabled);
         gameView.setSoundEnabled(enabled);
@@ -597,6 +617,7 @@ public class GameActivity extends Activity {
     }
 
     private void selectMusic(boolean enabled) {
+        gameView.playUiClick();
         musicEnabled = enabled;
         GamePrefs.setMusicEnabled(this, enabled);
         music.setEnabled(enabled);
@@ -604,6 +625,7 @@ public class GameActivity extends Activity {
     }
 
     private void selectNight(boolean night) {
+        gameView.playUiClick();
         if (night == nightMode) {
             return;
         }
@@ -614,12 +636,14 @@ public class GameActivity extends Activity {
     }
 
     private void showSettings() {
+        gameView.playUiMenu();
         settingsOverlay.setVisibility(View.VISIBLE);
         settingsOverlay.setAlpha(0f);
         settingsOverlay.animate().alpha(1f).setDuration(180).start();
     }
 
     private void hideSettings() {
+        gameView.playUiClick();
         settingsOverlay.animate().alpha(0f).setDuration(150)
                 .withEndAction(new Runnable() {
                     @Override
@@ -834,6 +858,7 @@ public class GameActivity extends Activity {
     // ------------------------------------------------------------------------ flow
 
     private void startGame() {
+        gameView.playUiClick();
         music.setScene(MusicPlayer.Scene.GAME);
         music.setPaused(false);
         menuOverlay.setVisibility(View.GONE);
@@ -859,6 +884,7 @@ public class GameActivity extends Activity {
     }
 
     private void goToMenu() {
+        gameView.playUiMenu();
         music.setScene(MusicPlayer.Scene.MENU);
         hud.setVisibility(View.GONE);
         hint.setVisibility(View.GONE);
@@ -878,6 +904,7 @@ public class GameActivity extends Activity {
             return;
         }
         gameView.pauseGame();
+        gameView.playUiMenu();
         music.setPaused(true);
         hud.setVisibility(View.GONE);
         scrim.setVisibility(View.VISIBLE);
@@ -886,6 +913,7 @@ public class GameActivity extends Activity {
     }
 
     private void hidePause() {
+        gameView.playUiClick();
         music.setPaused(false);
         hideCard(pausePanel);
         hud.setVisibility(View.VISIBLE);
@@ -894,7 +922,13 @@ public class GameActivity extends Activity {
 
     private void showGameOver(int score, int rowsCleared, long millis) {
         music.setScene(MusicPlayer.Scene.NONE);
+        int previousBest = GamePrefs.highestScore(this);
         boolean record = GamePrefs.recordRun(this, difficulty, score, rowsCleared, millis);
+        int newBest = GamePrefs.highestScore(this);
+        if (Progress.unlockedBetween(previousBest, newBest)) {
+            gameView.playUiUnlock();
+            Toast.makeText(this, strings.unlockNotice, Toast.LENGTH_LONG).show();
+        }
         gameOverTitle.setText(record ? strings.newRecord : strings.gameOver);
         gameOverScore.setText(String.format(java.util.Locale.ROOT, strings.scoreLine, score));
         gameOverRows.setText(String.format(java.util.Locale.ROOT, strings.rowsLine, rowsCleared));

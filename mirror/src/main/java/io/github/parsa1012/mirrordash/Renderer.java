@@ -32,6 +32,7 @@ public class Renderer {
     private final Paint gridPaint = new Paint();
     private final Paint axisPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rowFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint markerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rowEdgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint skinPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint corePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -135,6 +136,10 @@ public class Renderer {
         rowEdgePaint.setStyle(Paint.Style.STROKE);
         rowEdgePaint.setColor(withAlpha(theme.rowEdge, 140));
         rowEdgePaint.setStrokeWidth(1.6f * density);
+        markerPaint.setColor(theme.night ? 0xFFEAF2FF : 0xFF173861);
+        markerPaint.setStyle(Paint.Style.STROKE);
+        markerPaint.setStrokeWidth(Math.max(1.5f, 1.6f * density));
+        markerPaint.setStrokeCap(Paint.Cap.ROUND);
 
         corePaint.setStyle(Paint.Style.FILL);
 
@@ -293,13 +298,34 @@ public class Renderer {
             float gapCorner = row.height * 0.5f;
             for (int g = 0; g < row.gapCount; g++) {
                 float center = row.currentGapCenter(g);
-                float half = row.gapWidth[g] * 0.5f;
+                float half = row.currentGapWidth(g) * 0.5f;
                 gapRect.set(center - half, top, center + half, bottom);
                 rowPath.addRoundRect(gapRect, gapCorner, gapCorner, Path.Direction.CW);
             }
 
             canvas.drawPath(rowPath, rowFillPaint);
             canvas.drawPath(rowPath, rowEdgePaint);
+            if (row.wave || row.pulse) {
+                int count = row.segments(width);
+                float bestLeft = 0f, bestRight = 0f;
+                for (int k = 0; k < count; k++) {
+                    float l = row.segmentEdges[2 * k], r = row.segmentEdges[2 * k + 1];
+                    if (r - l > bestRight - bestLeft) { bestLeft = l; bestRight = r; }
+                }
+                if (bestRight - bestLeft >= 30f * density) {
+                    float x = (bestLeft + bestRight) * .5f, y = (top + bottom) * .5f;
+                    float h = 4f * density, w = 6f * density;
+                    if (row.wave) { // side-facing chevrons: gaps slide sideways
+                        canvas.drawLine(x - w, y, x - w + h, y - h, markerPaint);
+                        canvas.drawLine(x - w, y, x - w + h, y + h, markerPaint);
+                        canvas.drawLine(x + w, y, x + w - h, y - h, markerPaint);
+                        canvas.drawLine(x + w, y, x + w - h, y + h, markerPaint);
+                    } else { // vertical bars: opening breathes
+                        canvas.drawLine(x - w / 2f, y - h, x - w / 2f, y + h, markerPaint);
+                        canvas.drawLine(x + w / 2f, y - h, x + w / 2f, y + h, markerPaint);
+                    }
+                }
+            }
         }
     }
 

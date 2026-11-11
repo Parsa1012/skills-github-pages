@@ -28,6 +28,9 @@ public class ObstacleRow {
     float wavePeriod;
     float wavePhase;
     float waveOffset;
+    boolean pulse;
+    float pulseAmplitude;
+    float pulseOffset;
 
     /** Scratch output for {@link #segments(float)}: left/right pairs. */
     final float[] segmentEdges = new float[(MAX_GAPS + 1) * 2];
@@ -41,6 +44,9 @@ public class ObstacleRow {
         this.gapCount = 0;
         this.scored = false;
         this.wave = false;
+        this.pulse = false;
+        this.pulseAmplitude = 0f;
+        this.pulseOffset = 0f;
         this.waveOffset = 0f;
         this.waveAmplitude = 0f;
         this.wavePeriod = 1f;
@@ -64,19 +70,26 @@ public class ObstacleRow {
         wavePhase = phase;
     }
 
+    void enablePulse(float amplitude, float period, float phase) {
+        pulse = true;
+        pulseAmplitude = amplitude;
+        wavePeriod = period > 0.05f ? period : 1f;
+        wavePhase = phase;
+    }
+
     void updateWave(double elapsedSeconds) {
-        if (!wave) {
-            waveOffset = 0f;
-            return;
-        }
         double phase = elapsedSeconds * (2.0 * Math.PI / wavePeriod) + wavePhase;
-        waveOffset = (float) (Math.sin(phase) * waveAmplitude);
+        float movement = (float) Math.sin(phase);
+        waveOffset = wave ? movement * waveAmplitude : 0f;
+        pulseOffset = pulse ? movement * pulseAmplitude : 0f;
     }
 
     /** Gap centre in screen space, including the wave offset. */
     float currentGapCenter(int index) {
         return gapCenter[index] + waveOffset;
     }
+
+    float currentGapWidth(int index) { return gapWidth[index] + pulseOffset; }
 
     /**
      * Builds the solid segments of the row into {@link #segmentEdges} and returns how many
@@ -85,7 +98,7 @@ public class ObstacleRow {
     int segments(float screenWidth) {
         for (int i = 0; i < gapCount; i++) {
             sortedCenter[i] = gapCenter[i] + waveOffset;
-            sortedWidth[i] = gapWidth[i];
+            sortedWidth[i] = currentGapWidth(i);
         }
         // Two gaps at most: a tiny insertion sort keeps the segment builder simple.
         for (int i = 0; i < gapCount - 1; i++) {

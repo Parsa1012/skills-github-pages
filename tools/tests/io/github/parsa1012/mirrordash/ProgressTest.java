@@ -40,6 +40,8 @@ public final class ProgressTest {
         check(GamePrefs.best(c, Difficulty.EASY) == 250 && GamePrefs.bestRows(c, Difficulty.EASY) == 12);
         check(GamePrefs.bestTime(c, Difficulty.EASY) == 47000 && GamePrefs.bestLevel(c, Difficulty.EASY) == 3);
         check(GamePrefs.best(c, Difficulty.HARD) == 0 && GamePrefs.runs(c, Difficulty.HARD) == 0);
+        check(Progress.unlockedBetween(149,150) && Progress.unlockedBetween(399,400));
+        check(!Progress.unlockedBetween(150,399) && !Progress.unlockedBetween(400,500));
         check(Progress.validStyle(1,149) == 0 && Progress.validStyle(1,150) == 1);
         check(Progress.validStyle(2,399) == 0 && Progress.validStyle(2,400) == 2);
         GamePrefs.setAppearance(c,false,1); check(GamePrefs.appearance(c,false)==1);

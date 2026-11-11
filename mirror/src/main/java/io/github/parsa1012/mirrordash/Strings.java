@@ -54,6 +54,7 @@ public final class Strings {
     public String backgroundTwo;
     public String unlockAt;
     public String selected;
+    public String unlockNotice;
     public String on;
     public String off;
 
@@ -120,6 +121,7 @@ public final class Strings {
         s.backgroundTwo = "بنفش";
         s.unlockAt = "باز شدن با رکورد %1$d در هر درجه";
         s.selected = "انتخاب‌شده";
+        s.unlockNotice = "ظاهرهای جدید باز شدند! از تنظیمات آنها را انتخاب کنید.";
         s.appName = "توپهای همزاد";
         s.tagline = "یک انگشت، دو نیمه";
 
@@ -166,6 +168,7 @@ public final class Strings {
                         + "ردیف‌ها از بالا می‌آیند و هر ردیف یک دیوار است با یک یا دو سوراخ:\n"
                         + "• یک سوراخ: هر دو توپ از همان سوراخ نزدیک محور می‌گذرند؛ لازم نیست به هم بچسبند.\n"
                         + "• دو سوراخ: هر توپ باید از سوراخ خودش رد شود، پس باید از هم دور شوند.\n\n"
+                        + "بعضی ردیف‌ها حرکت می‌کنند: نشانه دو فلش یعنی حرکت جانبی، و دو خط یعنی باز و بسته شدن شکاف.\n\n"
                         + "۳) ریتم\n"
                         + "ردیف‌ها به شکل «کنار هم» یا «دور از هم» با ترتیب تصادفی می‌آیند. "
                         + "به‌محض رد کردن یک ردیف، برای ردیف بعدی جابه‌جا شوید.\n\n"
@@ -218,6 +221,7 @@ public final class Strings {
         s.backgroundTwo = "Violet";
         s.unlockAt = "Unlock at a score of %1$d on any difficulty";
         s.selected = "Selected";
+        s.unlockNotice = "New styles unlocked! Choose them in Settings.";
         s.appName = "Twin Balls";
         s.tagline = "One finger, two halves";
 
@@ -265,6 +269,7 @@ public final class Strings {
                         + "• One opening: both balls pass near the centre; they do not need to overlap.\n"
                         + "• Two openings: each ball passes through its own, so they have to be "
                         + "far apart.\n\n"
+                        + "Some rows move: side arrows mark sliding gaps; two bars mark a breathing opening.\n\n"
                         + "3) Rhythm\n"
                         + "Rows can be together or far apart in random order. The "
                         + "moment a row passes, move for the next one.\n\n"
@@ -317,6 +322,7 @@ public final class Strings {
         s.backgroundTwo = "بنفسجي";
         s.unlockAt = "يُفتح برقم %1$d في أي درجة صعوبة";
         s.selected = "المحدد";
+        s.unlockNotice = "تم فتح مظاهر جديدة! اخترها من الإعدادات.";
         s.appName = "كرات التوأم";
         s.tagline = "إصبع واحد، نصفان";
 
@@ -363,6 +369,7 @@ public final class Strings {
                         + "تنزل الصفوف من الأعلى، وكل صف جدار فيه فتحة أو فتحتان:\n"
                         + "• فتحة واحدة: تمرّ الكرتان قرب المحور، ولا تحتاجان إلى التلامس.\n"
                         + "• فتحتان: تمرّ كل كرة من فتحتها، أي يجب أن تبتعدا عن بعضهما.\n\n"
+                        + "بعض الصفوف متحركة: السهمان للحركة الجانبية والخطان للفتحة المتغيرة.\n\n"
                         + "٣) الإيقاع\n"
                         + "تأتي الصفوف بين «متجاورتين» و«متباعدتين» بترتيب عشوائي؛ بمجرّد "
                         + "تجاوز صف، تحرّك للصف التالي.\n\n"
@@ -412,6 +419,7 @@ public final class Strings {
         s.backgroundTwo = "Violeta";
         s.unlockAt = "Se desbloquea con %1$d puntos en cualquier dificultad";
         s.selected = "Seleccionado";
+        s.unlockNotice = "¡Estilos nuevos desbloqueados! Elígelos en Ajustes.";
         s.appName = "Bolas Gemelas";
         s.tagline = "Un dedo, dos mitades";
 
@@ -460,6 +468,7 @@ public final class Strings {
                         + "• Una abertura: ambas bolas pasan cerca del eje; no necesitan tocarse.\n"
                         + "• Dos aberturas: cada bola pasa por la suya, así que tienen que "
                         + "estar separadas.\n\n"
+                        + "Algunas filas se mueven: las flechas indican desplazamiento y dos líneas una abertura variable.\n\n"
                         + "3) Ritmo\n"
                         + "Las filas pueden ser juntas o separadas en orden aleatorio. "
                         + "Cuando pase una fila, muévete para la siguiente.\n\n"
