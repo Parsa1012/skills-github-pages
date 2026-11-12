@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+[ext_resource type="FontFile" path="res://assets/fonts/Vazirmatn-Bold.ttf" id="2_vazir_bold"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.105882, 0.145098, 0.231373, 0.94)
@@ -15,6 +16,10 @@ corner_radius_bottom_right = 14
 corner_radius_bottom_left = 14
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary_btn"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
 bg_color = Color(0.054902, 0.647059, 0.913725, 1)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
@@ -53,7 +58,7 @@ theme_override_constants/margin_bottom = 20
 
 [node name="MainLayout" type="VBoxContainer" parent="SafeMargin"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 16
 
 [node name="HeaderBar" type="HBoxContainer" parent="SafeMargin/MainLayout"]
 layout_mode = 2
@@ -65,20 +70,21 @@ size_flags_horizontal = 3
 [node name="TitleLabel" type="Label" parent="SafeMargin/MainLayout/HeaderBar/TitleBlock"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.972549, 0.980392, 0.988235, 1)
-theme_override_font_sizes/font_size = 34
-text = "COUNTERSTRIKE ARENA"
+theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_font_sizes/font_size = 32
+text = "کانتر استرایک آرنا"
 
 [node name="SubtitleLabel" type="Label" parent="SafeMargin/MainLayout/HeaderBar/TitleBlock"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_font_sizes/font_size = 16
-text = "Offline 2.5D Low-Poly Arcade Arena • Phase 1 Skeleton"
+theme_override_font_sizes/font_size = 15
+text = "میدان نبرد آرکید 2.5D آفلاین • فاز ۱ (ساختار پایه و دوربین)"
 
 [node name="BadgeLabel" type="Label" parent="SafeMargin/MainLayout/HeaderBar"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.984314, 0.572549, 0.235294, 1)
 theme_override_font_sizes/font_size = 15
-text = "Target: Galaxy A32"
+text = "هدف بهینه‌سازی: Galaxy A32"
 vertical_alignment = 1
 
 [node name="ContentRow" type="HBoxContainer" parent="SafeMargin/MainLayout"]
@@ -89,113 +95,139 @@ theme_override_constants/separation = 24
 [node name="ActionColumn" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 1.1
+size_flags_stretch_ratio = 1.05
 alignment = 1
 theme_override_constants/separation = 14
 
 [node name="BtnCameraTest" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
 custom_minimum_size = Vector2(0, 68)
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_font_sizes/font_size = 19
 theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
-text = "Launch Camera Angle Test (BombSquad 2.5D)"
+text = "آزمایش دوربین و صحنه (نمای BombSquad)"
 
 [node name="BtnToggleSettings" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
 custom_minimum_size = Vector2(0, 58)
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "Performance & Device Settings"
+theme_override_font_sizes/font_size = 17
+text = "نمایش / مخفی‌سازی تنظیمات عملکرد و صدا"
 
 [node name="BtnPlayPlaceholder" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 disabled = true
-theme_override_font_sizes/font_size = 17
-text = "Arena Match (Unlocked in Phase 2–5)"
+theme_override_font_sizes/font_size = 16
+text = "شروع مسابقه آرکید (در فازهای ۲ تا ۵)"
 
 [node name="SettingsPanel" type="PanelContainer" parent="SafeMargin/MainLayout/ContentRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 1.2
+size_flags_stretch_ratio = 1.25
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="SettingsMargin" type="MarginContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 18
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
 
 [node name="SettingsVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="SettingsHeader" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.972549, 0.980392, 0.988235, 1)
-theme_override_font_sizes/font_size = 20
-text = "Galaxy A32 Runtime Settings (Offline)"
+theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_font_sizes/font_size = 19
+text = "تنظیمات آفلاین دستگاه (Galaxy A32)"
 
 [node name="FpsLabel" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
-theme_override_font_sizes/font_size = 15
-text = "Target Frame Rate (30 FPS Stability Priority)"
+theme_override_font_sizes/font_size = 14
+text = "نرخ فریم هدف (اولویت پایداری ۳۰ فریم)"
 
 [node name="FpsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="BtnFps30" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
-text = "30 FPS (Stable)"
+text = "30 FPS (پایدار)"
 
 [node name="BtnFps60" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
-text = "60 FPS (Test)"
+text = "60 FPS (آزمایشی)"
 
 [node name="QualityLabel" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
-theme_override_font_sizes/font_size = 15
-text = "Quality Preset"
+theme_override_font_sizes/font_size = 14
+text = "کیفیت گرافیک"
 
 [node name="QualityRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="BtnLow" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
-text = "Low"
+text = "کم"
 
 [node name="BtnMedium" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
-text = "Medium"
+text = "متوسط"
 
 [node name="BtnHigh" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
-text = "High"
+text = "زیاد"
+
+[node name="AudioLabel" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
+theme_override_font_sizes/font_size = 14
+text = "صدا و موسیقی منو"
+
+[node name="AudioRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BtnMusic" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "موسیقی منو: روشن"
+
+[node name="BtnSfx" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "صدای رابط: روشن"
 
 [node name="CameraInfoLabel" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.580392, 0.639216, 0.721569, 1)
-theme_override_font_sizes/font_size = 14
-text = "BombSquad Camera Defaults: Pitch 57.5 deg | Distance 19.5 m"
+theme_override_font_sizes/font_size = 13
+text = "تنظیمات دوربین BombSquad"
 autowrap_mode = 2
 
 [node name="FooterBar" type="HBoxContainer" parent="SafeMargin/MainLayout"]
@@ -206,7 +238,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.580392, 0.639216, 0.721569, 1)
 theme_override_font_sizes/font_size = 14
-text = "Offline Mode Ready"
+text = "حالت آفلاین آماده است"
 
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnCameraTest" to="." method="_on_btn_camera_test_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnToggleSettings" to="." method="_on_btn_toggle_settings_pressed"]
@@ -215,3 +247,5 @@ text = "Offline Mode Ready"
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnLow" to="." method="_on_btn_low_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnMedium" to="." method="_on_btn_medium_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnHigh" to="." method="_on_btn_high_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnMusic" to="." method="_on_btn_music_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnSfx" to="." method="_on_btn_sfx_pressed"]

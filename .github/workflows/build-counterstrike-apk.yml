@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
@@ -65,7 +65,7 @@ jobs:
 
       - name: Cache Godot 4.3-stable binary and export templates
         id: cache-godot
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             /tmp/godot-cache
@@ -236,7 +236,7 @@ jobs:
           echo "=== APK File Info ==="
           ls -lh "${OUT_APK}"
 
-      - name: Verify APK architecture (arm64-v8a only) and signature
+      - name: Verify APK architecture (arm64-v8a only), assets, and signature
         run: |
           set -euo pipefail
           OUT_APK="${GITHUB_WORKSPACE}/${PROJECT_DIR}/builds/${APK_FILENAME}"
@@ -250,11 +250,16 @@ jobs:
             exit 1
           fi
 
+          echo "=== Bundled Persian Font & Audio Assets in APK ==="
+          unzip -l "${OUT_APK}" | grep -E 'assets/(audio|fonts|ui)/|Vazirmatn|main_menu' || true
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/audio/main_menu\.mp3|main_menu\.mp3-.*\.mp3str'
+          unzip -l "${OUT_APK}" | grep -qE 'Vazirmatn-Regular\.ttf|Vazirmatn-Regular\.ttf-.*\.fontdata'
+
           echo "=== APK Signature Verification ==="
           "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose "${OUT_APK}"
 
       - name: Upload Debug APK Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: counterstrike-arena-debug-arm64-apk
           path: ${{ env.PROJECT_DIR }}/builds/${{ env.APK_FILENAME }}

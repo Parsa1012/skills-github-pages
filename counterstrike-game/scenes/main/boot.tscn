@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/boot_screen.gd" id="1_boot"]
+[ext_resource type="FontFile" path="res://assets/fonts/Vazirmatn-Bold.ttf" id="2_vazir_bold"]
 
 [node name="Boot" type="Control"]
 layout_mode = 3
@@ -30,18 +31,19 @@ grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="CenterContainer"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 12
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_font_sizes/font_size = 34
-text = "COUNTERSTRIKE ARENA"
+theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_font_sizes/font_size = 36
+text = "کانتر استرایک آرنا"
 horizontal_alignment = 1
 
 [node name="SubtitleLabel" type="Label" parent="CenterContainer/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
 theme_override_font_sizes/font_size = 16
-text = "Initializing Offline 2.5D Foundation (Compatibility Renderer)..."
+text = "در حال راه‌اندازی نسخه آفلاین 2.5D (رندرر Compatibility)..."
 horizontal_alignment = 1

@@ -6,8 +6,11 @@ const SETTINGS_PATH: String = "user://arena_settings.cfg"
 var target_fps: int = 30
 var quality_preset: String = "medium"
 var master_volume: float = 0.85
+var music_volume: float = 0.70
 var sfx_volume: float = 0.85
-var ui_volume: float = 0.80
+var ui_volume: float = 0.85
+var music_enabled: bool = true
+var sfx_enabled: bool = true
 
 
 func _ready() -> void:
@@ -32,8 +35,11 @@ func load_settings() -> void:
 		quality_preset = "medium"
 
 	master_volume = clampf(float(config.get_value("audio", "master_volume", 0.85)), 0.0, 1.0)
+	music_volume = clampf(float(config.get_value("audio", "music_volume", 0.70)), 0.0, 1.0)
 	sfx_volume = clampf(float(config.get_value("audio", "sfx_volume", 0.85)), 0.0, 1.0)
-	ui_volume = clampf(float(config.get_value("audio", "ui_volume", 0.80)), 0.0, 1.0)
+	ui_volume = clampf(float(config.get_value("audio", "ui_volume", 0.85)), 0.0, 1.0)
+	music_enabled = bool(config.get_value("audio", "music_enabled", true))
+	sfx_enabled = bool(config.get_value("audio", "sfx_enabled", true))
 
 
 func save_settings() -> void:
@@ -41,8 +47,11 @@ func save_settings() -> void:
 	config.set_value("performance", "target_fps", target_fps)
 	config.set_value("performance", "quality_preset", quality_preset)
 	config.set_value("audio", "master_volume", master_volume)
+	config.set_value("audio", "music_volume", music_volume)
 	config.set_value("audio", "sfx_volume", sfx_volume)
 	config.set_value("audio", "ui_volume", ui_volume)
+	config.set_value("audio", "music_enabled", music_enabled)
+	config.set_value("audio", "sfx_enabled", sfx_enabled)
 	config.save(SETTINGS_PATH)
 
 
@@ -50,5 +59,8 @@ func apply_defaults() -> void:
 	target_fps = 30
 	quality_preset = "medium"
 	master_volume = 0.85
+	music_volume = 0.70
 	sfx_volume = 0.85
-	ui_volume = 0.80
+	ui_volume = 0.85
+	music_enabled = true
+	sfx_enabled = true

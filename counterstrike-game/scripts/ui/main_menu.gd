@@ -1,5 +1,5 @@
 extends Control
-## Phase 1 Main Menu & Offline Settings Hub (Galaxy A32 safe-area aware).
+## منوی اصلی و مرکز تنظیمات آفلاین بازی (پشتیبانی کامل فارسی RTL و حاشیه امن صفحه موبایل).
 
 @onready var _safe_margin: MarginContainer = $SafeMargin
 @onready var _settings_panel: PanelContainer = $SafeMargin/MainLayout/ContentRow/SettingsPanel
@@ -8,12 +8,23 @@ extends Control
 @onready var _quality_low_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnLow
 @onready var _quality_med_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnMedium
 @onready var _quality_high_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnHigh
+@onready var _music_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnMusic
+@onready var _sfx_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnSfx
 @onready var _camera_info_label: Label = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/CameraInfoLabel
 @onready var _status_label: Label = $SafeMargin/MainLayout/FooterBar/StatusLabel
 
 
 func _ready() -> void:
+	layout_direction = Control.LAYOUT_DIRECTION_RTL
+	if _safe_margin != null:
+		_safe_margin.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	if _camera_info_label != null:
+		_camera_info_label.text_direction = Control.TEXT_DIRECTION_RTL
+	if _status_label != null:
+		_status_label.text_direction = Control.TEXT_DIRECTION_RTL
+
 	GameManager.current_state = GameManager.AppState.MAIN_MENU
+	AudioManager.play_menu_music()
 	_apply_safe_area_margins()
 	_refresh_ui()
 	get_viewport().size_changed.connect(_apply_safe_area_margins)
@@ -38,46 +49,80 @@ func _refresh_ui() -> void:
 	_quality_med_btn.button_pressed = (SaveManager.quality_preset == "medium")
 	_quality_high_btn.button_pressed = (SaveManager.quality_preset == "high")
 
+	_music_btn.button_pressed = SaveManager.music_enabled
+	_music_btn.text = "موسیقی منو: روشن" if SaveManager.music_enabled else "موسیقی منو: خاموش"
+	_sfx_btn.button_pressed = SaveManager.sfx_enabled
+	_sfx_btn.text = "صدای رابط: روشن" if SaveManager.sfx_enabled else "صدای رابط: خاموش"
+
+	var quality_fa: String = "متوسط"
+	match SaveManager.quality_preset:
+		"low":
+			quality_fa = "کم"
+		"high":
+			quality_fa = "زیاد"
+
 	var cam_cfg: CameraConfig = CameraConfig.from_project_settings()
 	_camera_info_label.text = (
-		"BombSquad Camera Defaults (ProjectSettings):\n"
-		+ "Pitch: %.1f deg | Distance: %.1f m | FOV: %.1f deg | Free 360: Off"
+		"تنظیمات دوربین BombSquad (ProjectSettings):\n"
+		+ "زاویه: %.1f° | فاصله: %.1f متر | زاویه دید: %.0f° | چرخش ۳۶۰: غیرفعال"
 	) % [cam_cfg.pitch_degrees, cam_cfg.distance, cam_cfg.fov_degrees]
 
-	_status_label.text = "Offline Mode Ready | Renderer: GL Compatibility | Target FPS: %d | Preset: %s" % [
+	_status_label.text = "حالت آفلاین فعال | رندرر: GL Compatibility | فریم هدف: %d FPS | کیفیت: %s" % [
 		fps_target,
-		SaveManager.quality_preset.capitalize()
+		quality_fa
 	]
 
 
 func _on_btn_camera_test_pressed() -> void:
+	AudioManager.play_ui_pop()
+	AudioManager.stop_menu_music()
 	GameManager.go_to_camera_test()
 
 
 func _on_btn_toggle_settings_pressed() -> void:
+	AudioManager.play_ui_menu()
 	_settings_panel.visible = not _settings_panel.visible
 
 
 func _on_btn_fps_30_pressed() -> void:
+	AudioManager.play_ui_click()
 	GameManager.set_target_fps(30)
 	_refresh_ui()
 
 
 func _on_btn_fps_60_pressed() -> void:
+	AudioManager.play_ui_click()
 	GameManager.set_target_fps(60)
 	_refresh_ui()
 
 
 func _on_btn_low_pressed() -> void:
+	AudioManager.play_ui_click()
 	GameManager.set_quality_preset("low")
 	_refresh_ui()
 
 
 func _on_btn_medium_pressed() -> void:
+	AudioManager.play_ui_click()
 	GameManager.set_quality_preset("medium")
 	_refresh_ui()
 
 
 func _on_btn_high_pressed() -> void:
+	AudioManager.play_ui_click()
 	GameManager.set_quality_preset("high")
+	_refresh_ui()
+
+
+func _on_btn_music_pressed() -> void:
+	AudioManager.play_ui_pop()
+	AudioManager.set_music_enabled(not SaveManager.music_enabled)
+	_refresh_ui()
+
+
+func _on_btn_sfx_pressed() -> void:
+	var next_enabled: bool = not SaveManager.sfx_enabled
+	AudioManager.set_sfx_enabled(next_enabled)
+	if next_enabled:
+		AudioManager.play_ui_pop()
 	_refresh_ui()

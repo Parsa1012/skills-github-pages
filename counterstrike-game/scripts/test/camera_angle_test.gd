@@ -1,5 +1,5 @@
 extends Node3D
-## Phase 1 Camera Angle & Low-Poly Visual Verification Controller.
+## کنترلر صحنه آزمایشی فاز ۱ برای بررسی زاویه دوربین BombSquad و کارایی Low-Poly به زبان فارسی.
 
 @onready var _camera_rig: ArenaCameraRig = $ArenaCameraRig
 @onready var _player_proxy: Node3D = $Units/PlayerProxy
@@ -16,6 +16,13 @@ var _telemetry_timer: float = 0.0
 
 
 func _ready() -> void:
+	if _safe_margin != null:
+		_safe_margin.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	if _cam_metrics_label != null:
+		_cam_metrics_label.text_direction = Control.TEXT_DIRECTION_RTL
+	if _perf_metrics_label != null:
+		_perf_metrics_label.text_direction = Control.TEXT_DIRECTION_RTL
+
 	GameManager.current_state = GameManager.AppState.CAMERA_TEST
 	_apply_quality_to_scene()
 	_sync_from_rig()
@@ -64,7 +71,7 @@ func _apply_test_camera() -> void:
 func _update_labels() -> void:
 	if _camera_rig != null and _cam_metrics_label != null:
 		_cam_metrics_label.text = (
-			"BombSquad View | Pitch: %.1f deg | Dist: %.1f m | Height: %.1f m | FOV: %.0f deg | 360 Rot: OFF"
+			"نمای BombSquad | زاویه: %.1f° | فاصله: %.1f متر | ارتفاع: %.1f متر | FOV: %.0f° | چرخش ۳۶۰: قفل"
 		) % [
 			_camera_rig.get_active_pitch(),
 			_camera_rig.get_active_distance(),
@@ -74,10 +81,10 @@ func _update_labels() -> void:
 
 	if _patrol_btn != null and _player_proxy != null:
 		var patrol_on: bool = bool(_player_proxy.get("auto_patrol"))
-		_patrol_btn.text = "Patrol: ON" if patrol_on else "Patrol: OFF"
+		_patrol_btn.text = "گشت‌زنی: روشن" if patrol_on else "گشت‌زنی: خاموش"
 
 	if _fps_btn != null:
-		_fps_btn.text = "Target: %d FPS" % SaveManager.target_fps
+		_fps_btn.text = "فریم هدف: %d FPS" % SaveManager.target_fps
 
 	_update_perf_label()
 
@@ -89,7 +96,7 @@ func _update_perf_label() -> void:
 	var frame_ms: float = Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
 	var draw_calls: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
 	var primitives: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))
-	_perf_metrics_label.text = "FPS: %.0f / %d | Frame: %.1f ms | Draw Calls: %d | Primitives: %d" % [
+	_perf_metrics_label.text = "فریم: %.0f / %d | زمان فریم: %.1f ms | Draw Calls: %d | پریمیتیو: %d" % [
 		fps,
 		SaveManager.target_fps,
 		frame_ms,
@@ -99,56 +106,67 @@ func _update_perf_label() -> void:
 
 
 func _on_btn_pitch_55_pressed() -> void:
+	AudioManager.play_ui_click()
 	_pitch_deg = 55.0
 	_apply_test_camera()
 
 
 func _on_btn_pitch_575_pressed() -> void:
+	AudioManager.play_ui_click()
 	_pitch_deg = 57.5
 	_apply_test_camera()
 
 
 func _on_btn_pitch_60_pressed() -> void:
+	AudioManager.play_ui_click()
 	_pitch_deg = 60.0
 	_apply_test_camera()
 
 
 func _on_btn_pitch_minus_pressed() -> void:
+	AudioManager.play_ui_click()
 	_pitch_deg -= 1.0
 	_apply_test_camera()
 
 
 func _on_btn_pitch_plus_pressed() -> void:
+	AudioManager.play_ui_click()
 	_pitch_deg += 1.0
 	_apply_test_camera()
 
 
 func _on_btn_dist_165_pressed() -> void:
+	AudioManager.play_ui_click()
 	_distance_m = 16.5
 	_apply_test_camera()
 
 
 func _on_btn_dist_195_pressed() -> void:
+	AudioManager.play_ui_click()
 	_distance_m = 19.5
 	_apply_test_camera()
 
 
 func _on_btn_dist_230_pressed() -> void:
+	AudioManager.play_ui_click()
 	_distance_m = 23.0
 	_apply_test_camera()
 
 
 func _on_btn_dist_minus_pressed() -> void:
+	AudioManager.play_ui_click()
 	_distance_m -= 1.0
 	_apply_test_camera()
 
 
 func _on_btn_dist_plus_pressed() -> void:
+	AudioManager.play_ui_click()
 	_distance_m += 1.0
 	_apply_test_camera()
 
 
 func _on_btn_patrol_pressed() -> void:
+	AudioManager.play_ui_pop()
 	if _player_proxy != null:
 		var current_patrol: bool = bool(_player_proxy.get("auto_patrol"))
 		_player_proxy.set("auto_patrol", not current_patrol)
@@ -156,12 +174,14 @@ func _on_btn_patrol_pressed() -> void:
 
 
 func _on_btn_toggle_fps_pressed() -> void:
+	AudioManager.play_ui_pop()
 	var next_fps: int = 60 if SaveManager.target_fps == 30 else 30
 	GameManager.set_target_fps(next_fps)
 	_update_labels()
 
 
 func _on_btn_reset_pressed() -> void:
+	AudioManager.play_ui_pop()
 	if _camera_rig != null:
 		_camera_rig.reload_from_project_settings()
 	_sync_from_rig()
@@ -169,4 +189,5 @@ func _on_btn_reset_pressed() -> void:
 
 
 func _on_btn_back_pressed() -> void:
+	AudioManager.play_ui_menu()
 	GameManager.go_to_main_menu()

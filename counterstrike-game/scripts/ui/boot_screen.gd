@@ -1,13 +1,14 @@
 extends Control
-## Lightweight Phase 1 boot initializer (offline-only, zero network calls).
+## راه‌انداز سبک و آفلاین فاز ۱ (بدون نیاز به اینترنت).
 
-const TRANSITION_DELAY_SEC: float = 0.25
+const TRANSITION_DELAY_SEC: float = 0.35
 
 var _elapsed: float = 0.0
 var _transitioned: bool = false
 
 
 func _ready() -> void:
+	layout_direction = Control.LAYOUT_DIRECTION_RTL
 	GameManager.apply_performance_settings()
 
 

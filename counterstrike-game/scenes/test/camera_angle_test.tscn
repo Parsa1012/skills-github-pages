@@ -296,18 +296,18 @@ theme_override_constants/separation = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
 theme_override_font_sizes/font_size = 14
-text = "BombSquad View | Pitch: 57.5 deg | Dist: 19.5 m"
+text = "نمای BombSquad | زاویه: 57.5° | فاصله: 19.5 متر"
 
 [node name="PerfMetricsLabel" type="Label" parent="HUDLayer/SafeMargin/RootVBox/TopBar/MetricsPanel/MetricsMargin/MetricsVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.92, 0.96, 1)
 theme_override_font_sizes/font_size = 13
-text = "FPS: 30 / 30 | Draw Calls: 0 | Primitives: 0"
+text = "فریم: 30 / 30 | Draw Calls: 0 | پریمیتیو: 0"
 
 [node name="BtnBack" type="Button" parent="HUDLayer/SafeMargin/RootVBox/TopBar"]
 custom_minimum_size = Vector2(124, 52)
 layout_mode = 2
-text = "Back to Menu"
+text = "بازگشت به منو"
 
 [node name="Spacer" type="Control" parent="HUDLayer/SafeMargin/RootVBox"]
 layout_mode = 2
@@ -334,64 +334,64 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="PitchTitle" type="Label" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
-custom_minimum_size = Vector2(120, 0)
+custom_minimum_size = Vector2(96, 0)
 layout_mode = 2
-text = "Angle (Pitch):"
+text = "زاویه:"
 
 [node name="BtnPitch55" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "55 deg"
+text = "55°"
 
 [node name="BtnPitch575" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "57.5 deg (Default)"
+text = "57.5° (پیش‌فرض)"
 
 [node name="BtnPitch60" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "60 deg"
+text = "60°"
 
 [node name="BtnPitchMinus" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
 custom_minimum_size = Vector2(56, 42)
 layout_mode = 2
-text = "-1"
+text = "-1°"
 
 [node name="BtnPitchPlus" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
 custom_minimum_size = Vector2(56, 42)
 layout_mode = 2
-text = "+1"
+text = "+1°"
 
 [node name="RowDist" type="HBoxContainer" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="DistTitle" type="Label" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
-custom_minimum_size = Vector2(120, 0)
+custom_minimum_size = Vector2(96, 0)
 layout_mode = 2
-text = "Distance:"
+text = "فاصله:"
 
 [node name="BtnDist165" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "16.5 m (Close)"
+text = "16.5m (نزدیک)"
 
 [node name="BtnDist195" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "19.5 m (Default)"
+text = "19.5m (پیش‌فرض)"
 
 [node name="BtnDist230" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "23.0 m (Wide)"
+text = "23m (باز)"
 
 [node name="BtnDistMinus" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
 custom_minimum_size = Vector2(56, 42)
@@ -411,19 +411,19 @@ theme_override_constants/separation = 8
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Patrol: ON"
+text = "گشت‌زنی: روشن"
 
 [node name="BtnToggleFps" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowUtility"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Target: 30 FPS"
+text = "فریم هدف: 30 FPS"
 
 [node name="BtnReset" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowUtility"]
 custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Reset ProjectSettings"
+text = "بازنشانی پیش‌فرض"
 
 [connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/TopBar/BtnBack" to="." method="_on_btn_back_pressed"]
 [connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch/BtnPitch55" to="." method="_on_btn_pitch_55_pressed"]

@@ -17,6 +17,7 @@ var current_state: AppState = AppState.BOOT
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	TranslationServer.set_locale("fa")
 	_register_camera_project_settings()
 	apply_performance_settings()
 	EventBus.scene_change_requested.connect(change_scene)

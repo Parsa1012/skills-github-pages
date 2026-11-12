@@ -10,8 +10,8 @@ config_version=5
 
 [application]
 
-config/name="Counterstrike Arena"
-config/description="Offline 2.5D Low-Poly Fictional Arcade Arena designed for Android and optimized for Samsung Galaxy A32."
+config/name="کانتر استرایک آرنا"
+config/description="بازی آفلاین آرکید 2.5D با گرافیک Low-Poly برای اندروید و بهینه‌شده برای گلکسی A32"
 config/version="0.1.0-phase1"
 run/main_scene="res://scenes/main/boot.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
@@ -44,6 +44,15 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=4
 window/vsync/vsync_mode=1
+
+[gui]
+
+theme/custom="res://assets/ui/persian_theme.tres"
+theme/custom_font="res://assets/fonts/Vazirmatn-Regular.ttf"
+
+[internationalization]
+
+locale/fallback="fa"
 
 [input_devices]
 
