@@ -34,7 +34,7 @@ func _process(delta: float) -> void:
 func _apply_safe_area_margins() -> void:
 	if _safe_margin == null:
 		return
-	var pad: Dictionary = GameManager.get_safe_area_padding(get_viewport_rect().size)
+	var pad: Dictionary = GameManager.get_safe_area_padding(get_viewport().get_visible_rect().size)
 	_safe_margin.add_theme_constant_override("margin_left", int(pad["left"]))
 	_safe_margin.add_theme_constant_override("margin_right", int(pad["right"]))
 	_safe_margin.add_theme_constant_override("margin_top", int(pad["top"]))
