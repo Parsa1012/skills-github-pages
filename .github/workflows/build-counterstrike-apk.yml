@@ -188,7 +188,7 @@ jobs:
                   continue
               lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
               for i, line in enumerate(lines):
-                  if any(k in line for k in ("ERROR:", "WARNING:", "SCRIPT ERROR", "Parse Error", "QA_FAIL")):
+                  if any(k in line for k in ("ERROR:", "WARNING:", "SCRIPT ERROR", "Parse Error", "QA_FAIL", "Leaked", "still in use")):
                       ctx = line
                       if i + 1 < len(lines) and ("at:" in lines[i + 1] or "res://" in lines[i + 1]):
                           ctx += " | " + lines[i + 1].strip()
