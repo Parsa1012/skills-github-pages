@@ -45,11 +45,6 @@ window/stretch/aspect="expand"
 window/handheld/orientation=4
 window/vsync/vsync_mode=1
 
-[gui]
-
-theme/custom="res://assets/ui/persian_theme.tres"
-theme/custom_font="res://assets/fonts/Vazirmatn-Regular.ttf"
-
 [internationalization]
 
 locale/fallback="fa"

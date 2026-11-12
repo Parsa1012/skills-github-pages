@@ -18,9 +18,20 @@ var current_state: AppState = AppState.BOOT
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	TranslationServer.set_locale("fa")
+	_apply_persian_theme()
 	_register_camera_project_settings()
 	apply_performance_settings()
 	EventBus.scene_change_requested.connect(change_scene)
+
+
+func _apply_persian_theme() -> void:
+	if Engine.is_editor_hint():
+		return
+	var theme_path: String = "res://assets/ui/persian_theme.tres"
+	if ResourceLoader.exists(theme_path):
+		var loaded_theme: Resource = ResourceLoader.load(theme_path)
+		if loaded_theme is Theme and get_tree() != null and get_tree().root != null:
+			get_tree().root.theme = loaded_theme as Theme
 
 
 func _register_camera_project_settings() -> void:
