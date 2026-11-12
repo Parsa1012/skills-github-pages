@@ -21,27 +21,47 @@ env:
 jobs:
   build-android-debug-apk:
     name: Build Debug APK (Godot 4.3 / arm64-v8a)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Java JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install required Android SDK packages
+      - name: Set up Android SDK packages
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34"
-          echo "ANDROID_HOME=${ANDROID_HOME}"
-          ls -la "${ANDROID_HOME}/build-tools/34.0.0/apksigner"
+          set -euo pipefail
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "${SDK_DIR}" ]; then
+            echo "ERROR: Android SDK directory not found at ${SDK_DIR}" >&2
+            exit 1
+          fi
+          echo "ANDROID_HOME=${SDK_DIR}" >> "${GITHUB_ENV}"
+          echo "ANDROID_SDK_ROOT=${SDK_DIR}" >> "${GITHUB_ENV}"
+
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "${SDKMANAGER}" ] && [ -x "${SDK_DIR}/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER="${SDK_DIR}/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          if [ -z "${SDKMANAGER}" ]; then
+            echo "ERROR: sdkmanager not found in ${SDK_DIR}" >&2
+            exit 1
+          fi
+
+          echo "${SDK_DIR}/platform-tools" >> "${GITHUB_PATH}"
+          echo "$(dirname "${SDKMANAGER}")" >> "${GITHUB_PATH}"
+
+          yes | "${SDKMANAGER}" --licenses >/dev/null 2>&1 || true
+          "${SDKMANAGER}" --install "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+          ls -la "${SDK_DIR}/build-tools/34.0.0/apksigner"
 
       - name: Cache Godot 4.3-stable binary and export templates
         id: cache-godot
@@ -78,6 +98,7 @@ jobs:
           mv /tmp/godot-templates/templates "${TEMPLATES_DEST}"
 
           godot4 --version
+          ldd /usr/local/bin/godot4 | grep "not found" || true
           ls -lh "${TEMPLATES_DEST}/android_debug.apk"
 
       - name: Generate ephemeral CI Android debug keystore
@@ -99,16 +120,21 @@ jobs:
         run: |
           set -euo pipefail
           echo "=== Step 1: Headless resource import ==="
-          godot4 --headless --path "${PROJECT_DIR}" --import
+          godot4 --headless --path "${PROJECT_DIR}" --import 2>&1 | tee /tmp/godot-import.log
 
           echo "=== Step 2: Initialize EditorSettings ==="
           godot4 --headless --editor --path "${PROJECT_DIR}" --quit
 
           echo "=== Step 3: Smoke test boot -> main_menu ==="
-          godot4 --headless --path "${PROJECT_DIR}" --quit-after 30
+          godot4 --headless --path "${PROJECT_DIR}" --quit-after 30 2>&1 | tee /tmp/godot-smoke-boot.log
 
           echo "=== Step 4: Smoke test camera_angle_test.tscn ==="
-          godot4 --headless --path "${PROJECT_DIR}" res://scenes/test/camera_angle_test.tscn --quit-after 20
+          godot4 --headless --path "${PROJECT_DIR}" res://scenes/test/camera_angle_test.tscn --quit-after 20 2>&1 | tee /tmp/godot-smoke-test.log
+
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file" /tmp/godot-import.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log; then
+            echo "Detected Godot script/import error during headless verification!" >&2
+            exit 1
+          fi
 
       - name: Configure Godot Android export editor settings
         run: |
@@ -156,7 +182,7 @@ jobs:
           OUT_DIR="${GITHUB_WORKSPACE}/${PROJECT_DIR}/builds"
           OUT_APK="${OUT_DIR}/${APK_FILENAME}"
           mkdir -p "${OUT_DIR}"
-          godot4 --headless --verbose --path "${PROJECT_DIR}" --export-debug "Android" "${OUT_APK}"
+          godot4 --headless --verbose --path "${PROJECT_DIR}" --export-debug "Android" "${OUT_APK}" 2>&1 | tee /tmp/godot-export.log
 
           echo "=== APK File Info ==="
           ls -lh "${OUT_APK}"
