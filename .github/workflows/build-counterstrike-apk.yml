@@ -166,7 +166,7 @@ jobs:
           fi
           cat /tmp/godot-smoke-test.log
 
-          echo "=== Step 5: Smoke test Phase 2 arena_sector_01.tscn ==="
+          echo "=== Step 5: Smoke test arena_sector_01.tscn ==="
           if ! godot4 --headless --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
             cat /tmp/godot-smoke-arena.log
             emit_error_log /tmp/godot-smoke-arena.log "Godot arena_sector_01 smoke test failed"
@@ -174,8 +174,30 @@ jobs:
           fi
           cat /tmp/godot-smoke-arena.log
 
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log; then
-            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log | head -n 5 | tr '\n' ' ')"
+          echo "=== Step 6: End-to-End Runtime QA Suite ==="
+          if ! godot4 --headless --fixed-fps 30 --path "${PROJECT_DIR}" -s res://scripts/test/ci_runtime_qa.gd >/tmp/godot-qa.log 2>&1; then
+            cat /tmp/godot-qa.log
+            emit_error_log /tmp/godot-qa.log "Godot runtime QA suite failed"
+            exit 1
+          fi
+          cat /tmp/godot-qa.log
+          grep -q "\[QA_PASS\]" /tmp/godot-qa.log
+
+          # Surface any Godot warnings or errors as CI annotations for visibility
+          python3 - <<'PY'
+          import pathlib, re
+          for log_name in ["/tmp/godot-import.log", "/tmp/godot-editor.log", "/tmp/godot-smoke-boot.log", "/tmp/godot-smoke-test.log", "/tmp/godot-smoke-arena.log", "/tmp/godot-qa.log"]:
+              p = pathlib.Path(log_name)
+              if not p.exists():
+                  continue
+              for line in p.read_text(encoding="utf-8", errors="replace").splitlines():
+                  if any(k in line for k in ("ERROR:", "WARNING:", "SCRIPT ERROR", "Parse Error", "QA_FAIL")):
+                      safe = line.replace("%", "%25").replace("\r", "%0D").replace("\n", " ")
+                      print(f"::warning title=Godot log ({p.name})::{safe[:240]}")
+          PY
+
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log /tmp/godot-qa.log; then
+            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log /tmp/godot-qa.log | head -n 5 | tr '\n' ' ')"
             exit 1
           fi
 

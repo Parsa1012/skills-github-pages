@@ -69,7 +69,7 @@ mesh = SubResource("BoxMesh_aim_tip")
 transform = Transform3D(-1.85, 0, 0, 0, 1.85, 0, 0, 0, -1.85, 0, 0, 0)
 
 [node name="BlueVisorBeacon" type="MeshInstance3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -0.35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.12, -0.31)
 cast_shadow = 0
 mesh = SubResource("BoxMesh_badge")
 surface_material_override/0 = SubResource("StandardMaterial3D_team_visor")
