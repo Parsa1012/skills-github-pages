@@ -14,6 +14,12 @@ signal quality_preset_changed(preset_name: String)
 signal camera_settings_changed()
 
 @warning_ignore("unused_signal")
+signal aim_fire_mode_changed(mode_name: String)
+
+@warning_ignore("unused_signal")
+signal player_zone_changed(zone_id: String, zone_title_fa: String, inside: bool)
+
+@warning_ignore("unused_signal")
 signal match_started(mode_id: String)
 
 @warning_ignore("unused_signal")

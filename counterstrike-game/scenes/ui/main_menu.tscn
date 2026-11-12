@@ -78,7 +78,7 @@ text = "کانتر استرایک آرنا"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
 theme_override_font_sizes/font_size = 15
-text = "میدان نبرد آرکید 2.5D آفلاین • فاز ۱ (ساختار پایه و دوربین)"
+text = "میدان نبرد آرکید 2.5D آفلاین • فاز ۲ (شخصیت سه‌بعدی، حرکت و کنترل لمسی)"
 
 [node name="BadgeLabel" type="Label" parent="SafeMargin/MainLayout/HeaderBar"]
 layout_mode = 2
@@ -99,26 +99,25 @@ size_flags_stretch_ratio = 1.05
 alignment = 1
 theme_override_constants/separation = 14
 
-[node name="BtnCameraTest" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
-custom_minimum_size = Vector2(0, 68)
+[node name="BtnEnterArena" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 19
+theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
-text = "آزمایش دوربین و صحنه (نمای BombSquad)"
+text = "ورود به میدان نبرد (فاز ۲: حرکت و جوی‌استیک)"
 
-[node name="BtnToggleSettings" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
-custom_minimum_size = Vector2(0, 58)
+[node name="BtnCameraTest" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
-text = "نمایش / مخفی‌سازی تنظیمات عملکرد و صدا"
+text = "آزمایش زاویه دوربین BombSquad (فاز ۱)"
 
-[node name="BtnPlayPlaceholder" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
+[node name="BtnToggleSettings" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
-disabled = true
 theme_override_font_sizes/font_size = 16
-text = "شروع مسابقه آرکید (در فازهای ۲ تا ۵)"
+text = "نمایش / مخفی‌سازی تنظیمات دستگاه"
 
 [node name="SettingsPanel" type="PanelContainer" parent="SafeMargin/MainLayout/ContentRow"]
 layout_mode = 2
@@ -135,7 +134,7 @@ theme_override_constants/margin_bottom = 14
 
 [node name="SettingsVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 9
 
 [node name="SettingsHeader" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
@@ -155,14 +154,14 @@ layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="BtnFps30" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "30 FPS (پایدار)"
 
 [node name="BtnFps60" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
@@ -179,45 +178,44 @@ layout_mode = 2
 theme_override_constants/separation = 10
 
 [node name="BtnLow" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "کم"
 
 [node name="BtnMedium" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "متوسط"
 
 [node name="BtnHigh" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "زیاد"
 
-[node name="AudioLabel" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+[node name="ControlsLabel" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
 theme_override_font_sizes/font_size = 14
-text = "صدا و موسیقی منو"
+text = "روش نشانه و شلیک لمسی و صدا"
 
-[node name="AudioRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+[node name="ControlsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="BtnMusic" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow"]
-custom_minimum_size = Vector2(0, 44)
+[node name="BtnAimMode" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow"]
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-toggle_mode = true
-text = "موسیقی منو: روشن"
+text = "نشانه: دو جوی‌استیک"
 
-[node name="BtnSfx" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow"]
-custom_minimum_size = Vector2(0, 44)
+[node name="BtnSfx" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow"]
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
@@ -240,6 +238,7 @@ theme_override_colors/font_color = Color(0.580392, 0.639216, 0.721569, 1)
 theme_override_font_sizes/font_size = 14
 text = "حالت آفلاین آماده است"
 
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnEnterArena" to="." method="_on_btn_enter_arena_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnCameraTest" to="." method="_on_btn_camera_test_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnToggleSettings" to="." method="_on_btn_toggle_settings_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow/BtnFps30" to="." method="_on_btn_fps_30_pressed"]
@@ -247,5 +246,5 @@ text = "حالت آفلاین آماده است"
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnLow" to="." method="_on_btn_low_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnMedium" to="." method="_on_btn_medium_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnHigh" to="." method="_on_btn_high_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnMusic" to="." method="_on_btn_music_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnSfx" to="." method="_on_btn_sfx_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnAimMode" to="." method="_on_btn_aim_mode_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnSfx" to="." method="_on_btn_sfx_pressed"]

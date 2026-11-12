@@ -1,10 +1,10 @@
 extends Node
-## Independent offline audio manager using bundled MP3 assets inside counterstrike-game/assets/audio/.
+## مدیر صدای مستقل و آفلاین برای افکت‌های رابط کاربری و گیم‌پلی.
+## تنها از فایل‌های صوتی اختصاصی تولیدشده برای همین پروژه استفاده می‌کند.
 
-const MENU_MUSIC_PATH: String = "res://assets/audio/main_menu.mp3"
-const UI_CLICK_PATH: String = "res://assets/audio/ui_click.mp3"
-const UI_MENU_PATH: String = "res://assets/audio/ui_menu.mp3"
-const UI_POP_PATH: String = "res://assets/audio/ui_pop.mp3"
+const UI_TAP_PATH: String = "res://assets/audio/sfx_ui_tap.wav"
+const UI_SWITCH_PATH: String = "res://assets/audio/sfx_ui_switch.wav"
+const UI_CONFIRM_PATH: String = "res://assets/audio/sfx_ui_confirm.wav"
 
 const MAX_UI_PLAYERS: int = 4
 const MAX_SFX_PLAYERS: int = 8
@@ -16,9 +16,9 @@ var _ui_cursor: int = 0
 var _sfx_cursor: int = 0
 
 var _menu_music: AudioStream = null
-var _ui_click_sfx: AudioStream = null
-var _ui_menu_sfx: AudioStream = null
-var _ui_pop_sfx: AudioStream = null
+var _ui_tap_sfx: AudioStream = null
+var _ui_switch_sfx: AudioStream = null
+var _ui_confirm_sfx: AudioStream = null
 var _menu_music_requested: bool = false
 
 
@@ -49,17 +49,18 @@ func _build_player_pools() -> void:
 
 
 func _load_bundled_audio() -> void:
-	if ResourceLoader.exists(MENU_MUSIC_PATH):
-		_menu_music = ResourceLoader.load(MENU_MUSIC_PATH)
-		if _menu_music is AudioStreamMP3:
-			(_menu_music as AudioStreamMP3).loop = true
+	if ResourceLoader.exists(UI_TAP_PATH):
+		_ui_tap_sfx = ResourceLoader.load(UI_TAP_PATH)
+	if ResourceLoader.exists(UI_SWITCH_PATH):
+		_ui_switch_sfx = ResourceLoader.load(UI_SWITCH_PATH)
+	if ResourceLoader.exists(UI_CONFIRM_PATH):
+		_ui_confirm_sfx = ResourceLoader.load(UI_CONFIRM_PATH)
 
-	if ResourceLoader.exists(UI_CLICK_PATH):
-		_ui_click_sfx = ResourceLoader.load(UI_CLICK_PATH)
-	if ResourceLoader.exists(UI_MENU_PATH):
-		_ui_menu_sfx = ResourceLoader.load(UI_MENU_PATH)
-	if ResourceLoader.exists(UI_POP_PATH):
-		_ui_pop_sfx = ResourceLoader.load(UI_POP_PATH)
+
+func register_menu_music(stream: AudioStream) -> void:
+	_menu_music = stream
+	if _menu_music_requested:
+		play_menu_music()
 
 
 func apply_volumes() -> void:
@@ -71,7 +72,7 @@ func apply_volumes() -> void:
 		_music_player.volume_db = linear_to_db(music_lin) if music_lin > 0.001 else -80.0
 		if not SaveManager.music_enabled and _music_player.playing:
 			_music_player.stop()
-		elif SaveManager.music_enabled and _menu_music_requested and not _music_player.playing:
+		elif SaveManager.music_enabled and _menu_music_requested and _menu_music != null and not _music_player.playing:
 			play_menu_music()
 
 	var ui_db: float = linear_to_db(ui_lin) if ui_lin > 0.001 else -80.0
@@ -111,15 +112,15 @@ func set_sfx_enabled(enabled: bool) -> void:
 
 
 func play_ui_click(pitch_scale: float = 1.0) -> void:
-	play_ui_stream(_ui_click_sfx, pitch_scale)
+	play_ui_stream(_ui_tap_sfx, pitch_scale)
 
 
 func play_ui_menu(pitch_scale: float = 1.0) -> void:
-	play_ui_stream(_ui_menu_sfx, pitch_scale)
+	play_ui_stream(_ui_switch_sfx, pitch_scale)
 
 
 func play_ui_pop(pitch_scale: float = 1.0) -> void:
-	play_ui_stream(_ui_pop_sfx, pitch_scale)
+	play_ui_stream(_ui_confirm_sfx, pitch_scale)
 
 
 func play_ui_stream(stream: AudioStream, pitch_scale: float = 1.0) -> void:

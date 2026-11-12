@@ -8,8 +8,8 @@ extends Control
 @onready var _quality_low_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnLow
 @onready var _quality_med_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnMedium
 @onready var _quality_high_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnHigh
-@onready var _music_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnMusic
-@onready var _sfx_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnSfx
+@onready var _aim_mode_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnAimMode
+@onready var _sfx_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnSfx
 @onready var _camera_info_label: Label = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/CameraInfoLabel
 @onready var _status_label: Label = $SafeMargin/MainLayout/FooterBar/StatusLabel
 
@@ -24,7 +24,6 @@ func _ready() -> void:
 		_status_label.text_direction = Control.TEXT_DIRECTION_RTL
 
 	GameManager.current_state = GameManager.AppState.MAIN_MENU
-	AudioManager.play_menu_music()
 	_apply_safe_area_margins()
 	_refresh_ui()
 	get_viewport().size_changed.connect(_apply_safe_area_margins)
@@ -49,8 +48,9 @@ func _refresh_ui() -> void:
 	_quality_med_btn.button_pressed = (SaveManager.quality_preset == "medium")
 	_quality_high_btn.button_pressed = (SaveManager.quality_preset == "high")
 
-	_music_btn.button_pressed = SaveManager.music_enabled
-	_music_btn.text = "موسیقی منو: روشن" if SaveManager.music_enabled else "موسیقی منو: خاموش"
+	var is_fire_btn: bool = (SaveManager.aim_fire_mode == "fire_button")
+	_aim_mode_btn.text = "نشانه: دکمه شلیک جدا" if is_fire_btn else "نشانه: دو جوی‌استیک"
+
 	_sfx_btn.button_pressed = SaveManager.sfx_enabled
 	_sfx_btn.text = "صدای رابط: روشن" if SaveManager.sfx_enabled else "صدای رابط: خاموش"
 
@@ -63,19 +63,23 @@ func _refresh_ui() -> void:
 
 	var cam_cfg: CameraConfig = CameraConfig.from_project_settings()
 	_camera_info_label.text = (
-		"تنظیمات دوربین BombSquad (ProjectSettings):\n"
-		+ "زاویه: %.1f° | فاصله: %.1f متر | زاویه دید: %.0f° | چرخش ۳۶۰: غیرفعال"
+		"دوربین BombSquad: زاویه %.1f° | فاصله %.1f متر | زاویه دید %.0f°\n"
+		+ "پوشه آماده Kenney: assets/kenney/ (در انتظار بارگذاری مدل‌ها)"
 	) % [cam_cfg.pitch_degrees, cam_cfg.distance, cam_cfg.fov_degrees]
 
-	_status_label.text = "حالت آفلاین فعال | رندرر: GL Compatibility | فریم هدف: %d FPS | کیفیت: %s" % [
+	_status_label.text = "فاز ۲ آفلاین | رندرر: GL Compatibility | فریم هدف: %d FPS | کیفیت: %s" % [
 		fps_target,
 		quality_fa
 	]
 
 
+func _on_btn_enter_arena_pressed() -> void:
+	AudioManager.play_ui_pop()
+	GameManager.go_to_arena_sector_01()
+
+
 func _on_btn_camera_test_pressed() -> void:
 	AudioManager.play_ui_pop()
-	AudioManager.stop_menu_music()
 	GameManager.go_to_camera_test()
 
 
@@ -114,9 +118,10 @@ func _on_btn_high_pressed() -> void:
 	_refresh_ui()
 
 
-func _on_btn_music_pressed() -> void:
-	AudioManager.play_ui_pop()
-	AudioManager.set_music_enabled(not SaveManager.music_enabled)
+func _on_btn_aim_mode_pressed() -> void:
+	AudioManager.play_ui_menu()
+	var next_mode: String = "fire_button" if SaveManager.aim_fire_mode == "twin_stick" else "twin_stick"
+	GameManager.set_aim_fire_mode(next_mode)
 	_refresh_ui()
 
 

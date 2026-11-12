@@ -1,16 +1,17 @@
 extends Node
-## Top-level offline session coordinator, FPS/quality policy manager, and scene router.
+## هماهنگ‌کننده اصلی جلسه آفلاین، مدیریت نرخ فریم/کیفیت و جابه‌جایی بین صحنه‌ها.
 
 enum AppState {
 	BOOT,
 	MAIN_MENU,
 	CAMERA_TEST,
-	IN_MATCH,
+	ARENA_PLAY,
 	PAUSED
 }
 
 const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 const CAMERA_TEST_SCENE: String = "res://scenes/test/camera_angle_test.tscn"
+const ARENA_SECTOR_01_SCENE: String = "res://scenes/maps/arena_sector_01.tscn"
 
 var current_state: AppState = AppState.BOOT
 
@@ -58,8 +59,25 @@ func _ensure_setting(setting_name: String, default_value: Variant, prop_type: in
 
 func apply_performance_settings() -> void:
 	Engine.max_fps = SaveManager.target_fps
+	_apply_viewport_quality_preset(SaveManager.quality_preset)
 	EventBus.fps_target_changed.emit(SaveManager.target_fps)
 	EventBus.quality_preset_changed.emit(SaveManager.quality_preset)
+
+
+func _apply_viewport_quality_preset(preset: String) -> void:
+	if get_tree() == null or get_tree().root == null:
+		return
+	var root_vp: Viewport = get_tree().root
+	match preset:
+		"low":
+			root_vp.scaling_3d_scale = 0.75
+			root_vp.msaa_3d = Viewport.MSAA_DISABLED
+		"high":
+			root_vp.scaling_3d_scale = 1.0
+			root_vp.msaa_3d = Viewport.MSAA_2X
+		_:
+			root_vp.scaling_3d_scale = 0.90
+			root_vp.msaa_3d = Viewport.MSAA_DISABLED
 
 
 func set_target_fps(fps: int) -> void:
@@ -75,6 +93,13 @@ func set_quality_preset(preset: String) -> void:
 		apply_performance_settings()
 
 
+func set_aim_fire_mode(mode: String) -> void:
+	if mode in ["twin_stick", "fire_button"]:
+		SaveManager.aim_fire_mode = mode
+		SaveManager.save_settings()
+		EventBus.aim_fire_mode_changed.emit(mode)
+
+
 func go_to_main_menu() -> void:
 	current_state = AppState.MAIN_MENU
 	change_scene(MAIN_MENU_SCENE)
@@ -83,6 +108,11 @@ func go_to_main_menu() -> void:
 func go_to_camera_test() -> void:
 	current_state = AppState.CAMERA_TEST
 	change_scene(CAMERA_TEST_SCENE)
+
+
+func go_to_arena_sector_01() -> void:
+	current_state = AppState.ARENA_PLAY
+	change_scene(ARENA_SECTOR_01_SCENE)
 
 
 func change_scene(scene_path: String) -> void:

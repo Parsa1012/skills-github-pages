@@ -1,0 +1,183 @@
+[gd_scene load_steps=22 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.4
+height = 1.65
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_armor_blue"]
+albedo_color = Color(0.054902, 0.556863, 0.878431, 1)
+roughness = 0.72
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_armor_dark"]
+albedo_color = Color(0.117647, 0.160784, 0.231373, 1)
+roughness = 0.78
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_visor"]
+shading_mode = 0
+albedo_color = Color(0.729412, 0.901961, 0.992157, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_core_glow"]
+shading_mode = 0
+albedo_color = Color(0.219608, 0.741176, 0.972549, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ring"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.219608, 0.741176, 0.972549, 0.55)
+
+[sub_resource type="BoxMesh" id="BoxMesh_leg"]
+size = Vector3(0.22, 0.62, 0.24)
+
+[sub_resource type="BoxMesh" id="BoxMesh_torso"]
+size = Vector3(0.64, 0.66, 0.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_core"]
+size = Vector3(0.24, 0.22, 0.06)
+
+[sub_resource type="BoxMesh" id="BoxMesh_backpack"]
+size = Vector3(0.42, 0.46, 0.22)
+
+[sub_resource type="BoxMesh" id="BoxMesh_head"]
+size = Vector3(0.44, 0.4, 0.44)
+
+[sub_resource type="BoxMesh" id="BoxMesh_visor"]
+size = Vector3(0.36, 0.14, 0.06)
+
+[sub_resource type="BoxMesh" id="BoxMesh_arm"]
+size = Vector3(0.18, 0.18, 0.48)
+
+[sub_resource type="BoxMesh" id="BoxMesh_blaster"]
+size = Vector3(0.16, 0.2, 0.52)
+
+[sub_resource type="BoxMesh" id="BoxMesh_muzzle"]
+size = Vector3(0.12, 0.12, 0.1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_team_ring"]
+top_radius = 0.62
+bottom_radius = 0.66
+height = 0.03
+radial_segments = 20
+
+[sub_resource type="BoxMesh" id="BoxMesh_aim_beam"]
+size = Vector3(0.08, 0.02, 4.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_aim_tip"]
+size = Vector3(0.26, 0.03, 0.26)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blaster"]
+albedo_color = Color(0.2, 0.254902, 0.333333, 1)
+roughness = 0.55
+
+[sub_resource type="BoxMesh" id="BoxMesh_shoulder"]
+size = Vector3(0.22, 0.22, 0.26)
+
+[node name="PlayerCharacter" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 3
+floor_max_angle = 0.802851
+floor_snap_length = 0.25
+script = ExtResource("1_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.825, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="TeamRingMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_team_ring")
+surface_material_override/0 = SubResource("StandardMaterial3D_ring")
+
+[node name="AimIndicatorPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.07, 0)
+
+[node name="AimBeamMesh" type="MeshInstance3D" parent="AimIndicatorPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.5)
+visible = false
+cast_shadow = 0
+mesh = SubResource("BoxMesh_aim_beam")
+
+[node name="AimTipMesh" type="MeshInstance3D" parent="AimIndicatorPivot"]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 0, 0.01, -4.65)
+visible = false
+cast_shadow = 0
+mesh = SubResource("BoxMesh_aim_tip")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="ProceduralRig" type="Node3D" parent="VisualRoot"]
+
+[node name="LeftLegPivot" type="Node3D" parent="VisualRoot/ProceduralRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.17, 0.6, 0)
+
+[node name="LeftLegMesh" type="MeshInstance3D" parent="VisualRoot/ProceduralRig/LeftLegPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.29, 0)
+mesh = SubResource("BoxMesh_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_armor_dark")
+
+[node name="RightLegPivot" type="Node3D" parent="VisualRoot/ProceduralRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.17, 0.6, 0)
+
+[node name="RightLegMesh" type="MeshInstance3D" parent="VisualRoot/ProceduralRig/RightLegPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.29, 0)
+mesh = SubResource("BoxMesh_leg")
+surface_material_override/0 = SubResource("StandardMaterial3D_armor_dark")
+
+[node name="TorsoMesh" type="MeshInstance3D" parent="VisualRoot/ProceduralRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.94, 0)
+mesh = SubResource("BoxMesh_torso")
+surface_material_override/0 = SubResource("StandardMaterial3D_armor_blue")
+
+[node name="CoreMesh" type="MeshInstance3D" parent="VisualRoot/ProceduralRig/TorsoMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, -0.2)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_core")
+surface_material_override/0 = SubResource("StandardMaterial3D_core_glow")
+
+[node name="BackpackMesh" type="MeshInstance3D" parent="VisualRoot/ProceduralRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.96, 0.28)
+mesh = SubResource("BoxMesh_backpack")
+surface_material_override/0 = SubResource("StandardMaterial3D_armor_dark")
+
+[node name="LeftShoulder" type="MeshInstance3D" parent="VisualRoot/ProceduralRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.15, 0)
+mesh = SubResource("BoxMesh_shoulder")
+surface_material_override/0 = SubResource("StandardMaterial3D_armor_blue")
+
+[node name="RightShoulder" type="MeshInstance3D" parent="VisualRoot/ProceduralRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.15, 0)
+mesh = SubResource("BoxMesh_shoulder")
+surface_material_override/0 = SubResource("StandardMaterial3D_armor_blue")
+
+[node name="HeadPivot" type="Node3D" parent="VisualRoot/ProceduralRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.48, 0)
+
+[node name="HelmetMesh" type="MeshInstance3D" parent="VisualRoot/ProceduralRig/HeadPivot"]
+mesh = SubResource("BoxMesh_head")
+surface_material_override/0 = SubResource("StandardMaterial3D_armor_blue")
+
+[node name="VisorMesh" type="MeshInstance3D" parent="VisualRoot/ProceduralRig/HeadPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.22)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_visor")
+surface_material_override/0 = SubResource("StandardMaterial3D_visor")
+
+[node name="WeaponArmPivot" type="Node3D" parent="VisualRoot/ProceduralRig"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 0.96, -0.18)
+
+[node name="ArmMesh" type="MeshInstance3D" parent="VisualRoot/ProceduralRig/WeaponArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.08)
+mesh = SubResource("BoxMesh_arm")
+surface_material_override/0 = SubResource("StandardMaterial3D_armor_dark")
+
+[node name="EnergyBlasterMesh" type="MeshInstance3D" parent="VisualRoot/ProceduralRig/WeaponArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.44)
+mesh = SubResource("BoxMesh_blaster")
+surface_material_override/0 = SubResource("StandardMaterial3D_blaster")
+
+[node name="MuzzleTip" type="MeshInstance3D" parent="VisualRoot/ProceduralRig/WeaponArmPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.73)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_muzzle")

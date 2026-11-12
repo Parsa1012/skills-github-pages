@@ -166,8 +166,16 @@ jobs:
           fi
           cat /tmp/godot-smoke-test.log
 
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log; then
-            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log | head -n 5 | tr '\n' ' ')"
+          echo "=== Step 5: Smoke test Phase 2 arena_sector_01.tscn ==="
+          if ! godot4 --headless --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
+            cat /tmp/godot-smoke-arena.log
+            emit_error_log /tmp/godot-smoke-arena.log "Godot arena_sector_01 smoke test failed"
+            exit 1
+          fi
+          cat /tmp/godot-smoke-arena.log
+
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log; then
+            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log | head -n 5 | tr '\n' ' ')"
             exit 1
           fi
 
@@ -250,10 +258,14 @@ jobs:
             exit 1
           fi
 
-          echo "=== Bundled Persian Font & Audio Assets in APK ==="
-          unzip -l "${OUT_APK}" | grep -E 'assets/(audio|fonts|ui)/|Vazirmatn|main_menu' || true
-          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/audio/main_menu\.mp3|main_menu\.mp3-.*\.mp3str'
+          echo "=== Bundled Persian Font & Original Audio Assets in APK ==="
+          unzip -l "${OUT_APK}" | grep -E 'assets/(audio|fonts|ui)/|Vazirmatn|sfx_ui_' || true
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/audio/sfx_ui_tap\.wav|sfx_ui_tap\.wav-.*\.sample'
           unzip -l "${OUT_APK}" | grep -qE 'Vazirmatn-Regular\.ttf|Vazirmatn-Regular\.ttf-.*\.fontdata'
+          if unzip -l "${OUT_APK}" | grep -qE 'main_menu\.mp3|ui_click\.mp3|ui_menu\.mp3|ui_pop\.mp3'; then
+            echo "ERROR: Prohibited previous-project MP3 files found in APK!"
+            exit 1
+          fi
 
           echo "=== APK Signature Verification ==="
           "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose "${OUT_APK}"
