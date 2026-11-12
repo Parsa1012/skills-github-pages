@@ -37,8 +37,9 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		_resolve_target()
 		snap_to_target()
-		if EventBus != null and not EventBus.camera_settings_changed.is_connected(reload_from_project_settings):
-			EventBus.camera_settings_changed.connect(reload_from_project_settings)
+		var event_bus: Node = get_node_or_null("/root/EventBus")
+		if event_bus != null and not event_bus.is_connected("camera_settings_changed", reload_from_project_settings):
+			event_bus.connect("camera_settings_changed", reload_from_project_settings)
 
 
 func _process(delta: float) -> void:

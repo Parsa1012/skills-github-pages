@@ -119,20 +119,55 @@ jobs:
       - name: Import Godot project resources and verify headless scenes
         run: |
           set -euo pipefail
+          emit_error_log() {
+            local log_file="$1"
+            local label="$2"
+            if [ -f "${log_file}" ]; then
+              local summary
+              summary="$(grep -iE "ERROR|SCRIPT ERROR|Parse Error|Failed" "${log_file}" | head -n 10 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+              if [ -n "${summary}" ]; then
+                echo "::error title=${label}::${summary}"
+              else
+                summary="$(tail -n 10 "${log_file}" | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+                echo "::error title=${label}::${summary}"
+              fi
+            fi
+          }
+
           echo "=== Step 1: Headless resource import ==="
-          godot4 --headless --path "${PROJECT_DIR}" --import 2>&1 | tee /tmp/godot-import.log
+          if ! godot4 --headless --path "${PROJECT_DIR}" --import >/tmp/godot-import.log 2>&1; then
+            cat /tmp/godot-import.log
+            emit_error_log /tmp/godot-import.log "Godot import failed"
+            exit 1
+          fi
+          cat /tmp/godot-import.log
 
           echo "=== Step 2: Initialize EditorSettings ==="
-          godot4 --headless --editor --path "${PROJECT_DIR}" --quit
+          if ! godot4 --headless --editor --path "${PROJECT_DIR}" --quit >/tmp/godot-editor.log 2>&1; then
+            cat /tmp/godot-editor.log
+            emit_error_log /tmp/godot-editor.log "Godot editor init failed"
+            exit 1
+          fi
+          cat /tmp/godot-editor.log
 
           echo "=== Step 3: Smoke test boot -> main_menu ==="
-          godot4 --headless --path "${PROJECT_DIR}" --quit-after 30 2>&1 | tee /tmp/godot-smoke-boot.log
+          if ! godot4 --headless --path "${PROJECT_DIR}" --quit-after 30 >/tmp/godot-smoke-boot.log 2>&1; then
+            cat /tmp/godot-smoke-boot.log
+            emit_error_log /tmp/godot-smoke-boot.log "Godot boot smoke test failed"
+            exit 1
+          fi
+          cat /tmp/godot-smoke-boot.log
 
           echo "=== Step 4: Smoke test camera_angle_test.tscn ==="
-          godot4 --headless --path "${PROJECT_DIR}" res://scenes/test/camera_angle_test.tscn --quit-after 20 2>&1 | tee /tmp/godot-smoke-test.log
+          if ! godot4 --headless --path "${PROJECT_DIR}" res://scenes/test/camera_angle_test.tscn --quit-after 20 >/tmp/godot-smoke-test.log 2>&1; then
+            cat /tmp/godot-smoke-test.log
+            emit_error_log /tmp/godot-smoke-test.log "Godot camera_angle_test smoke test failed"
+            exit 1
+          fi
+          cat /tmp/godot-smoke-test.log
 
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file" /tmp/godot-import.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log; then
-            echo "Detected Godot script/import error during headless verification!" >&2
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log; then
+            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log | head -n 5 | tr '\n' ' ')"
             exit 1
           fi
 
@@ -182,7 +217,16 @@ jobs:
           OUT_DIR="${GITHUB_WORKSPACE}/${PROJECT_DIR}/builds"
           OUT_APK="${OUT_DIR}/${APK_FILENAME}"
           mkdir -p "${OUT_DIR}"
-          godot4 --headless --verbose --path "${PROJECT_DIR}" --export-debug "Android" "${OUT_APK}" 2>&1 | tee /tmp/godot-export.log
+          if ! godot4 --headless --verbose --path "${PROJECT_DIR}" --export-debug "Android" "${OUT_APK}" >/tmp/godot-export.log 2>&1; then
+            cat /tmp/godot-export.log
+            summary="$(grep -iE "ERROR|Failed|Could not|not found" /tmp/godot-export.log | head -n 10 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            if [ -z "${summary}" ]; then
+              summary="$(tail -n 10 /tmp/godot-export.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            fi
+            echo "::error title=Godot Android export failed::${summary}"
+            exit 1
+          fi
+          cat /tmp/godot-export.log
 
           echo "=== APK File Info ==="
           ls -lh "${OUT_APK}"
