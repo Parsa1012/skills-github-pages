@@ -45,6 +45,7 @@ var _fire_cooldown: float = 0.0
 var _recharging: bool = false
 var _recharge_timer: float = 0.0
 var _recoil_offset: float = 0.0
+var _step_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -57,13 +58,20 @@ func _ready() -> void:
 
 	_resolve_references()
 	_setup_materials()
-	_find_animation_player()
+	_setup_animations()
 	_ensure_default_blasters()
 	_equip_blaster(0, false)
 
 	EventBus.blaster_switch_requested.connect(switch_next_blaster)
 	EventBus.blaster_recharge_requested.connect(start_recharge)
 	_emit_stats()
+
+
+func _exit_tree() -> void:
+	if EventBus.blaster_switch_requested.is_connected(switch_next_blaster):
+		EventBus.blaster_switch_requested.disconnect(switch_next_blaster)
+	if EventBus.blaster_recharge_requested.is_connected(start_recharge):
+		EventBus.blaster_recharge_requested.disconnect(start_recharge)
 
 
 func is_alive() -> bool:
@@ -89,9 +97,41 @@ func _setup_materials() -> void:
 		_aim_beam_mat = mat
 
 
-func _find_animation_player() -> void:
-	if _kenney_soldier != null:
-		_anim_player = _kenney_soldier.find_child("AnimationPlayer", true, false) as AnimationPlayer
+func _setup_animations() -> void:
+	if _kenney_soldier == null:
+		return
+	_anim_player = _kenney_soldier.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _anim_player == null:
+		return
+
+	# Make a per-instance editable library so loop modes and rest-leg tracks apply cleanly.
+	for anim_name in ["idle", "walk", "sprint"]:
+		if _anim_player.has_animation(anim_name):
+			var anim: Animation = _anim_player.get_animation(anim_name)
+			if anim != null:
+				anim.loop_mode = Animation.LOOP_LINEAR
+
+	# Kenney's 'idle' omits leg/root tracks, which leaves legs stuck mid-stride after walking.
+	if _anim_player.has_animation("idle") and _anim_player.has_animation("static"):
+		var idle_anim: Animation = _anim_player.get_animation("idle")
+		var static_anim: Animation = _anim_player.get_animation("static")
+		if idle_anim != null and static_anim != null:
+			var existing_paths: Dictionary = {}
+			for t in idle_anim.get_track_count():
+				existing_paths[str(idle_anim.track_get_path(t))] = true
+			for st in static_anim.get_track_count():
+				var path_str: String = str(static_anim.track_get_path(st))
+				if not existing_paths.has(path_str) and (
+					"leg-" in path_str or path_str.ends_with(":position") or path_str.ends_with("root")
+				):
+					if static_anim.track_get_key_count(st) > 0:
+						var new_t: int = idle_anim.add_track(static_anim.track_get_type(st))
+						idle_anim.track_set_path(new_t, static_anim.track_get_path(st))
+						idle_anim.track_set_interpolation_type(new_t, static_anim.track_get_interpolation_type(st))
+						idle_anim.track_insert_key(new_t, 0.0, static_anim.track_get_key_value(st, 0))
+
+	if _anim_player.has_animation("idle"):
+		_anim_player.play("idle")
 
 
 func _ensure_default_blasters() -> void:
@@ -225,11 +265,23 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	var actual_horiz_speed: float = Vector3(velocity.x, 0.0, velocity.z).length()
 	_update_facing_and_aim(move_world, aim_world, move_2d.length(), aim_2d.length(), fire_active, delta)
-	_update_soldier_animation(current_vel_xz.length(), fire_active, delta)
+	_update_soldier_animation(actual_horiz_speed, delta)
+	_update_footsteps(actual_horiz_speed, delta)
 
 	if fire_active and not _recharging and _fire_cooldown <= 0.0:
-		_try_fire(current_vel_xz.length())
+		_try_fire(actual_horiz_speed)
+
+
+func _update_footsteps(horiz_speed: float, delta: float) -> void:
+	if not is_on_floor() or horiz_speed < 1.8:
+		_step_timer = 0.08
+		return
+	_step_timer -= delta
+	if _step_timer <= 0.0:
+		_step_timer = 0.28 if horiz_speed > 4.6 else 0.38
+		AudioManager.play_sfx_path("res://assets/kenney/audio/walking.ogg", randf_range(0.92, 1.08), -12.0)
 
 
 func _try_fire(horiz_speed: float) -> void:
@@ -242,26 +294,49 @@ func _try_fire(horiz_speed: float) -> void:
 
 	_current_energy -= 1
 	_fire_cooldown = b.pulse_cooldown
-	_recoil_offset = 0.11
+	_recoil_offset = 0.09
 
 	var forward_dir := Vector3(-sin(_facing_yaw), 0.0, -cos(_facing_yaw)).normalized()
-	var spread_deg: float = b.spread_moving_deg if horiz_speed > 0.6 else b.spread_still_deg
-	var spawn_pos: Vector3 = _muzzle_marker.global_position if _muzzle_marker != null else global_position + Vector3(0.0, 0.96, 0.0) + forward_dir * 0.75
+	var chest_origin := global_position + Vector3(0.0, 0.74, 0.0)
+	var muzzle_pos: Vector3 = _muzzle_marker.global_position if _muzzle_marker != null else chest_origin + forward_dir * 0.68
+	var barrel_check_end := Vector3(muzzle_pos.x, chest_origin.y, muzzle_pos.z)
 
-	for _p in b.pellets_per_shot:
-		var angle_rad: float = deg_to_rad(randf_range(-spread_deg, spread_deg))
-		var bolt_dir: Vector3 = forward_dir.rotated(Vector3.UP, angle_rad)
-		var proj: Node = PoolManager.acquire(EnergyProjectile.POOL_ID, get_parent())
-		if proj is EnergyProjectile:
-			(proj as EnergyProjectile).launch(
-				spawn_pos,
-				bolt_dir,
-				b.projectile_speed,
-				b.energy_damage,
-				team_id,
-				self,
-				b.projectile_color
-			)
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var pre_query := PhysicsRayQueryParameters3D.create(chest_origin, barrel_check_end, 1 | 2, [get_rid()])
+	pre_query.collide_with_areas = false
+	pre_query.collide_with_bodies = true
+	pre_query.hit_from_inside = true
+	var pre_hit: Dictionary = space_state.intersect_ray(pre_query)
+
+	var spread_deg: float = b.spread_moving_deg if horiz_speed > 0.6 else b.spread_still_deg
+	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+
+	if not pre_hit.is_empty():
+		var hit_pos: Vector3 = pre_hit.get("position", barrel_check_end)
+		var collider: Object = pre_hit.get("collider", null)
+		if collider != null and collider.has_method("take_damage"):
+			var target_team: Variant = collider.get("team_id")
+			if target_team == null or int(target_team) != team_id:
+				collider.call("take_damage", b.energy_damage * float(b.pellets_per_shot), team_id)
+		var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
+		if flash is ImpactFlash:
+			(flash as ImpactFlash).trigger(hit_pos, b.projectile_color)
+	else:
+		var spawn_pos := Vector3(muzzle_pos.x, chest_origin.y, muzzle_pos.z)
+		for _p in b.pellets_per_shot:
+			var angle_rad: float = deg_to_rad(randf_range(-spread_deg, spread_deg))
+			var bolt_dir: Vector3 = forward_dir.rotated(Vector3.UP, angle_rad)
+			var proj: Node = PoolManager.acquire(EnergyProjectile.POOL_ID, proj_parent)
+			if proj is EnergyProjectile:
+				(proj as EnergyProjectile).launch(
+					spawn_pos,
+					bolt_dir,
+					b.projectile_speed,
+					b.energy_damage,
+					team_id,
+					self,
+					b.projectile_color
+				)
 
 	AudioManager.play_sfx_path(b.shoot_sfx_path, randf_range(0.95, 1.05))
 	if _current_energy <= 0:
@@ -286,6 +361,10 @@ func _enter_respawn(attacker_team: int) -> void:
 	_respawn_timer = 2.5
 	velocity = Vector3.ZERO
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", 0.85)
+	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
+	if flash is ImpactFlash:
+		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.85, 0.0), Color(0.219608, 0.741176, 0.972549, 1.0))
 	if _collision_shape != null:
 		_collision_shape.set_deferred("disabled", true)
 	if _visual_root != null:
@@ -298,12 +377,33 @@ func _enter_respawn(attacker_team: int) -> void:
 	_emit_stats()
 
 
+func _find_safe_respawn_pos() -> Vector3:
+	var candidates: Array[Vector3] = [
+		_spawn_pos,
+		_spawn_pos + Vector3(0.0, 0.0, -2.2),
+		_spawn_pos + Vector3(0.0, 0.0, 2.2),
+		_spawn_pos + Vector3(1.8, 0.0, 0.0)
+	]
+	var bots: Array[Node] = get_tree().get_nodes_in_group("arena_bots")
+	for cand in candidates:
+		var blocked: bool = false
+		for bot in bots:
+			if bot is Node3D and (bot as Node3D).visible:
+				if (bot as Node3D).global_position.distance_to(cand) < 1.35:
+					blocked = true
+					break
+		if not blocked:
+			return cand
+	return _spawn_pos
+
+
 func _respawn() -> void:
-	global_position = _spawn_pos
+	global_position = _find_safe_respawn_pos()
 	velocity = Vector3.ZERO
 	_hp = max_hp
 	_alive = true
 	_recharging = false
+	_time_since_damage = 10.0
 	var b: EnergyBlasterData = _get_active_blaster()
 	if b != null:
 		_current_energy = b.energy_cell_capacity
@@ -315,6 +415,7 @@ func _respawn() -> void:
 		_team_ring.visible = true
 	if _aim_indicator != null:
 		_aim_indicator.visible = true
+	AudioManager.play_sfx_path("res://assets/kenney/audio/land.ogg", 1.0, -6.0)
 	_emit_stats()
 
 
@@ -398,10 +499,10 @@ func _update_facing_and_aim(move_world: Vector3, aim_world: Vector3, move_len: f
 		_aim_beam_mat.albedo_color = Color(0.984314, 0.45098, 0.086275, 0.85) if fire_active else Color(0.219608, 0.741176, 0.972549, 0.58)
 
 
-func _update_soldier_animation(horiz_speed: float, _fire_active: bool, delta: float) -> void:
+func _update_soldier_animation(horiz_speed: float, delta: float) -> void:
 	if _weapon_mount != null:
-		_recoil_offset = move_toward(_recoil_offset, 0.0, 1.2 * delta)
-		_weapon_mount.position.z = -0.34 + _recoil_offset
+		_recoil_offset = move_toward(_recoil_offset, 0.0, 1.1 * delta)
+		_weapon_mount.position.z = -0.24 + _recoil_offset
 
 	if _anim_player == null:
 		return

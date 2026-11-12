@@ -42,6 +42,13 @@ func _ready() -> void:
 			event_bus.connect("camera_settings_changed", reload_from_project_settings)
 
 
+func _exit_tree() -> void:
+	if not Engine.is_editor_hint():
+		var event_bus: Node = get_node_or_null("/root/EventBus")
+		if event_bus != null and event_bus.is_connected("camera_settings_changed", reload_from_project_settings):
+			event_bus.disconnect("camera_settings_changed", reload_from_project_settings)
+
+
 func _process(delta: float) -> void:
 	if Engine.is_editor_hint():
 		return

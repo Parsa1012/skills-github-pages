@@ -12,7 +12,11 @@ var _mat: StandardMaterial3D = null
 
 
 func _ready() -> void:
-	if _mesh != null:
+	_ensure_material()
+
+
+func _ensure_material() -> void:
+	if _mat == null and _mesh != null:
 		_mat = StandardMaterial3D.new()
 		_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -20,6 +24,7 @@ func _ready() -> void:
 
 
 func trigger(world_pos: Vector3, flash_color: Color) -> void:
+	_ensure_material()
 	global_position = world_pos
 	_timer = 0.0
 	scale = Vector3(0.45, 0.45, 0.45)

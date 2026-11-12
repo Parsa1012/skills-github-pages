@@ -32,6 +32,9 @@ var _home_pos: Vector3 = Vector3.ZERO
 var _max_hp: float = 100.0
 var _hp: float = 100.0
 var _patrol_index: int = 0
+var _patrol_leg_timer: float = 0.0
+var _patrol_stuck_timer: float = 0.0
+var _patrol_check_pos: Vector3 = Vector3.ZERO
 var _hover_time: float = 0.0
 var _los_timer: float = 0.0
 var _fire_timer: float = 0.6
@@ -48,6 +51,7 @@ var _gravity: float = 18.0
 func _ready() -> void:
 	add_to_group("arena_bots")
 	_home_pos = global_position
+	_patrol_check_pos = _home_pos
 	_max_hp = profile.max_shield if profile != null else 100.0
 	_hp = _max_hp
 	_hover_time = randf() * TAU
@@ -103,8 +107,19 @@ func _process_patrol(delta: float) -> void:
 	var offset: Vector3 = patrol_offset_a if _patrol_index == 0 else patrol_offset_b
 	var target: Vector3 = _home_pos + offset
 	var to_target := Vector3(target.x - global_position.x, 0.0, target.z - global_position.z)
-	if to_target.length() < 0.65:
+
+	_patrol_leg_timer += delta
+	_patrol_stuck_timer += delta
+	if _patrol_stuck_timer >= 1.25:
+		_patrol_stuck_timer = 0.0
+		if global_position.distance_to(_patrol_check_pos) < 0.25:
+			_patrol_index = 1 - _patrol_index
+			_patrol_leg_timer = 0.0
+		_patrol_check_pos = global_position
+
+	if to_target.length() < 0.65 or _patrol_leg_timer >= 5.0:
 		_patrol_index = 1 - _patrol_index
+		_patrol_leg_timer = 0.0
 		return
 
 	var dir: Vector3 = to_target.normalized()
@@ -173,23 +188,45 @@ func _check_player_line_of_sight() -> bool:
 func _fire_energy_bolt(aim_dir: Vector3) -> void:
 	var muzzle: Marker3D = _muzzle_left if _use_left_muzzle else _muzzle_right
 	_use_left_muzzle = not _use_left_muzzle
-	var spawn_pos: Vector3 = muzzle.global_position if muzzle != null else global_position + Vector3(0.0, 0.95, 0.0)
+	var torso_origin := global_position + Vector3(0.0, 0.96, 0.0)
+	var spawn_pos: Vector3 = muzzle.global_position if muzzle != null else torso_origin + aim_dir * 0.65
 
-	var precision: float = profile.aim_precision if profile != null else 0.72
-	var max_err_rad: float = deg_to_rad((1.0 - precision) * 14.0)
-	var shoot_dir: Vector3 = aim_dir.rotated(Vector3.UP, randf_range(-max_err_rad, max_err_rad))
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var pre_query := PhysicsRayQueryParameters3D.create(torso_origin, spawn_pos, 1 | 2, [get_rid()])
+	pre_query.collide_with_areas = false
+	pre_query.collide_with_bodies = true
+	pre_query.hit_from_inside = true
+	var pre_hit: Dictionary = space_state.intersect_ray(pre_query)
 
-	var proj: Node = PoolManager.acquire(EnergyProjectile.POOL_ID, get_parent())
-	if proj is EnergyProjectile:
-		(proj as EnergyProjectile).launch(
-			spawn_pos,
-			shoot_dir,
-			projectile_speed,
-			projectile_damage,
-			team_id,
-			self,
-			Color(0.984314, 0.45098, 0.086275, 1.0)
-		)
+	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+	var bolt_col := Color(0.984314, 0.45098, 0.086275, 1.0)
+
+	if not pre_hit.is_empty():
+		var hit_pos: Vector3 = pre_hit.get("position", spawn_pos)
+		var collider: Object = pre_hit.get("collider", null)
+		if collider != null and collider.has_method("take_damage"):
+			var target_team: Variant = collider.get("team_id")
+			if target_team == null or int(target_team) != team_id:
+				collider.call("take_damage", projectile_damage, team_id)
+		var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
+		if flash is ImpactFlash:
+			(flash as ImpactFlash).trigger(hit_pos, bolt_col)
+	else:
+		var precision: float = profile.aim_precision if profile != null else 0.72
+		var max_err_rad: float = deg_to_rad((1.0 - precision) * 14.0)
+		var shoot_dir: Vector3 = aim_dir.rotated(Vector3.UP, randf_range(-max_err_rad, max_err_rad))
+
+		var proj: Node = PoolManager.acquire(EnergyProjectile.POOL_ID, proj_parent)
+		if proj is EnergyProjectile:
+			(proj as EnergyProjectile).launch(
+				spawn_pos,
+				shoot_dir,
+				projectile_speed,
+				projectile_damage,
+				team_id,
+				self,
+				bolt_col
+			)
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_attack.ogg", randf_range(0.94, 1.06))
 
 
@@ -211,7 +248,8 @@ func _enter_respawn(attacker_team: int) -> void:
 	velocity = Vector3.ZERO
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", randf_range(0.94, 1.04))
 
-	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, get_parent())
+	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 	if flash is ImpactFlash:
 		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.9, 0.0), Color(0.984314, 0.572549, 0.235294, 1.0))
 
@@ -227,8 +265,29 @@ func _enter_respawn(attacker_team: int) -> void:
 	bot_defeated.emit(self, attacker_team)
 
 
+func _find_safe_home_pos() -> Vector3:
+	var offsets: Array[Vector3] = [
+		Vector3.ZERO,
+		Vector3(0.0, 0.0, -1.6),
+		Vector3(0.0, 0.0, 1.6),
+		Vector3(-1.6, 0.0, 0.0)
+	]
+	for off in offsets:
+		var cand := Vector3(
+			clampf(_home_pos.x + off.x, -13.6, 13.6),
+			_home_pos.y,
+			clampf(_home_pos.z + off.z, -9.6, 9.6)
+		)
+		if _player_ref == null or not is_instance_valid(_player_ref) or _player_ref.global_position.distance_to(cand) >= 1.4:
+			return cand
+	return _home_pos
+
+
 func _respawn_at_home() -> void:
-	global_position = _home_pos
+	global_position = _find_safe_home_pos()
+	_patrol_check_pos = global_position
+	_patrol_leg_timer = 0.0
+	_patrol_stuck_timer = 0.0
 	velocity = Vector3.ZERO
 	_hp = _max_hp
 	_has_los = false

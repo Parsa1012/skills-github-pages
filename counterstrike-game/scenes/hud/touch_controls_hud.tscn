@@ -44,18 +44,20 @@ script = ExtResource("1_hud")
 [node name="TopSafeMargin" type="MarginContainer" parent="."]
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 64.0
+offset_bottom = 96.0
 grow_horizontal = 2
 mouse_filter = 2
 
 [node name="TopHudBar" type="HBoxContainer" parent="TopSafeMargin"]
 layout_mode = 2
+size_flags_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 8
 
 [node name="BtnBackMenu" type="Button" parent="TopSafeMargin/TopHudBar"]
 custom_minimum_size = Vector2(96, 42)
 layout_mode = 2
+focus_mode = 0
 theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "منوی اصلی"
@@ -116,6 +118,7 @@ vertical_alignment = 1
 [node name="BtnAimMode" type="Button" parent="TopSafeMargin/TopHudBar"]
 custom_minimum_size = Vector2(160, 42)
 layout_mode = 2
+focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "حالت: دو جوی‌استیک"

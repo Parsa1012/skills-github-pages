@@ -17,9 +17,15 @@ func _ready() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
-		_touch_index = -1
-		_pressed = false
-		queue_redraw()
+		_reset_button()
+	elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_reset_button()
+
+
+func _reset_button() -> void:
+	_touch_index = -1
+	_pressed = false
+	queue_redraw()
 
 
 func _input(event: InputEvent) -> void:

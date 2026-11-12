@@ -133,12 +133,12 @@ func get_safe_area_padding(viewport_size: Vector2) -> Dictionary:
 	var scale_x: float = viewport_size.x / float(screen_size.x)
 	var scale_y: float = viewport_size.y / float(screen_size.y)
 
-	var left_pad: float = maxf(float(safe_rect.position.x) * scale_x, 16.0)
-	var top_pad: float = maxf(float(safe_rect.position.y) * scale_y, 12.0)
+	var left_pad: float = clampf(float(safe_rect.position.x) * scale_x, 16.0, 96.0)
+	var top_pad: float = clampf(float(safe_rect.position.y) * scale_y, 12.0, 56.0)
 	var right_px: int = screen_size.x - (safe_rect.position.x + safe_rect.size.x)
 	var bottom_px: int = screen_size.y - (safe_rect.position.y + safe_rect.size.y)
-	var right_pad: float = maxf(float(right_px) * scale_x, 16.0)
-	var bottom_pad: float = maxf(float(bottom_px) * scale_y, 12.0)
+	var right_pad: float = clampf(float(right_px) * scale_x, 16.0, 96.0)
+	var bottom_pad: float = clampf(float(bottom_px) * scale_y, 12.0, 48.0)
 
 	return {
 		"left": left_pad,

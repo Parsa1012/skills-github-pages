@@ -1,4 +1,4 @@
-[gd_scene load_steps=37 format=3]
+[gd_scene load_steps=40 format=3]
 
 [ext_resource type="Script" path="res://scripts/maps/arena_sector_controller.gd" id="1_ctrl"]
 [ext_resource type="PackedScene" path="res://scenes/camera/arena_camera_rig.tscn" id="2_cam"]
@@ -81,6 +81,16 @@ size = Vector3(2.15, 2.3, 0.98)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_column"]
 size = Vector3(1.18, 1.95, 1.18)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_column_damaged"]
+size = Vector3(1.18, 1.4, 1.18)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bricks"]
+size = Vector3(1.24, 0.66, 1.36)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_flagpole"]
+height = 1.8
+radius = 0.18
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_block"]
 size = Vector3(2, 1, 2)
@@ -245,8 +255,8 @@ transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.4, 0, -6.2)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyPillar_NE"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.975, 0)
-shape = SubResource("BoxShape3D_column")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+shape = SubResource("BoxShape3D_column_damaged")
 
 [node name="Model" parent="ArenaEnvironment/KenneyPillar_NE" instance=ExtResource("10_coldmg")]
 transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
@@ -255,8 +265,8 @@ transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.4, 0, 6.2)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyPillar_SW"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.975, 0)
-shape = SubResource("BoxShape3D_column")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+shape = SubResource("BoxShape3D_column_damaged")
 
 [node name="Model" parent="ArenaEnvironment/KenneyPillar_SW" instance=ExtResource("10_coldmg")]
 transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
@@ -281,17 +291,37 @@ shape = SubResource("BoxShape3D_block")
 [node name="Model" parent="ArenaEnvironment/KenneyBlock_Center" instance=ExtResource("12_block")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
 
-[node name="BricksAccent_West" parent="ArenaEnvironment" instance=ExtResource("11_bricks")]
-transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, -12.5, 0, -7.8)
+[node name="BricksAccent_West" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.5, 0, -7.8)
 
-[node name="BricksAccent_East" parent="ArenaEnvironment" instance=ExtResource("11_bricks")]
-transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 12.5, 0, 7.8)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/BricksAccent_West"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.33, 0)
+shape = SubResource("BoxShape3D_bricks")
+
+[node name="Model" parent="ArenaEnvironment/BricksAccent_West" instance=ExtResource("11_bricks")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 0, 0)
+
+[node name="BricksAccent_East" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 0, 7.8)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/BricksAccent_East"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.33, 0)
+shape = SubResource("BoxShape3D_bricks")
+
+[node name="Model" parent="ArenaEnvironment/BricksAccent_East" instance=ExtResource("11_bricks")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 0, 0)
 
 [node name="BannerBlue_North" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
 transform = Transform3D(-4.37114e-08, 0, 2.2, 0, 2.2, 0, -2.2, 0, -4.37114e-08, -14.2, 0, -5.5)
 
 [node name="BannerBlue_South" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
 transform = Transform3D(-4.37114e-08, 0, 2.2, 0, 2.2, 0, -2.2, 0, -4.37114e-08, -14.2, 0, 5.5)
+
+[node name="BannerOrange_North" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
+transform = Transform3D(-4.37114e-08, 0, -2.2, 0, 2.2, 0, 2.2, 0, -4.37114e-08, 14.2, 0, -5.5)
+
+[node name="BannerOrange_South" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
+transform = Transform3D(-4.37114e-08, 0, -2.2, 0, 2.2, 0, 2.2, 0, -4.37114e-08, 14.2, 0, 5.5)
 
 [node name="ZoneA_North" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -7.2)
@@ -309,6 +339,12 @@ mesh = SubResource("CylinderMesh_zone")
 
 [node name="ZoneFlag" parent="ZoneA_North" instance=ExtResource("14_flag")]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, -1.8)
+
+[node name="ZoneFlagBody" type="StaticBody3D" parent="ZoneA_North"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -1.8)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneA_North/ZoneFlagBody"]
+shape = SubResource("CylinderShape3D_flagpole")
 
 [node name="ZoneB_South" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 7.2)
@@ -328,6 +364,12 @@ mesh = SubResource("CylinderMesh_zone")
 
 [node name="ZoneFlag" parent="ZoneB_South" instance=ExtResource("14_flag")]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 1.8)
+
+[node name="ZoneFlagBody" type="StaticBody3D" parent="ZoneB_South"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 1.8)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneB_South/ZoneFlagBody"]
+shape = SubResource("CylinderShape3D_flagpole")
 
 [node name="ArenaBots" type="Node3D" parent="."]
 

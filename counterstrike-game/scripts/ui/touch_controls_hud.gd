@@ -43,6 +43,17 @@ func _ready() -> void:
 		_btn_recharge.action_triggered.connect(_on_recharge_triggered)
 
 
+func _exit_tree() -> void:
+	if EventBus.aim_fire_mode_changed.is_connected(_on_aim_fire_mode_changed):
+		EventBus.aim_fire_mode_changed.disconnect(_on_aim_fire_mode_changed)
+	if EventBus.player_zone_changed.is_connected(_on_player_zone_changed):
+		EventBus.player_zone_changed.disconnect(_on_player_zone_changed)
+	if EventBus.player_stats_updated.is_connected(_on_player_stats_updated):
+		EventBus.player_stats_updated.disconnect(_on_player_stats_updated)
+	if EventBus.score_updated.is_connected(_on_score_updated):
+		EventBus.score_updated.disconnect(_on_score_updated)
+
+
 func _process(delta: float) -> void:
 	_fps_sample_timer += delta
 	if _fps_sample_timer >= 0.45:

@@ -123,7 +123,7 @@ func play_ui_pop(pitch_scale: float = 1.0) -> void:
 	play_ui_stream(_ui_confirm_sfx, pitch_scale)
 
 
-func play_sfx_path(resource_path: String, pitch_scale: float = 1.0) -> void:
+func play_sfx_path(resource_path: String, pitch_scale: float = 1.0, volume_offset_db: float = 0.0) -> void:
 	if not SaveManager.sfx_enabled or resource_path.is_empty():
 		return
 	var stream: AudioStream = _sfx_cache.get(resource_path, null) as AudioStream
@@ -133,7 +133,7 @@ func play_sfx_path(resource_path: String, pitch_scale: float = 1.0) -> void:
 			stream = loaded as AudioStream
 			_sfx_cache[resource_path] = stream
 	if stream != null:
-		play_sfx_stream(stream, pitch_scale)
+		play_sfx_stream(stream, pitch_scale, volume_offset_db)
 
 
 func play_ui_stream(stream: AudioStream, pitch_scale: float = 1.0) -> void:
@@ -146,13 +146,16 @@ func play_ui_stream(stream: AudioStream, pitch_scale: float = 1.0) -> void:
 	player.play()
 
 
-func play_sfx_stream(stream: AudioStream, pitch_scale: float = 1.0) -> void:
+func play_sfx_stream(stream: AudioStream, pitch_scale: float = 1.0, volume_offset_db: float = 0.0) -> void:
 	if not SaveManager.sfx_enabled or stream == null or _sfx_players.is_empty():
 		return
+	var sfx_lin: float = SaveManager.master_volume * SaveManager.sfx_volume
+	var base_db: float = linear_to_db(sfx_lin) if sfx_lin > 0.001 else -80.0
 	var player: AudioStreamPlayer = _sfx_players[_sfx_cursor]
 	_sfx_cursor = (_sfx_cursor + 1) % _sfx_players.size()
 	player.stream = stream
 	player.pitch_scale = pitch_scale
+	player.volume_db = base_db + volume_offset_db
 	player.play()
 
 

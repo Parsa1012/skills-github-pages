@@ -6,7 +6,6 @@ const POOL_ID: StringName = &"energy_projectile"
 const IMPACT_POOL_ID: StringName = &"impact_flash"
 
 @onready var _bolt_mesh: MeshInstance3D = $BoltMesh
-@onready var _core_mesh: MeshInstance3D = $CoreMesh
 
 var _direction: Vector3 = Vector3.FORWARD
 var _speed: float = 26.0
@@ -21,7 +20,11 @@ var _outer_mat: StandardMaterial3D = null
 
 
 func _ready() -> void:
-	if _bolt_mesh != null:
+	_ensure_material()
+
+
+func _ensure_material() -> void:
+	if _outer_mat == null and _bolt_mesh != null:
 		_outer_mat = StandardMaterial3D.new()
 		_outer_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		_outer_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -29,6 +32,7 @@ func _ready() -> void:
 
 
 func launch(origin: Vector3, direction: Vector3, speed: float, damage: float, team_id: int, shooter: CollisionObject3D, bolt_color: Color) -> void:
+	_ensure_material()
 	global_position = origin
 	var flat_dir := Vector3(direction.x, direction.y * 0.25, direction.z)
 	if flat_dir.length_squared() < 0.0001:
@@ -66,6 +70,7 @@ func _physics_process(delta: float) -> void:
 	var query := PhysicsRayQueryParameters3D.create(start_pos, end_pos, 1 | 2, _exclude_rids)
 	query.collide_with_areas = false
 	query.collide_with_bodies = true
+	query.hit_from_inside = true
 
 	var hit: Dictionary = space_state.intersect_ray(query)
 	if not hit.is_empty():
@@ -83,7 +88,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _spawn_impact(world_pos: Vector3) -> void:
-	var flash: Node = PoolManager.acquire(IMPACT_POOL_ID, get_parent())
+	var target_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+	var flash: Node = PoolManager.acquire(IMPACT_POOL_ID, target_parent)
 	if flash is ImpactFlash:
 		(flash as ImpactFlash).trigger(world_pos, _color)
 

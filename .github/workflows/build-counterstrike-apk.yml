@@ -174,8 +174,8 @@ jobs:
           fi
           cat /tmp/godot-smoke-arena.log
 
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log; then
-            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log | head -n 5 | tr '\n' ' ')"
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log; then
+            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log | head -n 5 | tr '\n' ' ')"
             exit 1
           fi
 
