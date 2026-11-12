@@ -114,11 +114,6 @@ func apply_volumes() -> void:
 		_music_player.volume_db = linear_to_db(music_lin) if music_lin > 0.001 else -80.0
 		if not SaveManager.music_enabled and _music_player.playing:
 			_music_player.stop()
-		elif SaveManager.music_enabled and not _music_mode.is_empty() and not _music_player.playing:
-			if _music_mode == "menu":
-				play_menu_music()
-			elif _music_mode == "arena":
-				play_arena_music()
 
 	var ui_db: float = linear_to_db(ui_lin) if ui_lin > 0.001 else -80.0
 	var sfx_db: float = linear_to_db(sfx_lin) if sfx_lin > 0.001 else -80.0
@@ -128,34 +123,37 @@ func apply_volumes() -> void:
 		p.volume_db = sfx_db
 
 
-func play_menu_music() -> void:
-	_music_mode = "menu"
-	_music_ducked = false
-	apply_volumes()
-	if not SaveManager.music_enabled or _music_player == null or _menu_music == null:
+func _ensure_music_playing() -> void:
+	if not SaveManager.music_enabled or _music_player == null:
 		return
-	if _music_player.stream != _menu_music:
+	var target_stream: AudioStream = null
+	if _music_mode == "menu":
+		target_stream = _menu_music
+	elif _music_mode == "arena":
+		target_stream = _arena_music
+	if target_stream == null:
+		return
+	if _music_player.stream != target_stream:
 		_music_player.stop()
-		_music_player.stream = _menu_music
+		_music_player.stream = target_stream
 	if _is_dummy_audio_driver():
 		return
 	if not _music_player.playing:
 		_music_player.play()
+
+
+func play_menu_music() -> void:
+	_music_mode = "menu"
+	_music_ducked = false
+	apply_volumes()
+	_ensure_music_playing()
 
 
 func play_arena_music() -> void:
 	_music_mode = "arena"
 	_music_ducked = false
 	apply_volumes()
-	if not SaveManager.music_enabled or _music_player == null or _arena_music == null:
-		return
-	if _music_player.stream != _arena_music:
-		_music_player.stop()
-		_music_player.stream = _arena_music
-	if _is_dummy_audio_driver():
-		return
-	if not _music_player.playing:
-		_music_player.play()
+	_ensure_music_playing()
 
 
 func stop_menu_music() -> void:
@@ -178,6 +176,8 @@ func set_music_enabled(enabled: bool) -> void:
 	SaveManager.music_enabled = enabled
 	SaveManager.save_settings()
 	apply_volumes()
+	if enabled and not _music_mode.is_empty():
+		_ensure_music_playing()
 
 
 func set_sfx_enabled(enabled: bool) -> void:

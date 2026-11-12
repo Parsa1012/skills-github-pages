@@ -380,7 +380,9 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 	else:
 		var precision: float = profile.aim_precision if profile != null else 0.72
 		var max_err_rad: float = deg_to_rad((1.0 - precision) * 14.0)
-		var offsets_deg: Array[float] = [-4.5, 4.5] if is_heavy else [0.0]
+		var offsets_deg: Array[float] = [0.0]
+		if is_heavy:
+			offsets_deg = [-4.5, 4.5]
 		var bolt_scale: Vector3 = Vector3(1.25, 1.25, 1.1) if is_heavy else Vector3.ONE
 		for off_deg in offsets_deg:
 			var shoot_dir: Vector3 = aim_dir.rotated(Vector3.UP, deg_to_rad(off_deg) + randf_range(-max_err_rad, max_err_rad))
