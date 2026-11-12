@@ -3,8 +3,7 @@
 Wave-based survival · pure HTML5 canvas · zero dependencies</p>
 
 <p align="center">
-  <a href="https://Parsa1012.github.io/skills-github-pages/counter/"><b>▶ PLAY ONLINE</b></a>
-  <br /><sub>GitHub Pages must be enabled for the hosting repository (see below).</sub>
+  <a href="https://Parsa1012.github.io/Counterstrike-/"><b>▶ PLAY ONLINE</b></a>
 </p>
 
 ---
@@ -57,37 +56,19 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-## Deploy on GitHub Pages
+## Hosting
 
-The repository is already set up for Pages:
+The game is published with **GitHub Pages** straight from `main`:
 
-1. **Settings → Pages**
-2. **Source:** *Deploy from a branch*
-3. **Branch:** `main` · folder `/ (root)`
-4. Save — the game is live at `https://Parsa1012.github.io/skills-github-pages/counter/`
+- **Settings → Pages → Deploy from a branch → `main` → `/ (root)`**
+- Live URL: <https://Parsa1012.github.io/Counterstrike-/>
 
 `.nojekyll` is included so static files are served as-is.
-
-### Ship it as a standalone repository
-
-If you want the game at its own URL (`https://Parsa1012.github.io/counter/`), create an
-empty public repo named `counter` on GitHub and push this folder:
-
-```bash
-# from inside the counter/ folder
-git init -b main
-git add .
-git commit -m "COUNTER: tactical top-down browser shooter"
-git remote add origin https://github.com/Parsa1012/counter.git
-git push -u origin main
-```
-
-Then enable **Settings → Pages → Deploy from a branch → main → / (root)**.
 
 ## Project structure
 
 ```
-counter/
+.
 ├── index.html        # markup, HUD, menus
 ├── css/style.css     # all styling (responsive, mobile controls)
 ├── js/audio.js       # WebAudio SFX engine + UI/menu sound
@@ -112,14 +93,14 @@ Most of the feel lives in a few constants inside `js/game.js`:
 هر مرحله موج بزرگ‌تری از دشمن‌ها می‌آید؛ جعبه‌ها و دیوارها جلوی گلوله را می‌گیرند،
 پس از کاور استفاده کن.
 
+نسخهٔ آنلاین: <https://Parsa1012.github.io/Counterstrike-/>
+
 برای اجرا محلی:
 
 ```bash
 python3 -m http.server 8000
 # http://localhost:8000
 ```
-
-نسخهٔ آنلاین: <https://Parsa1012.github.io/counter/>
 
 ## License
 
