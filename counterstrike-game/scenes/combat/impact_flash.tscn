@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/impact_flash.gd" id="1_flash"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_flash"]
+radius = 0.3
+height = 0.6
+radial_segments = 8
+rings = 4
+
+[node name="ImpactFlash" type="Node3D"]
+script = ExtResource("1_flash")
+
+[node name="FlashMesh" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+mesh = SubResource("SphereMesh_flash")

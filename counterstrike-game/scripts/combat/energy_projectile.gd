@@ -1,0 +1,93 @@
+class_name EnergyProjectile
+extends Node3D
+## گلوله انرژی استخری (Pooled) با رهگیری پیوسته RayCast برای جلوگیری از رد شدن از دیوار در ۳۰ فریم.
+
+const POOL_ID: StringName = &"energy_projectile"
+const IMPACT_POOL_ID: StringName = &"impact_flash"
+
+@onready var _bolt_mesh: MeshInstance3D = $BoltMesh
+@onready var _core_mesh: MeshInstance3D = $CoreMesh
+
+var _direction: Vector3 = Vector3.FORWARD
+var _speed: float = 26.0
+var _damage: float = 25.0
+var _team_id: int = 0
+var _exclude_rids: Array[RID] = []
+var _color: Color = Color(0.219608, 0.741176, 0.972549, 1.0)
+var _age: float = 0.0
+var _max_lifetime: float = 1.35
+var _active: bool = false
+var _outer_mat: StandardMaterial3D = null
+
+
+func _ready() -> void:
+	if _bolt_mesh != null:
+		_outer_mat = StandardMaterial3D.new()
+		_outer_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_outer_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_bolt_mesh.material_override = _outer_mat
+
+
+func launch(origin: Vector3, direction: Vector3, speed: float, damage: float, team_id: int, shooter: CollisionObject3D, bolt_color: Color) -> void:
+	global_position = origin
+	var flat_dir := Vector3(direction.x, direction.y * 0.25, direction.z)
+	if flat_dir.length_squared() < 0.0001:
+		flat_dir = Vector3.FORWARD
+	_direction = flat_dir.normalized()
+	_speed = maxf(speed, 4.0)
+	_damage = maxf(damage, 1.0)
+	_team_id = team_id
+	_color = bolt_color
+	_age = 0.0
+	_active = true
+
+	_exclude_rids.clear()
+	if shooter != null and is_instance_valid(shooter):
+		_exclude_rids.append(shooter.get_rid())
+
+	rotation.y = atan2(-_direction.x, -_direction.z)
+	if _outer_mat != null:
+		_outer_mat.albedo_color = Color(bolt_color.r, bolt_color.g, bolt_color.b, 0.88)
+
+
+func _physics_process(delta: float) -> void:
+	if not _active:
+		return
+
+	_age += delta
+	if _age >= _max_lifetime:
+		_recycle()
+		return
+
+	var start_pos: Vector3 = global_position
+	var end_pos: Vector3 = start_pos + _direction * (_speed * delta)
+
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(start_pos, end_pos, 1 | 2, _exclude_rids)
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+
+	var hit: Dictionary = space_state.intersect_ray(query)
+	if not hit.is_empty():
+		var hit_pos: Vector3 = hit.get("position", end_pos)
+		var collider: Object = hit.get("collider", null)
+		if collider != null and collider.has_method("take_damage"):
+			var target_team: Variant = collider.get("team_id")
+			if target_team == null or int(target_team) != _team_id:
+				collider.call("take_damage", _damage, _team_id)
+		_spawn_impact(hit_pos)
+		_recycle()
+		return
+
+	global_position = end_pos
+
+
+func _spawn_impact(world_pos: Vector3) -> void:
+	var flash: Node = PoolManager.acquire(IMPACT_POOL_ID, get_parent())
+	if flash is ImpactFlash:
+		(flash as ImpactFlash).trigger(world_pos, _color)
+
+
+func _recycle() -> void:
+	_active = false
+	PoolManager.release(POOL_ID, self)

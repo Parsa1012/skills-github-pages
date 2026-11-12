@@ -1,10 +1,8 @@
-# دارایی‌های سه‌بعدی Kenney (آماده جایگزینی)
+# دارایی‌های رسمی Kenney (شخصیت‌ها، محیط، سلاح‌های انرژی و صدا)
 
-این پوشه برای نگهداری بسته‌های مدل سه‌بعدی **Kenney** (شخصیت‌ها و قطعات محیطی با فرمت `.glb` / `.gltf` / `.tscn`) طراحی شده است:
+تمام مدل‌ها و افکت‌های صوتی این پوشه از بسته‌های رسمی و متن‌باز **Kenney** (`Starter-Kit-3D-Platformer`، `Starter-Kit-FPS` و `Starter-Kit-Basic-Scene` با مجوز در `LICENSE.md`) مستقیماً در پروژه ادغام شده‌اند:
 
-- `assets/kenney/characters/` ← مدل‌های شخصیت‌های Kenney (مثلاً `character.glb` یا زیرپوشه بسته کاراکتر)
-- `assets/kenney/environment/` ← بلوک‌ها، دیوارها، موانع و کف‌پوش‌های محیطی Kenney
-
-## نحوه اتصال خودکار در پروژه
-- صحنه بازیکن `res://scenes/entities/player_character.tscn` دارای پارامتر `kenney_character_scene` است و به محض قرار گرفتن فایل‌های Kenney، می‌توان مدل Low-Poly فعلی را با یک مدل Kenney جایگزین کرد بدون اینکه کد حرکت، دوربین یا کنترل لمسی تغییری کند.
-- محیط `res://scenes/maps/arena_sector_01.tscn` به صورت ماژولار (`Floor`, `Walls`, `Cover`, `Ramps`, `Zones`) ساخته شده و آماده جایگزینی مستقیم با قطعات `kenney/environment/` است.
+- `mini_arena/` ← شخصیت متحرک سرباز آرکید (`character-soldier.glb`)، ستون‌ها (`column.glb`)، آجرها (`bricks.glb`)، بلوک‌ها (`block.glb`)، دیوارها (`wall.glb`)، پرچم‌ها (`banner.glb`)، پله (`stairs.glb`) و `Textures/colormap.png`
+- `fps/` ← سلاح‌های انرژی (`blaster.glb`, `blaster-repeater.glb`)، بات پرنده دشمن (`enemy-flying.glb`)، دیوارهای کوتاه و بلند سنگر (`wall-low.glb`, `wall-high.glb`) و `Textures/colormap.png`
+- `platformer/` ← پرچم مناطق تسخیر (`flag.glb`)، سکوها (`platform.glb`, `platform-medium.glb`) و `Textures/colormap.png`
+- `audio/` ← افکت‌های صوتی `.ogg` شلیک، تغییر سلاح، برخورد و نابودی بات دشمن

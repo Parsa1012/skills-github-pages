@@ -258,9 +258,10 @@ jobs:
             exit 1
           fi
 
-          echo "=== Bundled Persian Font & Original Audio Assets in APK ==="
-          unzip -l "${OUT_APK}" | grep -E 'assets/(audio|fonts|ui)/|Vazirmatn|sfx_ui_' || true
+          echo "=== Bundled Persian Font, Original Audio & Kenney Assets in APK ==="
+          unzip -l "${OUT_APK}" | grep -E 'assets/(audio|fonts|ui|kenney)/|Vazirmatn|sfx_ui_|character-soldier|blaster' | head -n 30 || true
           unzip -l "${OUT_APK}" | grep -qE 'assets/assets/audio/sfx_ui_tap\.wav|sfx_ui_tap\.wav-.*\.sample'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/kenney/mini_arena/character-soldier\.glb|character-soldier\.glb'
           unzip -l "${OUT_APK}" | grep -qE 'Vazirmatn-Regular\.ttf|Vazirmatn-Regular\.ttf-.*\.fontdata'
           if unzip -l "${OUT_APK}" | grep -qE 'main_menu\.mp3|ui_click\.mp3|ui_menu\.mp3|ui_pop\.mp3'; then
             echo "ERROR: Prohibited previous-project MP3 files found in APK!"

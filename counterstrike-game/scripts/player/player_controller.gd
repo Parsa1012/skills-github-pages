@@ -1,22 +1,26 @@
 class_name PlayerController
 extends CharacterBody3D
-## کنترلر سه‌بعدی بازیکن در نمای 2.5D BombSquad (حرکت نرم، چرخش مستقل نشانه، سازگار با مدل‌های Kenney).
+## کنترلر سه‌بعدی بازیکن در نمای 2.5D BombSquad با مدل متحرک و سلاح‌های انرژی Kenney.
 
-@export var walk_speed: float = 3.8
-@export var run_speed: float = 6.4
+signal player_defeated(attacker_team: int)
+
+@export var team_id: int = 0
+@export var walk_speed: float = 3.9
+@export var run_speed: float = 6.5
 @export var acceleration: float = 28.0
 @export var deceleration: float = 34.0
 @export var turn_speed: float = 16.0
+@export var max_hp: float = 100.0
 @export var camera_rig_path: NodePath
 @export var touch_hud_path: NodePath
-@export var kenney_character_scene: PackedScene
+@export var blasters: Array[EnergyBlasterData] = []
 
+@onready var _collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var _visual_root: Node3D = $VisualRoot
-@onready var _procedural_rig: Node3D = $VisualRoot/ProceduralRig
-@onready var _left_leg: Node3D = $VisualRoot/ProceduralRig/LeftLegPivot
-@onready var _right_leg: Node3D = $VisualRoot/ProceduralRig/RightLegPivot
-@onready var _weapon_arm: Node3D = $VisualRoot/ProceduralRig/WeaponArmPivot
-@onready var _muzzle_tip: MeshInstance3D = $VisualRoot/ProceduralRig/WeaponArmPivot/MuzzleTip
+@onready var _kenney_soldier: Node3D = $VisualRoot/KenneySoldier
+@onready var _weapon_mount: Node3D = $VisualRoot/WeaponMount
+@onready var _muzzle_marker: Marker3D = $VisualRoot/WeaponMount/MuzzleMarker
+@onready var _team_ring: MeshInstance3D = $TeamRingMesh
 @onready var _aim_indicator: Node3D = $AimIndicatorPivot
 @onready var _aim_beam: MeshInstance3D = $AimIndicatorPivot/AimBeamMesh
 @onready var _aim_tip: MeshInstance3D = $AimIndicatorPivot/AimTipMesh
@@ -24,23 +28,46 @@ extends CharacterBody3D
 var _gravity: float = 18.0
 var _camera_rig: Node3D = null
 var _touch_hud: Node = null
-var _walk_cycle: float = 0.0
-var _fire_pulse_timer: float = 0.0
+var _anim_player: AnimationPlayer = null
 var _aim_beam_mat: StandardMaterial3D = null
-var _muzzle_mat: StandardMaterial3D = null
-var _facing_yaw: float = 0.0
-var _kenney_instance: Node3D = null
+var _facing_yaw: float = -PI * 0.5
+var _spawn_pos: Vector3 = Vector3.ZERO
+
+var _hp: float = 100.0
+var _alive: bool = true
+var _respawn_timer: float = 0.0
+var _time_since_damage: float = 10.0
+
+var _blaster_index: int = 0
+var _weapon_model_instance: Node3D = null
+var _current_energy: int = 16
+var _fire_cooldown: float = 0.0
+var _recharging: bool = false
+var _recharge_timer: float = 0.0
+var _recoil_offset: float = 0.0
 
 
 func _ready() -> void:
 	add_to_group("player")
+	_spawn_pos = global_position
+	_hp = max_hp
 	_gravity = float(ProjectSettings.get_setting("physics/3d/default_gravity", 18.0))
 	if _gravity < 9.8:
 		_gravity = 18.0
 
 	_resolve_references()
 	_setup_materials()
-	_apply_kenney_override_if_present()
+	_find_animation_player()
+	_ensure_default_blasters()
+	_equip_blaster(0, false)
+
+	EventBus.blaster_switch_requested.connect(switch_next_blaster)
+	EventBus.blaster_recharge_requested.connect(start_recharge)
+	_emit_stats()
+
+
+func is_alive() -> bool:
+	return _alive
 
 
 func _resolve_references() -> void:
@@ -55,32 +82,122 @@ func _setup_materials() -> void:
 		var mat := StandardMaterial3D.new()
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.55)
+		mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.58)
 		_aim_beam.material_override = mat
 		if _aim_tip != null:
 			_aim_tip.material_override = mat
 		_aim_beam_mat = mat
 
-	if _muzzle_tip != null:
-		var m_mat := StandardMaterial3D.new()
-		m_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		m_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 1.0)
-		_muzzle_tip.material_override = m_mat
-		_muzzle_mat = m_mat
+
+func _find_animation_player() -> void:
+	if _kenney_soldier != null:
+		_anim_player = _kenney_soldier.find_child("AnimationPlayer", true, false) as AnimationPlayer
 
 
-func _apply_kenney_override_if_present() -> void:
-	if kenney_character_scene == null or _visual_root == null:
+func _ensure_default_blasters() -> void:
+	if not blasters.is_empty():
 		return
-	var instance: Node = kenney_character_scene.instantiate()
-	if instance is Node3D:
-		_kenney_instance = instance as Node3D
-		_visual_root.add_child(_kenney_instance)
-		if _procedural_rig != null:
-			_procedural_rig.visible = false
+	var p1: Resource = ResourceLoader.load("res://data/blasters/pulse_blaster.tres")
+	var p2: Resource = ResourceLoader.load("res://data/blasters/rapid_repeater.tres")
+	if p1 is EnergyBlasterData:
+		blasters.append(p1 as EnergyBlasterData)
+	if p2 is EnergyBlasterData:
+		blasters.append(p2 as EnergyBlasterData)
+
+
+func _get_active_blaster() -> EnergyBlasterData:
+	if blasters.is_empty():
+		return null
+	return blasters[clampi(_blaster_index, 0, blasters.size() - 1)]
+
+
+func switch_next_blaster() -> void:
+	if blasters.size() <= 1 or not _alive:
+		return
+	var next_idx: int = (_blaster_index + 1) % blasters.size()
+	_equip_blaster(next_idx, true)
+
+
+func _equip_blaster(idx: int, play_sfx: bool) -> void:
+	if blasters.is_empty():
+		return
+	_blaster_index = clampi(idx, 0, blasters.size() - 1)
+	var b: EnergyBlasterData = _get_active_blaster()
+	if b == null:
+		return
+
+	_recharging = false
+	_recharge_timer = 0.0
+	_fire_cooldown = 0.0
+	_current_energy = b.energy_cell_capacity
+
+	if _weapon_model_instance != null and is_instance_valid(_weapon_model_instance):
+		_weapon_model_instance.queue_free()
+		_weapon_model_instance = null
+
+	if _weapon_mount != null and not b.model_scene_path.is_empty() and ResourceLoader.exists(b.model_scene_path):
+		var packed: Resource = ResourceLoader.load(b.model_scene_path)
+		if packed is PackedScene:
+			var inst: Node = (packed as PackedScene).instantiate()
+			if inst is Node3D:
+				_weapon_model_instance = inst as Node3D
+				_weapon_model_instance.scale = Vector3(b.model_scale, b.model_scale, b.model_scale)
+				_weapon_model_instance.rotation_degrees = Vector3(0.0, 180.0, 0.0)
+				_weapon_mount.add_child(_weapon_model_instance)
+
+	if play_sfx:
+		AudioManager.play_sfx_path("res://assets/kenney/audio/weapon_change.ogg", 1.0)
+	_emit_stats()
+
+
+func start_recharge() -> void:
+	var b: EnergyBlasterData = _get_active_blaster()
+	if b == null or _recharging or not _alive:
+		return
+	if _current_energy >= b.energy_cell_capacity:
+		return
+	_recharging = true
+	_recharge_timer = b.recharge_seconds
+	AudioManager.play_ui_menu(0.92)
+	_emit_stats()
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		var key_ev := event as InputEventKey
+		if key_ev.keycode == KEY_Q:
+			switch_next_blaster()
+		elif key_ev.keycode == KEY_R:
+			start_recharge()
 
 
 func _physics_process(delta: float) -> void:
+	if not _alive:
+		_respawn_timer -= delta
+		if _respawn_timer <= 0.0:
+			_respawn()
+		return
+
+	_time_since_damage += delta
+	if _time_since_damage >= 4.0 and _hp < max_hp:
+		var prev_hp: int = int(ceil(_hp))
+		_hp = minf(max_hp, _hp + 16.0 * delta)
+		if int(ceil(_hp)) != prev_hp:
+			_emit_stats()
+
+	if _fire_cooldown > 0.0:
+		_fire_cooldown = maxf(0.0, _fire_cooldown - delta)
+
+	if _recharging:
+		_recharge_timer -= delta
+		if _recharge_timer <= 0.0:
+			_recharging = false
+			var b: EnergyBlasterData = _get_active_blaster()
+			if b != null:
+				_current_energy = b.energy_cell_capacity
+			AudioManager.play_ui_pop(1.1)
+			_emit_stats()
+
 	var move_2d: Vector2 = _read_move_input()
 	var aim_2d: Vector2 = _read_aim_input()
 	var fire_active: bool = _read_fire_input()
@@ -109,7 +226,103 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 	_update_facing_and_aim(move_world, aim_world, move_2d.length(), aim_2d.length(), fire_active, delta)
-	_update_procedural_animation(current_vel_xz.length(), fire_active, delta)
+	_update_soldier_animation(current_vel_xz.length(), fire_active, delta)
+
+	if fire_active and not _recharging and _fire_cooldown <= 0.0:
+		_try_fire(current_vel_xz.length())
+
+
+func _try_fire(horiz_speed: float) -> void:
+	var b: EnergyBlasterData = _get_active_blaster()
+	if b == null:
+		return
+	if _current_energy <= 0:
+		start_recharge()
+		return
+
+	_current_energy -= 1
+	_fire_cooldown = b.pulse_cooldown
+	_recoil_offset = 0.11
+
+	var forward_dir := Vector3(-sin(_facing_yaw), 0.0, -cos(_facing_yaw)).normalized()
+	var spread_deg: float = b.spread_moving_deg if horiz_speed > 0.6 else b.spread_still_deg
+	var spawn_pos: Vector3 = _muzzle_marker.global_position if _muzzle_marker != null else global_position + Vector3(0.0, 0.96, 0.0) + forward_dir * 0.75
+
+	for _p in b.pellets_per_shot:
+		var angle_rad: float = deg_to_rad(randf_range(-spread_deg, spread_deg))
+		var bolt_dir: Vector3 = forward_dir.rotated(Vector3.UP, angle_rad)
+		var proj: Node = PoolManager.acquire(EnergyProjectile.POOL_ID, get_parent())
+		if proj is EnergyProjectile:
+			(proj as EnergyProjectile).launch(
+				spawn_pos,
+				bolt_dir,
+				b.projectile_speed,
+				b.energy_damage,
+				team_id,
+				self,
+				b.projectile_color
+			)
+
+	AudioManager.play_sfx_path(b.shoot_sfx_path, randf_range(0.95, 1.05))
+	if _current_energy <= 0:
+		start_recharge()
+	else:
+		_emit_stats()
+
+
+func take_damage(amount: float, attacker_team: int) -> void:
+	if not _alive or attacker_team == team_id:
+		return
+	_time_since_damage = 0.0
+	_hp = maxf(_hp - amount, 0.0)
+	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_hurt.ogg", 0.78)
+	_emit_stats()
+	if _hp <= 0.0:
+		_enter_respawn(attacker_team)
+
+
+func _enter_respawn(attacker_team: int) -> void:
+	_alive = false
+	_respawn_timer = 2.5
+	velocity = Vector3.ZERO
+	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", 0.85)
+	if _collision_shape != null:
+		_collision_shape.set_deferred("disabled", true)
+	if _visual_root != null:
+		_visual_root.visible = false
+	if _team_ring != null:
+		_team_ring.visible = false
+	if _aim_indicator != null:
+		_aim_indicator.visible = false
+	player_defeated.emit(attacker_team)
+	_emit_stats()
+
+
+func _respawn() -> void:
+	global_position = _spawn_pos
+	velocity = Vector3.ZERO
+	_hp = max_hp
+	_alive = true
+	_recharging = false
+	var b: EnergyBlasterData = _get_active_blaster()
+	if b != null:
+		_current_energy = b.energy_cell_capacity
+	if _collision_shape != null:
+		_collision_shape.set_deferred("disabled", false)
+	if _visual_root != null:
+		_visual_root.visible = true
+	if _team_ring != null:
+		_team_ring.visible = true
+	if _aim_indicator != null:
+		_aim_indicator.visible = true
+	_emit_stats()
+
+
+func _emit_stats() -> void:
+	var b: EnergyBlasterData = _get_active_blaster()
+	var b_name: String = b.display_name if b != null else "پالس بلاستر"
+	var b_cap: int = b.energy_cell_capacity if b != null else 16
+	EventBus.player_stats_updated.emit(int(ceil(_hp)), int(max_hp), _current_energy, b_cap, b_name, _recharging)
 
 
 func _read_move_input() -> Vector2:
@@ -169,8 +382,7 @@ func _update_facing_and_aim(move_world: Vector3, aim_world: Vector3, move_len: f
 
 	if target_dir.length_squared() > 0.001:
 		var target_yaw: float = atan2(-target_dir.x, -target_dir.z)
-		var turn_blend: float = clampf(turn_speed * delta, 0.0, 1.0)
-		_facing_yaw = lerp_angle(_facing_yaw, target_yaw, turn_blend)
+		_facing_yaw = lerp_angle(_facing_yaw, target_yaw, clampf(turn_speed * delta, 0.0, 1.0))
 
 	if _visual_root != null:
 		_visual_root.rotation.y = _facing_yaw
@@ -184,33 +396,25 @@ func _update_facing_and_aim(move_world: Vector3, aim_world: Vector3, move_len: f
 
 	if _aim_beam_mat != null:
 		_aim_beam_mat.albedo_color = Color(0.984314, 0.45098, 0.086275, 0.85) if fire_active else Color(0.219608, 0.741176, 0.972549, 0.58)
-	if _muzzle_mat != null:
-		_muzzle_mat.albedo_color = Color(0.984314, 0.572549, 0.235294, 1.0) if fire_active else Color(0.219608, 0.741176, 0.972549, 1.0)
 
 
-func _update_procedural_animation(horiz_speed: float, fire_active: bool, delta: float) -> void:
-	if _procedural_rig == null or not _procedural_rig.visible:
+func _update_soldier_animation(horiz_speed: float, _fire_active: bool, delta: float) -> void:
+	if _weapon_mount != null:
+		_recoil_offset = move_toward(_recoil_offset, 0.0, 1.2 * delta)
+		_weapon_mount.position.z = -0.34 + _recoil_offset
+
+	if _anim_player == null:
 		return
 
-	if horiz_speed > 0.25:
-		_walk_cycle += horiz_speed * delta * 2.2
-		var swing: float = sin(_walk_cycle) * minf(horiz_speed / run_speed, 1.0) * 0.52
-		if _left_leg != null:
-			_left_leg.rotation.x = swing
-		if _right_leg != null:
-			_right_leg.rotation.x = -swing
-		_procedural_rig.position.y = absf(cos(_walk_cycle)) * 0.06
-	else:
-		if _left_leg != null:
-			_left_leg.rotation.x = lerpf(_left_leg.rotation.x, 0.0, clampf(12.0 * delta, 0.0, 1.0))
-		if _right_leg != null:
-			_right_leg.rotation.x = lerpf(_right_leg.rotation.x, 0.0, clampf(12.0 * delta, 0.0, 1.0))
-		_procedural_rig.position.y = lerpf(_procedural_rig.position.y, 0.0, clampf(12.0 * delta, 0.0, 1.0))
-
-	if _weapon_arm != null:
-		if fire_active:
-			_fire_pulse_timer += delta * 18.0
-			_weapon_arm.position.z = -0.18 + absf(sin(_fire_pulse_timer)) * 0.06
-		else:
-			_fire_pulse_timer = 0.0
-			_weapon_arm.position.z = lerpf(_weapon_arm.position.z, -0.18, clampf(14.0 * delta, 0.0, 1.0))
+	if horiz_speed > 4.4 and _anim_player.has_animation("sprint"):
+		if _anim_player.current_animation != "sprint":
+			_anim_player.play("sprint", 0.12)
+		_anim_player.speed_scale = clampf(horiz_speed / run_speed, 0.8, 1.35)
+	elif horiz_speed > 0.35 and _anim_player.has_animation("walk"):
+		if _anim_player.current_animation != "walk":
+			_anim_player.play("walk", 0.12)
+		_anim_player.speed_scale = clampf(horiz_speed / walk_speed, 0.65, 1.3)
+	elif _anim_player.has_animation("idle"):
+		if _anim_player.current_animation != "idle":
+			_anim_player.play("idle", 0.15)
+		_anim_player.speed_scale = 1.0

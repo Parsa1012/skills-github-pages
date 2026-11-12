@@ -1,13 +1,12 @@
 extends Node
-## مدیر صدای مستقل و آفلاین برای افکت‌های رابط کاربری و گیم‌پلی.
-## تنها از فایل‌های صوتی اختصاصی تولیدشده برای همین پروژه استفاده می‌کند.
+## مدیر صدای مستقل و آفلاین برای افکت‌های رابط کاربری و صدای گیم‌پلی (اختصاصی + Kenney CC0/MIT).
 
 const UI_TAP_PATH: String = "res://assets/audio/sfx_ui_tap.wav"
 const UI_SWITCH_PATH: String = "res://assets/audio/sfx_ui_switch.wav"
 const UI_CONFIRM_PATH: String = "res://assets/audio/sfx_ui_confirm.wav"
 
 const MAX_UI_PLAYERS: int = 4
-const MAX_SFX_PLAYERS: int = 8
+const MAX_SFX_PLAYERS: int = 10
 
 var _music_player: AudioStreamPlayer = null
 var _ui_players: Array[AudioStreamPlayer] = []
@@ -19,6 +18,7 @@ var _menu_music: AudioStream = null
 var _ui_tap_sfx: AudioStream = null
 var _ui_switch_sfx: AudioStream = null
 var _ui_confirm_sfx: AudioStream = null
+var _sfx_cache: Dictionary = {}
 var _menu_music_requested: bool = false
 
 
@@ -121,6 +121,19 @@ func play_ui_menu(pitch_scale: float = 1.0) -> void:
 
 func play_ui_pop(pitch_scale: float = 1.0) -> void:
 	play_ui_stream(_ui_confirm_sfx, pitch_scale)
+
+
+func play_sfx_path(resource_path: String, pitch_scale: float = 1.0) -> void:
+	if not SaveManager.sfx_enabled or resource_path.is_empty():
+		return
+	var stream: AudioStream = _sfx_cache.get(resource_path, null) as AudioStream
+	if stream == null and ResourceLoader.exists(resource_path):
+		var loaded: Resource = ResourceLoader.load(resource_path)
+		if loaded is AudioStream:
+			stream = loaded as AudioStream
+			_sfx_cache[resource_path] = stream
+	if stream != null:
+		play_sfx_stream(stream, pitch_scale)
 
 
 func play_ui_stream(stream: AudioStream, pitch_scale: float = 1.0) -> void:

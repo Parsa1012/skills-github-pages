@@ -1,5 +1,5 @@
 extends Node
-## Central typed signal hub for decoupled offline subsystems across phases.
+## مرکز سیگنال‌های تایپ‌شده برای ارتباط غیرمتمرکز بین زیرسیستم‌های آفلاین بازی.
 
 @warning_ignore("unused_signal")
 signal scene_change_requested(scene_path: String)
@@ -18,6 +18,15 @@ signal aim_fire_mode_changed(mode_name: String)
 
 @warning_ignore("unused_signal")
 signal player_zone_changed(zone_id: String, zone_title_fa: String, inside: bool)
+
+@warning_ignore("unused_signal")
+signal player_stats_updated(hp: int, max_hp: int, energy: int, max_energy: int, blaster_name_fa: String, recharging: bool)
+
+@warning_ignore("unused_signal")
+signal blaster_switch_requested()
+
+@warning_ignore("unused_signal")
+signal blaster_recharge_requested()
 
 @warning_ignore("unused_signal")
 signal match_started(mode_id: String)

@@ -1,10 +1,19 @@
-[gd_scene load_steps=39 format=3]
+[gd_scene load_steps=37 format=3]
 
 [ext_resource type="Script" path="res://scripts/maps/arena_sector_controller.gd" id="1_ctrl"]
 [ext_resource type="PackedScene" path="res://scenes/camera/arena_camera_rig.tscn" id="2_cam"]
 [ext_resource type="PackedScene" path="res://scenes/entities/player_character.tscn" id="3_player"]
 [ext_resource type="PackedScene" path="res://scenes/hud/touch_controls_hud.tscn" id="4_hud"]
 [ext_resource type="Script" path="res://scripts/modes/capture_zone_pad.gd" id="5_zone"]
+[ext_resource type="PackedScene" path="res://scenes/entities/arena_bot.tscn" id="6_bot"]
+[ext_resource type="PackedScene" path="res://assets/kenney/fps/wall-low.glb" id="7_wlow"]
+[ext_resource type="PackedScene" path="res://assets/kenney/fps/wall-high.glb" id="8_whigh"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/column.glb" id="9_col"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/column-damaged.glb" id="10_coldmg"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/bricks.glb" id="11_bricks"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/block.glb" id="12_block"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/banner.glb" id="13_banner"]
+[ext_resource type="PackedScene" path="res://assets/kenney/platformer/flag.glb" id="14_flag"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_arena"]
 sky_top_color = Color(0.105882, 0.168627, 0.278431, 1)
@@ -20,10 +29,10 @@ background_mode = 2
 sky = SubResource("Sky_arena")
 ambient_light_source = 2
 ambient_light_color = Color(0.752941, 0.819608, 0.909804, 1)
-ambient_light_energy = 0.58
+ambient_light_energy = 0.62
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
-albedo_color = Color(0.117647, 0.160784, 0.231373, 1)
+albedo_color = Color(0.109804, 0.14902, 0.219608, 1)
 roughness = 0.92
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
@@ -33,26 +42,6 @@ roughness = 0.86
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_deck"]
 albedo_color = Color(0.278431, 0.333333, 0.411765, 1)
 roughness = 0.8
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue_cover"]
-albedo_color = Color(0.054902, 0.517647, 0.780392, 1)
-roughness = 0.72
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_orange_crate"]
-albedo_color = Color(0.85098, 0.466667, 0.0235294, 1)
-roughness = 0.74
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pillar"]
-albedo_color = Color(0.392157, 0.454902, 0.545098, 1)
-roughness = 0.76
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bot_orange"]
-albedo_color = Color(0.917647, 0.345098, 0.0470588, 1)
-roughness = 0.7
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bot_visor"]
-shading_mode = 0
-albedo_color = Color(0.996078, 0.941176, 0.541176, 1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(32, 1, 24)
@@ -84,23 +73,17 @@ size = Vector3(2.4, 0.24, 2.8)
 [sub_resource type="BoxMesh" id="BoxMesh_ramp"]
 size = Vector3(2.4, 0.24, 2.8)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_cover_wide"]
-size = Vector3(2.4, 1.4, 1.2)
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_low"]
+size = Vector3(3.15, 1.16, 1)
 
-[sub_resource type="BoxMesh" id="BoxMesh_cover_wide"]
-size = Vector3(2.4, 1.4, 1.2)
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_high"]
+size = Vector3(2.15, 2.3, 0.98)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_crate"]
-size = Vector3(1.5, 1.3, 1.5)
+[sub_resource type="BoxShape3D" id="BoxShape3D_column"]
+size = Vector3(1.18, 1.95, 1.18)
 
-[sub_resource type="BoxMesh" id="BoxMesh_crate"]
-size = Vector3(1.5, 1.3, 1.5)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_pillar"]
-size = Vector3(1.3, 1.7, 1.3)
-
-[sub_resource type="BoxMesh" id="BoxMesh_pillar"]
-size = Vector3(1.3, 1.7, 1.3)
+[sub_resource type="BoxShape3D" id="BoxShape3D_block"]
+size = Vector3(2, 1, 2)
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_zone"]
 height = 1.6
@@ -112,19 +95,6 @@ bottom_radius = 2.25
 height = 0.04
 radial_segments = 24
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_bot"]
-radius = 0.42
-height = 1.65
-
-[sub_resource type="BoxMesh" id="BoxMesh_bot_body"]
-size = Vector3(0.66, 1.12, 0.46)
-
-[sub_resource type="BoxMesh" id="BoxMesh_bot_head"]
-size = Vector3(0.44, 0.42, 0.44)
-
-[sub_resource type="BoxMesh" id="BoxMesh_bot_visor"]
-size = Vector3(0.36, 0.13, 0.06)
-
 [node name="ArenaSector01" type="Node3D"]
 script = ExtResource("1_ctrl")
 
@@ -134,7 +104,7 @@ environment = SubResource("Environment_arena")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.819152, 0.451984, -0.353129, 0, 0.615661, 0.788011, 0.573576, -0.645501, 0.50432, -8, 18, 10)
 light_color = Color(1, 0.972549, 0.921569, 1)
-light_energy = 1.15
+light_energy = 1.2
 shadow_enabled = true
 
 [node name="ArenaEnvironment" type="Node3D" parent="."]
@@ -221,85 +191,107 @@ shape = SubResource("BoxShape3D_ramp")
 mesh = SubResource("BoxMesh_ramp")
 surface_material_override/0 = SubResource("StandardMaterial3D_deck")
 
-[node name="CoverBlueNorth" type="StaticBody3D" parent="ArenaEnvironment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.8, 0.7, -3.6)
+[node name="KenneyCoverLow_WestN" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -7.8, 0, -3.8)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CoverBlueNorth"]
-shape = SubResource("BoxShape3D_cover_wide")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyCoverLow_WestN"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)
+shape = SubResource("BoxShape3D_wall_low")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/CoverBlueNorth"]
-mesh = SubResource("BoxMesh_cover_wide")
-surface_material_override/0 = SubResource("StandardMaterial3D_blue_cover")
+[node name="Model" parent="ArenaEnvironment/KenneyCoverLow_WestN" instance=ExtResource("7_wlow")]
+transform = Transform3D(1.45, 0, 0, 0, 1.45, 0, 0, 0, 1.45, 0, 0, 0)
 
-[node name="CoverBlueSouth" type="StaticBody3D" parent="ArenaEnvironment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.8, 0.7, 3.6)
+[node name="KenneyCoverLow_WestS" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -7.8, 0, 3.8)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CoverBlueSouth"]
-shape = SubResource("BoxShape3D_cover_wide")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyCoverLow_WestS"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)
+shape = SubResource("BoxShape3D_wall_low")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/CoverBlueSouth"]
-mesh = SubResource("BoxMesh_cover_wide")
-surface_material_override/0 = SubResource("StandardMaterial3D_blue_cover")
+[node name="Model" parent="ArenaEnvironment/KenneyCoverLow_WestS" instance=ExtResource("7_wlow")]
+transform = Transform3D(1.45, 0, 0, 0, 1.45, 0, 0, 0, 1.45, 0, 0, 0)
 
-[node name="CrateOrangeNorth" type="StaticBody3D" parent="ArenaEnvironment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.8, 0.65, -3.6)
+[node name="KenneyCoverHigh_EastN" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 6.2, 0, -3.8)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CrateOrangeNorth"]
-shape = SubResource("BoxShape3D_crate")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyCoverHigh_EastN"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+shape = SubResource("BoxShape3D_wall_high")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/CrateOrangeNorth"]
-mesh = SubResource("BoxMesh_crate")
-surface_material_override/0 = SubResource("StandardMaterial3D_orange_crate")
+[node name="Model" parent="ArenaEnvironment/KenneyCoverHigh_EastN" instance=ExtResource("8_whigh")]
+transform = Transform3D(1.45, 0, 0, 0, 1.35, 0, 0, 0, 1.45, 0, 0, 0)
 
-[node name="CrateOrangeSouth" type="StaticBody3D" parent="ArenaEnvironment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.8, 0.65, 3.6)
+[node name="KenneyCoverHigh_EastS" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 6.2, 0, 3.8)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CrateOrangeSouth"]
-shape = SubResource("BoxShape3D_crate")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyCoverHigh_EastS"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+shape = SubResource("BoxShape3D_wall_high")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/CrateOrangeSouth"]
-mesh = SubResource("BoxMesh_crate")
-surface_material_override/0 = SubResource("StandardMaterial3D_orange_crate")
+[node name="Model" parent="ArenaEnvironment/KenneyCoverHigh_EastS" instance=ExtResource("8_whigh")]
+transform = Transform3D(1.45, 0, 0, 0, 1.35, 0, 0, 0, 1.45, 0, 0, 0)
 
-[node name="PillarNW" type="StaticBody3D" parent="ArenaEnvironment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.4, 0.85, -6.2)
+[node name="KenneyPillar_NW" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.4, 0, -6.2)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/PillarNW"]
-shape = SubResource("BoxShape3D_pillar")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyPillar_NW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.975, 0)
+shape = SubResource("BoxShape3D_column")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/PillarNW"]
-mesh = SubResource("BoxMesh_pillar")
-surface_material_override/0 = SubResource("StandardMaterial3D_pillar")
+[node name="Model" parent="ArenaEnvironment/KenneyPillar_NW" instance=ExtResource("9_col")]
+transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
 
-[node name="PillarNE" type="StaticBody3D" parent="ArenaEnvironment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.4, 0.85, -6.2)
+[node name="KenneyPillar_NE" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.4, 0, -6.2)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/PillarNE"]
-shape = SubResource("BoxShape3D_pillar")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyPillar_NE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.975, 0)
+shape = SubResource("BoxShape3D_column")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/PillarNE"]
-mesh = SubResource("BoxMesh_pillar")
-surface_material_override/0 = SubResource("StandardMaterial3D_pillar")
+[node name="Model" parent="ArenaEnvironment/KenneyPillar_NE" instance=ExtResource("10_coldmg")]
+transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
 
-[node name="PillarSW" type="StaticBody3D" parent="ArenaEnvironment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.4, 0.85, 6.2)
+[node name="KenneyPillar_SW" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.4, 0, 6.2)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/PillarSW"]
-shape = SubResource("BoxShape3D_pillar")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyPillar_SW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.975, 0)
+shape = SubResource("BoxShape3D_column")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/PillarSW"]
-mesh = SubResource("BoxMesh_pillar")
-surface_material_override/0 = SubResource("StandardMaterial3D_pillar")
+[node name="Model" parent="ArenaEnvironment/KenneyPillar_SW" instance=ExtResource("10_coldmg")]
+transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
 
-[node name="PillarSE" type="StaticBody3D" parent="ArenaEnvironment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.4, 0.85, 6.2)
+[node name="KenneyPillar_SE" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.4, 0, 6.2)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/PillarSE"]
-shape = SubResource("BoxShape3D_pillar")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyPillar_SE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.975, 0)
+shape = SubResource("BoxShape3D_column")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/PillarSE"]
-mesh = SubResource("BoxMesh_pillar")
-surface_material_override/0 = SubResource("StandardMaterial3D_pillar")
+[node name="Model" parent="ArenaEnvironment/KenneyPillar_SE" instance=ExtResource("9_col")]
+transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
+
+[node name="KenneyBlock_Center" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.36, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/KenneyBlock_Center"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("BoxShape3D_block")
+
+[node name="Model" parent="ArenaEnvironment/KenneyBlock_Center" instance=ExtResource("12_block")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+
+[node name="BricksAccent_West" parent="ArenaEnvironment" instance=ExtResource("11_bricks")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, -12.5, 0, -7.8)
+
+[node name="BricksAccent_East" parent="ArenaEnvironment" instance=ExtResource("11_bricks")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 12.5, 0, 7.8)
+
+[node name="BannerBlue_North" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
+transform = Transform3D(-4.37114e-08, 0, 2.2, 0, 2.2, 0, -2.2, 0, -4.37114e-08, -14.2, 0, -5.5)
+
+[node name="BannerBlue_South" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
+transform = Transform3D(-4.37114e-08, 0, 2.2, 0, 2.2, 0, -2.2, 0, -4.37114e-08, -14.2, 0, 5.5)
 
 [node name="ZoneA_North" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -7.2)
@@ -314,6 +306,9 @@ shape = SubResource("CylinderShape3D_zone")
 [node name="PadRingMesh" type="MeshInstance3D" parent="ZoneA_North"]
 cast_shadow = 0
 mesh = SubResource("CylinderMesh_zone")
+
+[node name="ZoneFlag" parent="ZoneA_North" instance=ExtResource("14_flag")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, -1.8)
 
 [node name="ZoneB_South" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 7.2)
@@ -331,85 +326,28 @@ shape = SubResource("CylinderShape3D_zone")
 cast_shadow = 0
 mesh = SubResource("CylinderMesh_zone")
 
-[node name="TargetBotProxies" type="Node3D" parent="."]
+[node name="ZoneFlag" parent="ZoneB_South" instance=ExtResource("14_flag")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 1.8)
 
-[node name="BotProxy_Center" type="StaticBody3D" parent="TargetBotProxies"]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 10.2, 0, 0)
-collision_layer = 2
-collision_mask = 0
+[node name="ArenaBots" type="Node3D" parent="."]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="TargetBotProxies/BotProxy_Center"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.825, 0)
-shape = SubResource("CapsuleShape3D_bot")
+[node name="Bot_Center" parent="ArenaBots" instance=ExtResource("6_bot")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.6, 0.02, 0)
+patrol_offset_a = Vector3(0, 0, -4.5)
+patrol_offset_b = Vector3(0, 0, 4.5)
 
-[node name="BodyMesh" type="MeshInstance3D" parent="TargetBotProxies/BotProxy_Center"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62, 0)
-mesh = SubResource("BoxMesh_bot_body")
-surface_material_override/0 = SubResource("StandardMaterial3D_bot_orange")
+[node name="Bot_North" parent="ArenaBots" instance=ExtResource("6_bot")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.8, 0.02, -7.8)
+patrol_offset_a = Vector3(-4.2, 0, 0)
+patrol_offset_b = Vector3(3.2, 0, 0)
 
-[node name="HeadMesh" type="MeshInstance3D" parent="TargetBotProxies/BotProxy_Center"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.44, 0)
-mesh = SubResource("BoxMesh_bot_head")
-surface_material_override/0 = SubResource("StandardMaterial3D_bot_orange")
-
-[node name="VisorMesh" type="MeshInstance3D" parent="TargetBotProxies/BotProxy_Center"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.46, -0.22)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_bot_visor")
-surface_material_override/0 = SubResource("StandardMaterial3D_bot_visor")
-
-[node name="BotProxy_North" type="StaticBody3D" parent="TargetBotProxies"]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 7.6, 0, -7.2)
-collision_layer = 2
-collision_mask = 0
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="TargetBotProxies/BotProxy_North"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.825, 0)
-shape = SubResource("CapsuleShape3D_bot")
-
-[node name="BodyMesh" type="MeshInstance3D" parent="TargetBotProxies/BotProxy_North"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62, 0)
-mesh = SubResource("BoxMesh_bot_body")
-surface_material_override/0 = SubResource("StandardMaterial3D_bot_orange")
-
-[node name="HeadMesh" type="MeshInstance3D" parent="TargetBotProxies/BotProxy_North"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.44, 0)
-mesh = SubResource("BoxMesh_bot_head")
-surface_material_override/0 = SubResource("StandardMaterial3D_bot_orange")
-
-[node name="VisorMesh" type="MeshInstance3D" parent="TargetBotProxies/BotProxy_North"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.46, -0.22)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_bot_visor")
-surface_material_override/0 = SubResource("StandardMaterial3D_bot_visor")
-
-[node name="BotProxy_South" type="StaticBody3D" parent="TargetBotProxies"]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 7.6, 0, 7.2)
-collision_layer = 2
-collision_mask = 0
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="TargetBotProxies/BotProxy_South"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.825, 0)
-shape = SubResource("CapsuleShape3D_bot")
-
-[node name="BodyMesh" type="MeshInstance3D" parent="TargetBotProxies/BotProxy_South"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62, 0)
-mesh = SubResource("BoxMesh_bot_body")
-surface_material_override/0 = SubResource("StandardMaterial3D_bot_orange")
-
-[node name="HeadMesh" type="MeshInstance3D" parent="TargetBotProxies/BotProxy_South"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.44, 0)
-mesh = SubResource("BoxMesh_bot_head")
-surface_material_override/0 = SubResource("StandardMaterial3D_bot_orange")
-
-[node name="VisorMesh" type="MeshInstance3D" parent="TargetBotProxies/BotProxy_South"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.46, -0.22)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_bot_visor")
-surface_material_override/0 = SubResource("StandardMaterial3D_bot_visor")
+[node name="Bot_South" parent="ArenaBots" instance=ExtResource("6_bot")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.8, 0.02, 7.8)
+patrol_offset_a = Vector3(-4.2, 0, 0)
+patrol_offset_b = Vector3(3.2, 0, 0)
 
 [node name="PlayerCharacter" parent="." instance=ExtResource("3_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.8, 0.02, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.2, 0.02, 0)
 camera_rig_path = NodePath("../ArenaCameraRig")
 touch_hud_path = NodePath("../TouchControlsHUD")
 

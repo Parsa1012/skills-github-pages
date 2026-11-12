@@ -64,10 +64,10 @@ func _refresh_ui() -> void:
 	var cam_cfg: CameraConfig = CameraConfig.from_project_settings()
 	_camera_info_label.text = (
 		"دوربین BombSquad: زاویه %.1f° | فاصله %.1f متر | زاویه دید %.0f°\n"
-		+ "پوشه آماده Kenney: assets/kenney/ (در انتظار بارگذاری مدل‌ها)"
+		+ "مدل‌های Kenney (شخصیت، سلاح انرژی، سنگرها و بات‌ها) متصل و فعال هستند."
 	) % [cam_cfg.pitch_degrees, cam_cfg.distance, cam_cfg.fov_degrees]
 
-	_status_label.text = "فاز ۲ آفلاین | رندرر: GL Compatibility | فریم هدف: %d FPS | کیفیت: %s" % [
+	_status_label.text = "نسخه آفلاین Kenney | رندرر: GL Compatibility | فریم هدف: %d FPS | کیفیت: %s" % [
 		fps_target,
 		quality_fa
 	]

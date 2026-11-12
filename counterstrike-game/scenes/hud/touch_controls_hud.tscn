@@ -1,30 +1,31 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/touch_controls_hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/virtual_joystick.gd" id="2_stick"]
 [ext_resource type="Script" path="res://scripts/ui/touch_fire_pad.gd" id="3_firepad"]
+[ext_resource type="Script" path="res://scripts/ui/touch_action_button.gd" id="4_actionbtn"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
-content_margin_left = 12.0
+content_margin_left = 10.0
 content_margin_top = 6.0
-content_margin_right = 12.0
+content_margin_right = 10.0
 content_margin_bottom = 6.0
-bg_color = Color(0.0705882, 0.101961, 0.168627, 0.85)
+bg_color = Color(0.0705882, 0.101961, 0.168627, 0.88)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.219608, 0.741176, 0.972549, 0.35)
+border_color = Color(0.219608, 0.741176, 0.972549, 0.4)
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
-content_margin_left = 14.0
-content_margin_top = 8.0
-content_margin_right = 14.0
-content_margin_bottom = 8.0
+content_margin_left = 12.0
+content_margin_top = 7.0
+content_margin_right = 12.0
+content_margin_bottom = 7.0
 bg_color = Color(0.117647, 0.160784, 0.25098, 0.92)
 border_width_left = 1
 border_width_top = 1
@@ -43,21 +44,45 @@ script = ExtResource("1_hud")
 [node name="TopSafeMargin" type="MarginContainer" parent="."]
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 68.0
+offset_bottom = 64.0
 grow_horizontal = 2
 mouse_filter = 2
 
 [node name="TopHudBar" type="HBoxContainer" parent="TopSafeMargin"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="BtnBackMenu" type="Button" parent="TopSafeMargin/TopHudBar"]
-custom_minimum_size = Vector2(118, 44)
+custom_minimum_size = Vector2(96, 42)
 layout_mode = 2
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "منوی اصلی"
+
+[node name="ScoreBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="ScoreLabel" type="Label" parent="TopSafeMargin/TopHudBar/ScoreBadge"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
+theme_override_font_sizes/font_size = 14
+text = "آبی 0 — 0 نارنجی"
+vertical_alignment = 1
+
+[node name="StatsBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="StatsLabel" type="Label" parent="TopSafeMargin/TopHudBar/StatsBadge"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.901961, 0.960784, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "جان: 100/100 | پالس بلاستر: 16/16"
+vertical_alignment = 1
 
 [node name="ZoneBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
 layout_mode = 2
@@ -67,7 +92,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
 [node name="ZoneLabel" type="Label" parent="TopSafeMargin/TopHudBar/ZoneBadge"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13
 text = "موقعیت: میدان آزاد"
 vertical_alignment = 1
 
@@ -84,14 +109,14 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
 [node name="PerfLabel" type="Label" parent="TopSafeMargin/TopHudBar/PerfBadge"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
-theme_override_font_sizes/font_size = 14
-text = "30 / 30 FPS"
+theme_override_font_sizes/font_size = 13
+text = "30/30 FPS"
 vertical_alignment = 1
 
 [node name="BtnAimMode" type="Button" parent="TopSafeMargin/TopHudBar"]
-custom_minimum_size = Vector2(178, 44)
+custom_minimum_size = Vector2(160, 42)
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "حالت: دو جوی‌استیک"
 
@@ -148,6 +173,33 @@ max_radius = 74.0
 knob_radius = 28.0
 enable_fire_threshold = true
 fire_threshold_ratio = 0.74
+
+[node name="ActionPadRow" type="HBoxContainer" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -224.0
+offset_top = 8.0
+offset_right = -10.0
+offset_bottom = 52.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="BtnRecharge" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+script = ExtResource("4_actionbtn")
+title_text = "شارژ"
+accent_color = Color(0.984314, 0.572549, 0.235294, 1)
+
+[node name="BtnSwitchBlaster" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
+custom_minimum_size = Vector2(108, 44)
+layout_mode = 2
+script = ExtResource("4_actionbtn")
+title_text = "تغییر سلاح"
+accent_color = Color(0.219608, 0.741176, 0.972549, 1)
 
 [node name="FirePadAnchor" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay"]
 layout_mode = 1

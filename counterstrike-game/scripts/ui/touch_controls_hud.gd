@@ -1,11 +1,15 @@
 extends CanvasLayer
-## رابط کاربری کنترل لمسی دو جوی‌استیک و نمایشگر وضعیت میدان نبرد در فاز ۲.
+## رابط کاربری کنترل لمسی چندلمسی، جان/انرژی، امتیاز و وضعیت میدان نبرد.
 
 @onready var _top_safe_margin: MarginContainer = $TopSafeMargin
 @onready var _bottom_safe_margin: MarginContainer = $BottomSafeMargin
 @onready var _left_move_stick: VirtualJoystick = $BottomSafeMargin/TouchControlsRow/LeftMoveStick
 @onready var _right_aim_stick: VirtualJoystick = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/RightAimStick
 @onready var _dedicated_fire_pad: TouchFirePad = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/FirePadAnchor/DedicatedFirePad
+@onready var _btn_switch_blaster: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnSwitchBlaster
+@onready var _btn_recharge: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnRecharge
+@onready var _score_label: Label = $TopSafeMargin/TopHudBar/ScoreBadge/ScoreLabel
+@onready var _stats_label: Label = $TopSafeMargin/TopHudBar/StatsBadge/StatsLabel
 @onready var _zone_label: Label = $TopSafeMargin/TopHudBar/ZoneBadge/ZoneLabel
 @onready var _perf_label: Label = $TopSafeMargin/TopHudBar/PerfBadge/PerfLabel
 @onready var _aim_mode_btn: Button = $TopSafeMargin/TopHudBar/BtnAimMode
@@ -18,18 +22,25 @@ func _ready() -> void:
 	if _top_safe_margin != null:
 		_top_safe_margin.layout_direction = Control.LAYOUT_DIRECTION_RTL
 	if _bottom_safe_margin != null:
-		# چیدمان فیزیکی کنترل لمسی باید همیشه چپ=حرکت و راست=نشانه بماند.
 		_bottom_safe_margin.layout_direction = Control.LAYOUT_DIRECTION_LTR
 
 	_setup_excluded_controls()
 	_apply_safe_area_margins()
 	_apply_aim_fire_mode()
 	_update_zone_badge("میدان آزاد")
+	_update_score_badge(0, 0)
 	_update_perf_badge()
 
 	get_viewport().size_changed.connect(_apply_safe_area_margins)
 	EventBus.aim_fire_mode_changed.connect(_on_aim_fire_mode_changed)
 	EventBus.player_zone_changed.connect(_on_player_zone_changed)
+	EventBus.player_stats_updated.connect(_on_player_stats_updated)
+	EventBus.score_updated.connect(_on_score_updated)
+
+	if _btn_switch_blaster != null:
+		_btn_switch_blaster.action_triggered.connect(_on_switch_blaster_triggered)
+	if _btn_recharge != null:
+		_btn_recharge.action_triggered.connect(_on_recharge_triggered)
 
 
 func _process(delta: float) -> void:
@@ -40,8 +51,16 @@ func _process(delta: float) -> void:
 
 
 func _setup_excluded_controls() -> void:
-	if _right_aim_stick != null and _dedicated_fire_pad != null:
-		_right_aim_stick.excluded_controls = [_dedicated_fire_pad]
+	if _right_aim_stick == null:
+		return
+	var excl: Array[Control] = []
+	if _dedicated_fire_pad != null:
+		excl.append(_dedicated_fire_pad)
+	if _btn_switch_blaster != null:
+		excl.append(_btn_switch_blaster)
+	if _btn_recharge != null:
+		excl.append(_btn_recharge)
+	_right_aim_stick.excluded_controls = excl
 
 
 func _apply_safe_area_margins() -> void:
@@ -80,11 +99,28 @@ func _on_aim_fire_mode_changed(_mode_name: String) -> void:
 
 
 func _on_player_zone_changed(_zone_id: String, zone_title_fa: String, inside: bool) -> void:
-	if inside:
-		_active_zone_title = zone_title_fa
-	else:
-		_active_zone_title = "میدان آزاد"
+	_active_zone_title = zone_title_fa if inside else "میدان آزاد"
 	_update_zone_badge(_active_zone_title)
+
+
+func _on_player_stats_updated(hp: int, max_hp: int, energy: int, max_energy: int, blaster_name_fa: String, recharging: bool) -> void:
+	if _stats_label == null:
+		return
+	var energy_str: String = "در حال شارژ..." if recharging else "%d / %d" % [energy, max_energy]
+	_stats_label.text = "جان: %d/%d  |  %s: %s" % [hp, max_hp, blaster_name_fa, energy_str]
+	if hp <= 30:
+		_stats_label.add_theme_color_override("font_color", Color(0.984314, 0.45098, 0.086275, 1.0))
+	else:
+		_stats_label.add_theme_color_override("font_color", Color(0.901961, 0.960784, 1.0, 1.0))
+
+
+func _on_score_updated(blue_score: int, orange_score: int) -> void:
+	_update_score_badge(blue_score, orange_score)
+
+
+func _update_score_badge(blue_score: int, orange_score: int) -> void:
+	if _score_label != null:
+		_score_label.text = "آبی %d  —  %d نارنجی" % [blue_score, orange_score]
 
 
 func _update_zone_badge(zone_title: String) -> void:
@@ -96,13 +132,7 @@ func _update_perf_badge() -> void:
 	if _perf_label == null:
 		return
 	var current_fps: int = int(round(Engine.get_frames_per_second()))
-	var quality_fa: String = "متوسط"
-	match SaveManager.quality_preset:
-		"low":
-			quality_fa = "کم"
-		"high":
-			quality_fa = "زیاد"
-	_perf_label.text = "%d / %d FPS • کیفیت %s" % [current_fps, SaveManager.target_fps, quality_fa]
+	_perf_label.text = "%d/%d FPS" % [current_fps, SaveManager.target_fps]
 
 
 func get_move_vector() -> Vector2:
@@ -117,6 +147,14 @@ func is_fire_active() -> bool:
 	if SaveManager.aim_fire_mode == "fire_button":
 		return _dedicated_fire_pad != null and _dedicated_fire_pad.is_pressed
 	return _right_aim_stick != null and _right_aim_stick.is_fire_engaged
+
+
+func _on_switch_blaster_triggered() -> void:
+	EventBus.blaster_switch_requested.emit()
+
+
+func _on_recharge_triggered() -> void:
+	EventBus.blaster_recharge_requested.emit()
 
 
 func _on_btn_back_menu_pressed() -> void:

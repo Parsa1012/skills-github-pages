@@ -1,5 +1,5 @@
 extends Node
-## Lightweight Node object pool to prevent GC/allocation spikes on Samsung Galaxy A32.
+## استخر اشیاء سبک برای جلوگیری از افت فریم و تخصیص حافظه حین بازی روی Galaxy A32.
 
 var _pools: Dictionary = {}
 var _scenes: Dictionary = {}
@@ -8,10 +8,11 @@ var _scenes: Dictionary = {}
 func register_pool(pool_id: StringName, scene: PackedScene, prewarm_count: int = 0) -> void:
 	if scene == null:
 		return
-	_scenes[pool_id] = scene
-	if not _pools.has(pool_id):
-		_pools[pool_id] = []
+	if _scenes.has(pool_id):
+		return
 
+	_scenes[pool_id] = scene
+	_pools[pool_id] = []
 	var bucket: Array = _pools[pool_id]
 	for _i in prewarm_count:
 		var instance: Node = scene.instantiate()
@@ -59,7 +60,8 @@ func release(pool_id: StringName, node: Node) -> void:
 	add_child(node)
 
 	var bucket: Array = _pools[pool_id]
-	bucket.append(node)
+	if not bucket.has(node):
+		bucket.append(node)
 
 
 func clear_all_pools() -> void:

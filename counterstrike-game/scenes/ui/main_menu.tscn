@@ -78,7 +78,7 @@ text = "کانتر استرایک آرنا"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
 theme_override_font_sizes/font_size = 15
-text = "میدان نبرد آرکید 2.5D آفلاین • فاز ۲ (شخصیت سه‌بعدی، حرکت و کنترل لمسی)"
+text = "میدان نبرد آرکید 2.5D آفلاین • مدل‌ها و سلاح‌های Kenney • کنترل لمسی و نبرد با بات‌ها"
 
 [node name="BadgeLabel" type="Label" parent="SafeMargin/MainLayout/HeaderBar"]
 layout_mode = 2
@@ -105,7 +105,7 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("2_vazir_bold")
 theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
-text = "ورود به میدان نبرد (فاز ۲: حرکت و جوی‌استیک)"
+text = "ورود به میدان نبرد آرکید (Kenney + نبرد با بات‌ها)"
 
 [node name="BtnCameraTest" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
 custom_minimum_size = Vector2(0, 56)

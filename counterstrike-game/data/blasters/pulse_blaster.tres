@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnergyBlasterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/energy_blaster_data.gd" id="1_blaster"]
+
+[resource]
+script = ExtResource("1_blaster")
+blaster_id = &"pulse_blaster"
+display_name = "پالس بلاستر"
+category = 2
+energy_damage = 28.0
+pulse_cooldown = 0.24
+projectile_speed = 26.0
+energy_cell_capacity = 16
+recharge_seconds = 1.05
+spread_still_deg = 0.8
+spread_moving_deg = 3.0
+pellets_per_shot = 1
+projectile_color = Color(0.219608, 0.741176, 0.972549, 1)
+model_scene_path = "res://assets/kenney/fps/blaster.glb"
+model_scale = 0.46
+shoot_sfx_path = "res://assets/kenney/audio/blaster.ogg"
+arena_credit_cost = 0
