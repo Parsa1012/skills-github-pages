@@ -2,6 +2,7 @@ extends Control
 ## منوی اصلی و مرکز تنظیمات آفلاین بازی (پشتیبانی کامل فارسی RTL و حاشیه امن صفحه موبایل).
 
 @onready var _safe_margin: MarginContainer = $SafeMargin
+@onready var _match_mode_btn: Button = $SafeMargin/MainLayout/ContentRow/ActionColumn/BtnMatchMode
 @onready var _settings_panel: PanelContainer = $SafeMargin/MainLayout/ContentRow/SettingsPanel
 @onready var _fps_30_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow/BtnFps30
 @onready var _fps_60_btn: Button = $SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow/BtnFps60
@@ -61,16 +62,30 @@ func _refresh_ui() -> void:
 		"high":
 			quality_fa = "زیاد"
 
+	var active_mode: ArenaModeConfig = GameManager.get_active_mode_config()
+	if _match_mode_btn != null and active_mode != null:
+		_match_mode_btn.text = "حالت نبرد: %s (هدف: %d)" % [active_mode.display_name_fa, active_mode.target_score]
+
 	var cam_cfg: CameraConfig = CameraConfig.from_project_settings()
 	_camera_info_label.text = (
 		"دوربین BombSquad: زاویه %.1f° | فاصله %.1f متر | زاویه دید %.0f°\n"
-		+ "مدل‌های Kenney (شخصیت، سلاح انرژی، سنگرها و بات‌ها) متصل و فعال هستند."
+		+ "میدان نبرد ۲×۳: ۱ هم‌تیمی آبی در برابر ۳ پهپاد نارنجی با ۳ سلاح انرژی."
 	) % [cam_cfg.pitch_degrees, cam_cfg.distance, cam_cfg.fov_degrees]
 
-	_status_label.text = "نسخه آفلاین Kenney | رندرر: GL Compatibility | فریم هدف: %d FPS | کیفیت: %s" % [
+	_status_label.text = "سابقه آفلاین: %d نبرد (%d پیروزی، %d حذف) | هدف: %d FPS | کیفیت: %s" % [
+		SaveManager.total_matches,
+		SaveManager.total_wins,
+		SaveManager.total_eliminations,
 		fps_target,
 		quality_fa
 	]
+
+
+func _on_btn_match_mode_pressed() -> void:
+	AudioManager.play_ui_menu()
+	var next_mode_id: String = "team_score_rush" if SaveManager.selected_mode_id == "zone_control" else "zone_control"
+	GameManager.set_selected_mode(next_mode_id)
+	_refresh_ui()
 
 
 func _on_btn_enter_arena_pressed() -> void:

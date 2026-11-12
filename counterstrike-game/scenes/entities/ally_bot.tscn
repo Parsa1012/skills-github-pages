@@ -1,0 +1,83 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/ai/arena_bot.gd" id="1_bot"]
+[ext_resource type="PackedScene" path="res://assets/kenney/platformer/character.glb" id="2_glb"]
+[ext_resource type="Resource" path="res://data/bots/ally_wingman.tres" id="3_profile"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_bot"]
+radius = 0.44
+height = 1.65
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ring"]
+top_radius = 0.64
+bottom_radius = 0.68
+height = 0.03
+radial_segments = 20
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ring"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.219608, 0.741176, 0.972549, 0.65)
+
+[sub_resource type="QuadMesh" id="QuadMesh_hp_bg"]
+size = Vector2(1.16, 0.14)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hp_bg"]
+shading_mode = 0
+albedo_color = Color(0.0588235, 0.0901961, 0.164706, 0.9)
+
+[sub_resource type="QuadMesh" id="QuadMesh_hp_fill"]
+size = Vector2(1.1, 0.09)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hp_fill"]
+shading_mode = 0
+albedo_color = Color(0.219608, 0.741176, 0.972549, 1)
+
+[node name="AllyBot" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 3
+floor_max_angle = 0.802851
+script = ExtResource("1_bot")
+team_id = 0
+profile = ExtResource("3_profile")
+fire_cooldown = 0.8
+projectile_speed = 20.0
+projectile_damage = 14.0
+hover_bob_enabled = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.825, 0)
+shape = SubResource("CapsuleShape3D_bot")
+
+[node name="TeamRingMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_ring")
+surface_material_override/0 = SubResource("StandardMaterial3D_ring")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="ModelPivot" type="Node3D" parent="VisualRoot"]
+
+[node name="KenneyAlly" parent="VisualRoot/ModelPivot" instance=ExtResource("2_glb")]
+transform = Transform3D(-1.55, 0, 0, 0, 1.55, 0, 0, 0, -1.55, 0, 0, 0)
+
+[node name="MuzzleLeft" type="Marker3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.38, 0.88, -0.62)
+
+[node name="MuzzleRight" type="Marker3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.38, 0.88, -0.62)
+
+[node name="HpBarPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5373, 0.843391, 0, -0.843391, 0.5373, 0, 2.02, 0)
+
+[node name="HpBarBg" type="MeshInstance3D" parent="HpBarPivot"]
+cast_shadow = 0
+mesh = SubResource("QuadMesh_hp_bg")
+surface_material_override/0 = SubResource("StandardMaterial3D_hp_bg")
+
+[node name="HpBarFill" type="MeshInstance3D" parent="HpBarPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.01)
+cast_shadow = 0
+mesh = SubResource("QuadMesh_hp_fill")
+surface_material_override/0 = SubResource("StandardMaterial3D_hp_fill")

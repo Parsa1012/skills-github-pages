@@ -1,5 +1,5 @@
 extends Node
-## هماهنگ‌کننده اصلی جلسه آفلاین، مدیریت نرخ فریم/کیفیت و جابه‌جایی بین صحنه‌ها.
+## هماهنگ‌کننده اصلی جلسه آفلاین، مدیریت نرخ فریم/کیفیت، حالت مسابقه و جابه‌جایی بین صحنه‌ها.
 
 enum AppState {
 	BOOT,
@@ -12,6 +12,8 @@ enum AppState {
 const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 const CAMERA_TEST_SCENE: String = "res://scenes/test/camera_angle_test.tscn"
 const ARENA_SECTOR_01_SCENE: String = "res://scenes/maps/arena_sector_01.tscn"
+const MODE_ZONE_CONTROL_PATH: String = "res://data/modes/zone_control.tres"
+const MODE_TEAM_RUSH_PATH: String = "res://data/modes/team_score_rush.tres"
 
 var current_state: AppState = AppState.BOOT
 
@@ -19,6 +21,8 @@ var current_state: AppState = AppState.BOOT
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	TranslationServer.set_locale("fa")
+	if get_tree() != null:
+		get_tree().set_quit_on_go_back(false)
 	_apply_persian_theme()
 	_register_camera_project_settings()
 	apply_performance_settings()
@@ -98,6 +102,38 @@ func set_aim_fire_mode(mode: String) -> void:
 		SaveManager.aim_fire_mode = mode
 		SaveManager.save_settings()
 		EventBus.aim_fire_mode_changed.emit(mode)
+
+
+func set_selected_mode(mode_id: String) -> void:
+	if mode_id in ["zone_control", "team_score_rush"]:
+		SaveManager.selected_mode_id = mode_id
+		SaveManager.save_settings()
+		EventBus.selected_mode_changed.emit(mode_id)
+
+
+func get_active_mode_config() -> ArenaModeConfig:
+	var path: String = MODE_TEAM_RUSH_PATH if SaveManager.selected_mode_id == "team_score_rush" else MODE_ZONE_CONTROL_PATH
+	if ResourceLoader.exists(path):
+		var res: Resource = ResourceLoader.load(path)
+		if res is ArenaModeConfig:
+			return res as ArenaModeConfig
+	var fallback := ArenaModeConfig.new()
+	return fallback
+
+
+func record_match_result(won: bool, eliminations: int) -> void:
+	SaveManager.total_matches += 1
+	if won:
+		SaveManager.total_wins += 1
+	SaveManager.total_eliminations += maxi(0, eliminations)
+	SaveManager.save_settings()
+
+
+func set_match_paused(paused: bool) -> void:
+	if get_tree() != null:
+		get_tree().paused = paused
+	current_state = AppState.PAUSED if paused else AppState.ARENA_PLAY
+	EventBus.match_paused_changed.emit(paused)
 
 
 func go_to_main_menu() -> void:

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ArenaBotProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_bot_profile.gd" id="1_profile"]
+
+[resource]
+script = ExtResource("1_profile")
+profile_id = &"scout_drone"
+display_name = "پهپاد سریع"
+difficulty = 0
+max_shield = 75.0
+move_speed = 4.35
+reaction_delay_sec = 0.28
+aim_precision = 0.64
+sight_range = 16.0
+zone_objective_focus = 0.85

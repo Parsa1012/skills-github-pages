@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ArenaBotProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_bot_profile.gd" id="1_profile"]
+
+[resource]
+script = ExtResource("1_profile")
+profile_id = &"heavy_sentinel"
+display_name = "پهپاد سنگین"
+difficulty = 2
+max_shield = 145.0
+move_speed = 2.75
+reaction_delay_sec = 0.4
+aim_precision = 0.8
+sight_range = 15.0
+zone_objective_focus = 0.55

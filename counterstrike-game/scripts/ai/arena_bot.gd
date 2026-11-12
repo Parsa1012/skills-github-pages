@@ -1,6 +1,6 @@
 class_name ArenaBot
 extends CharacterBody3D
-## هوش مصنوعی بات دشمن آفلاین (مدل پهپاد Kenney، گشت‌زنی، خط دید، تیراندازی انرژی و بازگشت).
+## هوش مصنوعی بات تاکتیکی تیمی (پشتیبانی از تیم آبی/نارنجی، تصرف مناطق، خط دید و بازگشت).
 
 signal bot_defeated(bot: ArenaBot, attacker_team: int)
 
@@ -17,6 +17,7 @@ enum BotState {
 @export var fire_cooldown: float = 1.05
 @export var projectile_speed: float = 16.0
 @export var projectile_damage: float = 10.0
+@export var hover_bob_enabled: bool = true
 
 @onready var _collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var _visual_root: Node3D = $VisualRoot
@@ -35,17 +36,19 @@ var _patrol_index: int = 0
 var _patrol_leg_timer: float = 0.0
 var _patrol_stuck_timer: float = 0.0
 var _patrol_check_pos: Vector3 = Vector3.ZERO
+var _zone_seek_pause_timer: float = 0.0
 var _hover_time: float = 0.0
 var _los_timer: float = 0.0
 var _fire_timer: float = 0.6
 var _respawn_timer: float = 0.0
 var _has_los: bool = false
-var _player_ref: Node3D = null
+var _target_ref: Node3D = null
 var _facing_yaw: float = PI * 0.5
 var _strafe_sign: float = 1.0
 var _strafe_timer: float = 0.0
 var _use_left_muzzle: bool = true
 var _gravity: float = 18.0
+var _anim_player: AnimationPlayer = null
 
 
 func _ready() -> void:
@@ -57,12 +60,52 @@ func _ready() -> void:
 	_hover_time = randf() * TAU
 	_los_timer = randf() * 0.25
 	_strafe_sign = 1.0 if randf() >= 0.5 else -1.0
+	_facing_yaw = -PI * 0.5 if team_id == 0 else PI * 0.5
+	_setup_team_visuals()
+	_setup_model_animations()
 	_update_hp_bar()
 
 
+func is_alive() -> bool:
+	return _state != BotState.RESPAWN
+
+
+func _setup_team_visuals() -> void:
+	var ring_col := Color(0.219608, 0.741176, 0.972549, 0.65) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 0.62)
+	var hp_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)
+
+	if _team_ring != null:
+		var rmat := StandardMaterial3D.new()
+		rmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		rmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		rmat.albedo_color = ring_col
+		_team_ring.material_override = rmat
+
+	if _hp_bar_fill != null:
+		var hmat := StandardMaterial3D.new()
+		hmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		hmat.albedo_color = hp_col
+		_hp_bar_fill.material_override = hmat
+
+
+func _setup_model_animations() -> void:
+	if _model_pivot == null:
+		return
+	_anim_player = _model_pivot.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _anim_player == null:
+		return
+	for anim_name in ["idle", "walk"]:
+		if _anim_player.has_animation(anim_name):
+			var anim: Animation = _anim_player.get_animation(anim_name)
+			if anim != null:
+				anim.loop_mode = Animation.LOOP_LINEAR
+	if _anim_player.has_animation("idle"):
+		_anim_player.play("idle")
+
+
 func _physics_process(delta: float) -> void:
-	_hover_time += delta * 3.4
-	if _model_pivot != null:
+	if hover_bob_enabled and _model_pivot != null:
+		_hover_time += delta * 3.4
 		_model_pivot.position.y = 0.52 + sin(_hover_time) * 0.10
 
 	if _state == BotState.RESPAWN:
@@ -71,17 +114,16 @@ func _physics_process(delta: float) -> void:
 			_respawn_at_home()
 		return
 
-	if _player_ref == null or not is_instance_valid(_player_ref):
-		var players: Array[Node] = get_tree().get_nodes_in_group("player")
-		if not players.is_empty():
-			_player_ref = players[0] as Node3D
+	if _zone_seek_pause_timer > 0.0:
+		_zone_seek_pause_timer = maxf(0.0, _zone_seek_pause_timer - delta)
 
 	_los_timer -= delta
 	if _los_timer <= 0.0:
-		_los_timer = 0.22
-		_has_los = _check_player_line_of_sight()
+		_los_timer = 0.24
+		_target_ref = _find_best_visible_target()
+		_has_los = (_target_ref != null)
 
-	if _has_los and _player_ref != null:
+	if _has_los and _target_ref != null and is_instance_valid(_target_ref):
 		_state = BotState.ENGAGE
 	else:
 		_state = BotState.PATROL
@@ -101,11 +143,45 @@ func _physics_process(delta: float) -> void:
 
 	if _visual_root != null:
 		_visual_root.rotation.y = _facing_yaw
+	_update_walk_animation()
+
+
+func _update_walk_animation() -> void:
+	if _anim_player == null:
+		return
+	var horiz_speed: float = Vector3(velocity.x, 0.0, velocity.z).length()
+	if horiz_speed > 0.45 and _anim_player.has_animation("walk"):
+		if _anim_player.current_animation != "walk":
+			_anim_player.play("walk", 0.12)
+		_anim_player.speed_scale = clampf(horiz_speed / 3.5, 0.7, 1.35)
+	elif _anim_player.has_animation("idle"):
+		if _anim_player.current_animation != "idle":
+			_anim_player.play("idle", 0.14)
+		_anim_player.speed_scale = 1.0
+
+
+func _pick_objective_target() -> Vector3:
+	var focus: float = profile.zone_objective_focus if profile != null else 0.0
+	if focus >= 0.6 and _zone_seek_pause_timer <= 0.0 and SaveManager.selected_mode_id == "zone_control":
+		var best_zone: Node3D = null
+		var best_dist: float = 18.0
+		for z in get_tree().get_nodes_in_group("capture_zones"):
+			if z is CaptureZonePad:
+				var pad := z as CaptureZonePad
+				if pad.get_owner_team() != team_id:
+					var d: float = global_position.distance_to(pad.global_position)
+					if d < best_dist:
+						best_dist = d
+						best_zone = pad
+		if best_zone != null:
+			return Vector3(best_zone.global_position.x, global_position.y, best_zone.global_position.z)
+
+	var offset: Vector3 = patrol_offset_a if _patrol_index == 0 else patrol_offset_b
+	return _home_pos + offset
 
 
 func _process_patrol(delta: float) -> void:
-	var offset: Vector3 = patrol_offset_a if _patrol_index == 0 else patrol_offset_b
-	var target: Vector3 = _home_pos + offset
+	var target: Vector3 = _pick_objective_target()
 	var to_target := Vector3(target.x - global_position.x, 0.0, target.z - global_position.z)
 
 	_patrol_leg_timer += delta
@@ -115,43 +191,56 @@ func _process_patrol(delta: float) -> void:
 		if global_position.distance_to(_patrol_check_pos) < 0.25:
 			_patrol_index = 1 - _patrol_index
 			_patrol_leg_timer = 0.0
+			_zone_seek_pause_timer = 3.5
 		_patrol_check_pos = global_position
 
-	if to_target.length() < 0.65 or _patrol_leg_timer >= 5.0:
-		_patrol_index = 1 - _patrol_index
-		_patrol_leg_timer = 0.0
+	if to_target.length() < 0.75:
+		velocity.x = move_toward(velocity.x, 0.0, 14.0 * delta)
+		velocity.z = move_toward(velocity.z, 0.0, 14.0 * delta)
+		if _patrol_leg_timer >= 1.2:
+			_patrol_index = 1 - _patrol_index
+			_patrol_leg_timer = 0.0
 		return
 
+	if _patrol_leg_timer >= 5.5:
+		_patrol_index = 1 - _patrol_index
+		_patrol_leg_timer = 0.0
+
 	var dir: Vector3 = to_target.normalized()
-	var spd: float = (profile.move_speed if profile != null else 3.4) * 0.78
+	var spd: float = (profile.move_speed if profile != null else 3.4) * 0.80
 	velocity.x = move_toward(velocity.x, dir.x * spd, 14.0 * delta)
 	velocity.z = move_toward(velocity.z, dir.z * spd, 14.0 * delta)
 	_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir.x, -dir.z), clampf(8.0 * delta, 0.0, 1.0))
 
 
 func _process_engage(delta: float) -> void:
-	if _player_ref == null:
+	if _target_ref == null or not is_instance_valid(_target_ref):
 		return
-	var to_player := Vector3(_player_ref.global_position.x - global_position.x, 0.0, _player_ref.global_position.z - global_position.z)
-	var dist: float = to_player.length()
+	if _target_ref.has_method("is_alive") and not bool(_target_ref.call("is_alive")):
+		_has_los = false
+		_target_ref = null
+		return
+
+	var to_target := Vector3(_target_ref.global_position.x - global_position.x, 0.0, _target_ref.global_position.z - global_position.z)
+	var dist: float = to_target.length()
 	if dist < 0.01:
 		return
-	var dir_to_player: Vector3 = to_player / dist
-	_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir_to_player.x, -dir_to_player.z), clampf(12.0 * delta, 0.0, 1.0))
+	var dir_to_target: Vector3 = to_target / dist
+	_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir_to_target.x, -dir_to_target.z), clampf(12.0 * delta, 0.0, 1.0))
 
 	_strafe_timer -= delta
 	if _strafe_timer <= 0.0:
 		_strafe_timer = randf_range(1.1, 2.2)
 		_strafe_sign *= -1.0
 
-	var strafe_vec := Vector3(-dir_to_player.z, 0.0, dir_to_player.x) * _strafe_sign
+	var strafe_vec := Vector3(-dir_to_target.z, 0.0, dir_to_target.x) * _strafe_sign
 	var radial_factor: float = 0.0
 	if dist > 9.8:
 		radial_factor = 0.65
-	elif dist < 5.6:
+	elif dist < 5.4:
 		radial_factor = -0.75
 
-	var move_dir: Vector3 = (strafe_vec * 0.75 + dir_to_player * radial_factor)
+	var move_dir: Vector3 = (strafe_vec * 0.75 + dir_to_target * radial_factor)
 	if move_dir.length_squared() > 0.001:
 		move_dir = move_dir.normalized()
 	var spd: float = profile.move_speed if profile != null else 3.4
@@ -161,34 +250,51 @@ func _process_engage(delta: float) -> void:
 	_fire_timer -= delta
 	if _fire_timer <= 0.0:
 		_fire_timer = fire_cooldown
-		_fire_energy_bolt(dir_to_player)
+		_fire_energy_bolt(dir_to_target)
 
 
-func _check_player_line_of_sight() -> bool:
-	if _player_ref == null or not is_instance_valid(_player_ref):
-		return false
-	if _player_ref.has_method("is_alive") and not bool(_player_ref.call("is_alive")):
-		return false
-
+func _find_best_visible_target() -> Node3D:
 	var sight_range: float = profile.sight_range if profile != null else 15.5
-	var origin: Vector3 = global_position + Vector3(0.0, 0.95, 0.0)
-	var target: Vector3 = _player_ref.global_position + Vector3(0.0, 0.95, 0.0)
-	if origin.distance_to(target) > sight_range:
-		return false
+	var origin: Vector3 = global_position + Vector3(0.0, 0.92, 0.0)
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
 
-	var query := PhysicsRayQueryParameters3D.create(origin, target, 1 | 2, [get_rid()])
-	query.collide_with_areas = false
-	query.collide_with_bodies = true
-	var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
-	if hit.is_empty():
-		return false
-	return hit.get("collider") == _player_ref
+	var candidates: Array[Node] = []
+	candidates.append_array(get_tree().get_nodes_in_group("player"))
+	candidates.append_array(get_tree().get_nodes_in_group("arena_bots"))
+
+	var best_node: Node3D = null
+	var best_dist: float = sight_range
+
+	for cand in candidates:
+		if cand == self or not (cand is Node3D) or not is_instance_valid(cand):
+			continue
+		var cand_node := cand as Node3D
+		var cand_team: Variant = cand_node.get("team_id")
+		if cand_team == null or int(cand_team) == team_id:
+			continue
+		if cand_node.has_method("is_alive") and not bool(cand_node.call("is_alive")):
+			continue
+
+		var target_pos: Vector3 = cand_node.global_position + Vector3(0.0, 0.92, 0.0)
+		var dist: float = origin.distance_to(target_pos)
+		if dist > best_dist:
+			continue
+
+		var query := PhysicsRayQueryParameters3D.create(origin, target_pos, 1 | 2, [get_rid()])
+		query.collide_with_areas = false
+		query.collide_with_bodies = true
+		var hit: Dictionary = space_state.intersect_ray(query)
+		if not hit.is_empty() and hit.get("collider") == cand_node:
+			best_dist = dist
+			best_node = cand_node
+
+	return best_node
 
 
 func _fire_energy_bolt(aim_dir: Vector3) -> void:
 	var muzzle: Marker3D = _muzzle_left if _use_left_muzzle else _muzzle_right
 	_use_left_muzzle = not _use_left_muzzle
-	var torso_origin := global_position + Vector3(0.0, 0.96, 0.0)
+	var torso_origin := global_position + Vector3(0.0, 0.92, 0.0)
 	var spawn_pos: Vector3 = muzzle.global_position if muzzle != null else torso_origin + aim_dir * 0.65
 
 	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
@@ -199,7 +305,7 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 	var pre_hit: Dictionary = space_state.intersect_ray(pre_query)
 
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
-	var bolt_col := Color(0.984314, 0.45098, 0.086275, 1.0)
+	var bolt_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)
 
 	if not pre_hit.is_empty():
 		var hit_pos: Vector3 = pre_hit.get("position", spawn_pos)
@@ -227,7 +333,8 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 				self,
 				bolt_col
 			)
-	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_attack.ogg", randf_range(0.94, 1.06))
+	var sfx: String = "res://assets/kenney/audio/blaster.ogg" if team_id == 0 else "res://assets/kenney/audio/enemy_attack.ogg"
+	AudioManager.play_sfx_path(sfx, randf_range(0.94, 1.06), -3.0)
 
 
 func take_damage(amount: float, attacker_team: int) -> void:
@@ -239,7 +346,7 @@ func take_damage(amount: float, attacker_team: int) -> void:
 	if _hp <= 0.0:
 		_enter_respawn(attacker_team)
 	else:
-		AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_hurt.ogg", randf_range(0.95, 1.08))
+		AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_hurt.ogg", randf_range(0.95, 1.08), -2.0)
 
 
 func _enter_respawn(attacker_team: int) -> void:
@@ -249,9 +356,10 @@ func _enter_respawn(attacker_team: int) -> void:
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", randf_range(0.94, 1.04))
 
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+	var flash_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.572549, 0.235294, 1.0)
 	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 	if flash is ImpactFlash:
-		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.9, 0.0), Color(0.984314, 0.572549, 0.235294, 1.0))
+		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.9, 0.0), flash_col)
 
 	if _collision_shape != null:
 		_collision_shape.set_deferred("disabled", true)
@@ -272,13 +380,23 @@ func _find_safe_home_pos() -> Vector3:
 		Vector3(0.0, 0.0, 1.6),
 		Vector3(-1.6, 0.0, 0.0)
 	]
+	var units: Array[Node] = []
+	units.append_array(get_tree().get_nodes_in_group("player"))
+	units.append_array(get_tree().get_nodes_in_group("arena_bots"))
+
 	for off in offsets:
 		var cand := Vector3(
 			clampf(_home_pos.x + off.x, -13.6, 13.6),
 			_home_pos.y,
 			clampf(_home_pos.z + off.z, -9.6, 9.6)
 		)
-		if _player_ref == null or not is_instance_valid(_player_ref) or _player_ref.global_position.distance_to(cand) >= 1.4:
+		var blocked: bool = false
+		for u in units:
+			if u != self and u is Node3D and is_instance_valid(u) and (u as Node3D).visible:
+				if (u as Node3D).global_position.distance_to(cand) < 1.35:
+					blocked = true
+					break
+		if not blocked:
 			return cand
 	return _home_pos
 
@@ -288,9 +406,11 @@ func _respawn_at_home() -> void:
 	_patrol_check_pos = global_position
 	_patrol_leg_timer = 0.0
 	_patrol_stuck_timer = 0.0
+	_zone_seek_pause_timer = 0.0
 	velocity = Vector3.ZERO
 	_hp = _max_hp
 	_has_los = false
+	_target_ref = null
 	_fire_timer = 0.85
 	_state = BotState.PATROL
 	_update_hp_bar()

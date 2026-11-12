@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ArenaModeConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_mode_config.gd" id="1_mode"]
+
+[resource]
+script = ExtResource("1_mode")
+mode_id = &"zone_control"
+display_name = "کنترل مناطق"
+mode_type = 0
+rounds_to_win = 1
+round_duration_sec = 120.0
+zone_capture_seconds = 4.0
+target_score = 25
+bots_per_team = 3

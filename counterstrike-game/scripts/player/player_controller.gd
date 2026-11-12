@@ -46,6 +46,7 @@ var _recharging: bool = false
 var _recharge_timer: float = 0.0
 var _recoil_offset: float = 0.0
 var _step_timer: float = 0.0
+var _respawn_last_sec: int = -1
 
 
 func _ready() -> void:
@@ -139,10 +140,13 @@ func _ensure_default_blasters() -> void:
 		return
 	var p1: Resource = ResourceLoader.load("res://data/blasters/pulse_blaster.tres")
 	var p2: Resource = ResourceLoader.load("res://data/blasters/rapid_repeater.tres")
+	var p3: Resource = ResourceLoader.load("res://data/blasters/plasma_scatter.tres")
 	if p1 is EnergyBlasterData:
 		blasters.append(p1 as EnergyBlasterData)
 	if p2 is EnergyBlasterData:
 		blasters.append(p2 as EnergyBlasterData)
+	if p3 is EnergyBlasterData:
+		blasters.append(p3 as EnergyBlasterData)
 
 
 func _get_active_blaster() -> EnergyBlasterData:
@@ -214,6 +218,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if not _alive:
 		_respawn_timer -= delta
+		var sec_left: int = maxi(1, int(ceil(_respawn_timer)))
+		if sec_left != _respawn_last_sec and _respawn_timer > 0.0:
+			_respawn_last_sec = sec_left
+			EventBus.player_respawn_countdown.emit(_respawn_timer, true)
 		if _respawn_timer <= 0.0:
 			_respawn()
 		return
@@ -323,8 +331,14 @@ func _try_fire(horiz_speed: float) -> void:
 			(flash as ImpactFlash).trigger(hit_pos, b.projectile_color)
 	else:
 		var spawn_pos := Vector3(muzzle_pos.x, chest_origin.y, muzzle_pos.z)
-		for _p in b.pellets_per_shot:
-			var angle_rad: float = deg_to_rad(randf_range(-spread_deg, spread_deg))
+		var count: int = maxi(1, b.pellets_per_shot)
+		for p_idx in count:
+			var base_deg: float = 0.0
+			if count > 1:
+				base_deg = lerpf(-spread_deg, spread_deg, float(p_idx) / float(count - 1))
+			else:
+				base_deg = randf_range(-spread_deg, spread_deg)
+			var angle_rad: float = deg_to_rad(base_deg + (randf_range(-0.8, 0.8) if count > 1 else 0.0))
 			var bolt_dir: Vector3 = forward_dir.rotated(Vector3.UP, angle_rad)
 			var proj: Node = PoolManager.acquire(EnergyProjectile.POOL_ID, proj_parent)
 			if proj is EnergyProjectile:
@@ -351,6 +365,7 @@ func take_damage(amount: float, attacker_team: int) -> void:
 	_time_since_damage = 0.0
 	_hp = maxf(_hp - amount, 0.0)
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_hurt.ogg", 0.78)
+	EventBus.player_damaged_feedback.emit(_hp / maxf(max_hp, 1.0))
 	_emit_stats()
 	if _hp <= 0.0:
 		_enter_respawn(attacker_team)
@@ -359,6 +374,7 @@ func take_damage(amount: float, attacker_team: int) -> void:
 func _enter_respawn(attacker_team: int) -> void:
 	_alive = false
 	_respawn_timer = 2.5
+	_respawn_last_sec = 3
 	velocity = Vector3.ZERO
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", 0.85)
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
@@ -373,6 +389,7 @@ func _enter_respawn(attacker_team: int) -> void:
 		_team_ring.visible = false
 	if _aim_indicator != null:
 		_aim_indicator.visible = false
+	EventBus.player_respawn_countdown.emit(_respawn_timer, true)
 	player_defeated.emit(attacker_team)
 	_emit_stats()
 
@@ -416,6 +433,7 @@ func _respawn() -> void:
 	if _aim_indicator != null:
 		_aim_indicator.visible = true
 	AudioManager.play_sfx_path("res://assets/kenney/audio/land.ogg", 1.0, -6.0)
+	EventBus.player_respawn_countdown.emit(0.0, false)
 	_emit_stats()
 
 

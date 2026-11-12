@@ -1,4 +1,4 @@
-[gd_scene load_steps=40 format=3]
+[gd_scene load_steps=44 format=3]
 
 [ext_resource type="Script" path="res://scripts/maps/arena_sector_controller.gd" id="1_ctrl"]
 [ext_resource type="PackedScene" path="res://scenes/camera/arena_camera_rig.tscn" id="2_cam"]
@@ -14,6 +14,10 @@
 [ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/block.glb" id="12_block"]
 [ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/banner.glb" id="13_banner"]
 [ext_resource type="PackedScene" path="res://assets/kenney/platformer/flag.glb" id="14_flag"]
+[ext_resource type="PackedScene" path="res://scenes/entities/ally_bot.tscn" id="15_ally"]
+[ext_resource type="Resource" path="res://data/bots/scout_drone.tres" id="16_scout"]
+[ext_resource type="Resource" path="res://data/bots/heavy_sentinel.tres" id="17_heavy"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/trophy.glb" id="18_trophy"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_arena"]
 sky_top_color = Color(0.105882, 0.168627, 0.278431, 1)
@@ -291,6 +295,9 @@ shape = SubResource("BoxShape3D_block")
 [node name="Model" parent="ArenaEnvironment/KenneyBlock_Center" instance=ExtResource("12_block")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
 
+[node name="KenneyTrophy_Center" parent="ArenaEnvironment/KenneyBlock_Center" instance=ExtResource("18_trophy")]
+transform = Transform3D(1.8, 0, 0, 0, 1.8, 0, 0, 0, 1.8, 0, 1, 0)
+
 [node name="BricksAccent_West" type="StaticBody3D" parent="ArenaEnvironment"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.5, 0, -7.8)
 
@@ -351,8 +358,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 7.2)
 script = ExtResource("5_zone")
 zone_id = "zone_b"
 zone_title_fa = "منطقه ب (جنوب)"
-idle_color = Color(0.984314, 0.572549, 0.235294, 0.35)
-active_color = Color(0.984314, 0.74902, 0.141176, 0.8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneB_South"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
@@ -373,6 +378,11 @@ shape = SubResource("CylinderShape3D_flagpole")
 
 [node name="ArenaBots" type="Node3D" parent="."]
 
+[node name="Ally_Blue_01" parent="ArenaBots" instance=ExtResource("15_ally")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.02, -4.6)
+patrol_offset_a = Vector3(4.5, 0, -2.5)
+patrol_offset_b = Vector3(9.2, 0, -2.2)
+
 [node name="Bot_Center" parent="ArenaBots" instance=ExtResource("6_bot")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.6, 0.02, 0)
 patrol_offset_a = Vector3(0, 0, -4.5)
@@ -380,13 +390,15 @@ patrol_offset_b = Vector3(0, 0, 4.5)
 
 [node name="Bot_North" parent="ArenaBots" instance=ExtResource("6_bot")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.8, 0.02, -7.8)
-patrol_offset_a = Vector3(-4.2, 0, 0)
-patrol_offset_b = Vector3(3.2, 0, 0)
+bot_config = ExtResource("16_scout")
+patrol_offset_a = Vector3(-5.8, 0, 0.6)
+patrol_offset_b = Vector3(2.8, 0, 0)
 
 [node name="Bot_South" parent="ArenaBots" instance=ExtResource("6_bot")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.8, 0.02, 7.8)
-patrol_offset_a = Vector3(-4.2, 0, 0)
-patrol_offset_b = Vector3(3.2, 0, 0)
+bot_config = ExtResource("17_heavy")
+patrol_offset_a = Vector3(-5.8, 0, -0.6)
+patrol_offset_b = Vector3(2.8, 0, 0)
 
 [node name="PlayerCharacter" parent="." instance=ExtResource("3_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.2, 0.02, 0)

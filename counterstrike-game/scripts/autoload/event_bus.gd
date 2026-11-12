@@ -17,10 +17,19 @@ signal camera_settings_changed()
 signal aim_fire_mode_changed(mode_name: String)
 
 @warning_ignore("unused_signal")
+signal selected_mode_changed(mode_id: String)
+
+@warning_ignore("unused_signal")
 signal player_zone_changed(zone_id: String, zone_title_fa: String, inside: bool)
 
 @warning_ignore("unused_signal")
 signal player_stats_updated(hp: int, max_hp: int, energy: int, max_energy: int, blaster_name_fa: String, recharging: bool)
+
+@warning_ignore("unused_signal")
+signal player_damaged_feedback(hp_ratio: float)
+
+@warning_ignore("unused_signal")
+signal player_respawn_countdown(seconds_left: float, active: bool)
 
 @warning_ignore("unused_signal")
 signal blaster_switch_requested()
@@ -29,7 +38,16 @@ signal blaster_switch_requested()
 signal blaster_recharge_requested()
 
 @warning_ignore("unused_signal")
-signal match_started(mode_id: String)
+signal match_started(mode_id: String, target_score: int)
+
+@warning_ignore("unused_signal")
+signal match_timer_updated(seconds_remaining: int)
+
+@warning_ignore("unused_signal")
+signal match_paused_changed(is_paused: bool)
+
+@warning_ignore("unused_signal")
+signal hud_toast_requested(message_fa: String, accent_color: Color)
 
 @warning_ignore("unused_signal")
 signal round_started(round_index: int)
@@ -47,4 +65,4 @@ signal zone_captured(zone_id: String, team_id: int)
 signal score_updated(blue_score: int, orange_score: int)
 
 @warning_ignore("unused_signal")
-signal match_ended(winning_team: int)
+signal match_ended(winning_team: int, blue_score: int, orange_score: int, player_eliminations: int)

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ArenaBotProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_bot_profile.gd" id="1_profile"]
+
+[resource]
+script = ExtResource("1_profile")
+profile_id = &"ally_wingman"
+display_name = "هم‌تیمی تاکتیکی"
+difficulty = 1
+max_shield = 115.0
+move_speed = 3.75
+reaction_delay_sec = 0.25
+aim_precision = 0.78
+sight_range = 16.5
+zone_objective_focus = 0.8

@@ -107,6 +107,12 @@ theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
 text = "ورود به میدان نبرد آرکید"
 
+[node name="BtnMatchMode" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+text = "حالت نبرد: کنترل مناطق"
+
 [node name="BtnCameraTest" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
@@ -239,6 +245,7 @@ theme_override_font_sizes/font_size = 14
 text = "حالت آفلاین آماده است"
 
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnEnterArena" to="." method="_on_btn_enter_arena_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnMatchMode" to="." method="_on_btn_match_mode_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnCameraTest" to="." method="_on_btn_camera_test_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnToggleSettings" to="." method="_on_btn_toggle_settings_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow/BtnFps30" to="." method="_on_btn_fps_30_pressed"]

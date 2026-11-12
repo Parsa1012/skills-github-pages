@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/touch_controls_hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/virtual_joystick.gd" id="2_stick"]
 [ext_resource type="Script" path="res://scripts/ui/touch_fire_pad.gd" id="3_firepad"]
 [ext_resource type="Script" path="res://scripts/ui/touch_action_button.gd" id="4_actionbtn"]
+[ext_resource type="FontFile" path="res://assets/fonts/Vazirmatn-Bold.ttf" id="5_vazir_bold"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
 content_margin_left = 10.0
@@ -22,9 +23,9 @@ corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
-content_margin_left = 12.0
+content_margin_left = 10.0
 content_margin_top = 7.0
-content_margin_right = 12.0
+content_margin_right = 10.0
 content_margin_bottom = 7.0
 bg_color = Color(0.117647, 0.160784, 0.25098, 0.92)
 border_width_left = 1
@@ -37,9 +38,58 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_toast"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.0588235, 0.0862745, 0.145098, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.219608, 0.741176, 0.972549, 0.65)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_overlay_card"]
+bg_color = Color(0.0823529, 0.117647, 0.196078, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.219608, 0.741176, 0.972549, 0.55)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary_btn"]
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+bg_color = Color(0.054902, 0.647059, 0.913725, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
 [node name="TouchControlsHUD" type="CanvasLayer"]
+process_mode = 3
 layer = 10
 script = ExtResource("1_hud")
+
+[node name="DamageFlashRect" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.937255, 0.266667, 0.266667, 0)
 
 [node name="TopSafeMargin" type="MarginContainer" parent="."]
 anchors_preset = 10
@@ -54,13 +104,13 @@ size_flags_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 8
 
-[node name="BtnBackMenu" type="Button" parent="TopSafeMargin/TopHudBar"]
-custom_minimum_size = Vector2(96, 42)
+[node name="BtnPause" type="Button" parent="TopSafeMargin/TopHudBar"]
+custom_minimum_size = Vector2(74, 42)
 layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-text = "منوی اصلی"
+text = "مکث"
 
 [node name="ScoreBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
 layout_mode = 2
@@ -72,6 +122,18 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
 theme_override_font_sizes/font_size = 14
 text = "آبی 0 — 0 نارنجی"
+vertical_alignment = 1
+
+[node name="TimerBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="TimerLabel" type="Label" parent="TopSafeMargin/TopHudBar/TimerBadge"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 14
+text = "02:00"
 vertical_alignment = 1
 
 [node name="StatsBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
@@ -95,7 +157,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
 theme_override_font_sizes/font_size = 13
-text = "موقعیت: میدان آزاد"
+text = "منطقه: میدان آزاد"
 vertical_alignment = 1
 
 [node name="Spacer" type="Control" parent="TopSafeMargin/TopHudBar"]
@@ -112,16 +174,37 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
 theme_override_font_sizes/font_size = 13
-text = "30/30 FPS"
+text = "30 FPS"
 vertical_alignment = 1
 
 [node name="BtnAimMode" type="Button" parent="TopSafeMargin/TopHudBar"]
-custom_minimum_size = Vector2(160, 42)
+custom_minimum_size = Vector2(150, 42)
 layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 13
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "حالت: دو جوی‌استیک"
+
+[node name="CenterToastPanel" type="PanelContainer" parent="."]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -210.0
+offset_top = 74.0
+offset_right = 210.0
+offset_bottom = 114.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_toast")
+
+[node name="ToastLabel" type="Label" parent="CenterToastPanel"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 15
+text = "منطقه تصرف شد!"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="BottomSafeMargin" type="MarginContainer" parent="."]
 anchors_preset = 12
@@ -229,5 +312,143 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("3_firepad")
 
-[connection signal="pressed" from="TopSafeMargin/TopHudBar/BtnBackMenu" to="." method="_on_btn_back_menu_pressed"]
+[node name="PauseOverlay" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0313726, 0.0470588, 0.0823529, 0.72)
+
+[node name="PauseCard" type="PanelContainer" parent="PauseOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -165.0
+offset_right = 200.0
+offset_bottom = 165.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_overlay_card")
+
+[node name="PauseMargin" type="MarginContainer" parent="PauseOverlay/PauseCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 20
+
+[node name="PauseVBox" type="VBoxContainer" parent="PauseOverlay/PauseCard/PauseMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PauseTitle" type="Label" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 24
+text = "بازی متوقف شد"
+horizontal_alignment = 1
+
+[node name="BtnResume" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
+text = "ادامه نبرد"
+
+[node name="BtnPauseAimMode" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "حالت: دو جوی‌استیک"
+
+[node name="BtnPauseRestart" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "شروع مجدد نبرد"
+
+[node name="BtnPauseMenu" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "بازگشت به منوی اصلی"
+
+[node name="MatchEndOverlay" type="ColorRect" parent="."]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0313726, 0.0470588, 0.0823529, 0.78)
+
+[node name="EndCard" type="PanelContainer" parent="MatchEndOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -230.0
+offset_top = -175.0
+offset_right = 230.0
+offset_bottom = 175.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_overlay_card")
+
+[node name="EndMargin" type="MarginContainer" parent="MatchEndOverlay/EndCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 22
+
+[node name="EndVBox" type="VBoxContainer" parent="MatchEndOverlay/EndCard/EndMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="EndTitleLabel" type="Label" parent="MatchEndOverlay/EndCard/EndMargin/EndVBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 24
+text = "پیروزی تیم آبی!"
+horizontal_alignment = 1
+
+[node name="EndDetailLabel" type="Label" parent="MatchEndOverlay/EndCard/EndMargin/EndVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.92, 0.97, 1)
+theme_override_font_sizes/font_size = 15
+text = "امتیاز نهایی: آبی 0 — 0 نارنجی"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="BtnPlayAgain" type="Button" parent="MatchEndOverlay/EndCard/EndMargin/EndVBox"]
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
+text = "بازی مجدد"
+
+[node name="BtnEndMenu" type="Button" parent="MatchEndOverlay/EndCard/EndMargin/EndVBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "بازگشت به منوی اصلی"
+
+[connection signal="pressed" from="TopSafeMargin/TopHudBar/BtnPause" to="." method="_on_btn_pause_pressed"]
 [connection signal="pressed" from="TopSafeMargin/TopHudBar/BtnAimMode" to="." method="_on_btn_aim_mode_pressed"]
+[connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnResume" to="." method="_on_btn_resume_pressed"]
+[connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseAimMode" to="." method="_on_btn_aim_mode_pressed"]
+[connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseRestart" to="." method="_on_btn_restart_pressed"]
+[connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseMenu" to="." method="_on_btn_back_menu_pressed"]
+[connection signal="pressed" from="MatchEndOverlay/EndCard/EndMargin/EndVBox/BtnPlayAgain" to="." method="_on_btn_restart_pressed"]
+[connection signal="pressed" from="MatchEndOverlay/EndCard/EndMargin/EndVBox/BtnEndMenu" to="." method="_on_btn_back_menu_pressed"]

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnergyBlasterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/energy_blaster_data.gd" id="1_blaster"]
+
+[resource]
+script = ExtResource("1_blaster")
+blaster_id = &"plasma_scatter"
+display_name = "پخش‌کننده پلاسما"
+category = 1
+energy_damage = 14.0
+pulse_cooldown = 0.46
+projectile_speed = 23.0
+energy_cell_capacity = 10
+recharge_seconds = 1.25
+spread_still_deg = 6.5
+spread_moving_deg = 9.0
+pellets_per_shot = 3
+projectile_color = Color(0.658824, 0.333333, 0.968627, 1)
+model_scene_path = "res://assets/kenney/fps/blaster.glb"
+model_scale = 0.5
+shoot_sfx_path = "res://assets/kenney/audio/blaster.ogg"
+arena_credit_cost = 0
