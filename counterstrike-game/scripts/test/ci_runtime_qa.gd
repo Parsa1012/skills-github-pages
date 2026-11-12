@@ -69,6 +69,9 @@ func _process(_delta: float) -> void:
 			_assert(GameManager.get_starting_blaster_index() == 0, "Expected pulse_blaster index 0")
 
 			_assert(AudioManager.get("_menu_music") != null, "Menu arcade BGM did not load")
+			AudioManager.play_menu_music()
+			AudioManager.set_master_volume(0.85)
+			_assert(is_equal_approx(SaveManager.master_volume, 0.85), "Master volume setter failed")
 			for sfx_p in [
 				"res://assets/audio/bgm_menu_arcade.wav",
 				"res://assets/audio/sfx_plasma_scatter.wav",

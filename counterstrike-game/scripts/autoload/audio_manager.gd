@@ -118,6 +118,8 @@ func play_menu_music() -> void:
 		return
 	if _music_player.stream != _menu_music:
 		_music_player.stream = _menu_music
+	if _is_dummy_audio_driver():
+		return
 	if not _music_player.playing:
 		_music_player.play()
 
@@ -194,7 +196,8 @@ func play_ui_stream(stream: AudioStream, pitch_scale: float = 1.0) -> void:
 	_ui_cursor = (_ui_cursor + 1) % _ui_players.size()
 	player.stream = stream
 	player.pitch_scale = pitch_scale
-	player.play()
+	if not _is_dummy_audio_driver():
+		player.play()
 
 
 func play_sfx_stream(stream: AudioStream, pitch_scale: float = 1.0, volume_offset_db: float = 0.0) -> void:
@@ -207,9 +210,16 @@ func play_sfx_stream(stream: AudioStream, pitch_scale: float = 1.0, volume_offse
 	player.stream = stream
 	player.pitch_scale = pitch_scale
 	player.volume_db = base_db + volume_offset_db
-	player.play()
+	if not _is_dummy_audio_driver():
+		player.play()
 
 
 func _on_music_finished() -> void:
+	if _is_dummy_audio_driver():
+		return
 	if _menu_music_requested and SaveManager.music_enabled and _music_player != null and _menu_music != null:
 		_music_player.play()
+
+
+func _is_dummy_audio_driver() -> bool:
+	return AudioServer.get_driver_name().to_lower() == "dummy"
