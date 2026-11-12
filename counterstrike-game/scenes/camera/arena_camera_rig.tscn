@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/camera/arena_camera_rig.gd" id="1_camrig"]
+
+[node name="ArenaCameraRig" type="Node3D"]
+script = ExtResource("1_camrig")
+
+[node name="CameraYawPivot" type="Node3D" parent="."]
+
+[node name="CameraPitchPivot" type="Node3D" parent="CameraYawPivot"]
+transform = Transform3D(1, 0, 0, 0, 0.5373, 0.843391, 0, -0.843391, 0.5373, 0, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="CameraYawPivot/CameraPitchPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 19.5)
+current = true
+fov = 44.0
+near = 0.5
+far = 120.0

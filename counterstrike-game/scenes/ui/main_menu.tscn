@@ -1,0 +1,217 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.105882, 0.145098, 0.231373, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.219608, 0.741176, 0.972549, 0.45)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary_btn"]
+bg_color = Color(0.054902, 0.647059, 0.913725, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0666667, 0.0901961, 0.145098, 1)
+
+[node name="SafeMargin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
+
+[node name="MainLayout" type="VBoxContainer" parent="SafeMargin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="HeaderBar" type="HBoxContainer" parent="SafeMargin/MainLayout"]
+layout_mode = 2
+
+[node name="TitleBlock" type="VBoxContainer" parent="SafeMargin/MainLayout/HeaderBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="SafeMargin/MainLayout/HeaderBar/TitleBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.972549, 0.980392, 0.988235, 1)
+theme_override_font_sizes/font_size = 34
+text = "COUNTERSTRIKE ARENA"
+
+[node name="SubtitleLabel" type="Label" parent="SafeMargin/MainLayout/HeaderBar/TitleBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
+theme_override_font_sizes/font_size = 16
+text = "Offline 2.5D Low-Poly Arcade Arena • Phase 1 Skeleton"
+
+[node name="BadgeLabel" type="Label" parent="SafeMargin/MainLayout/HeaderBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.572549, 0.235294, 1)
+theme_override_font_sizes/font_size = 15
+text = "Target: Galaxy A32"
+vertical_alignment = 1
+
+[node name="ContentRow" type="HBoxContainer" parent="SafeMargin/MainLayout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 24
+
+[node name="ActionColumn" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.1
+alignment = 1
+theme_override_constants/separation = 14
+
+[node name="BtnCameraTest" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
+text = "Launch Camera Angle Test (BombSquad 2.5D)"
+
+[node name="BtnToggleSettings" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
+custom_minimum_size = Vector2(0, 58)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Performance & Device Settings"
+
+[node name="BtnPlayPlaceholder" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+disabled = true
+theme_override_font_sizes/font_size = 17
+text = "Arena Match (Unlocked in Phase 2–5)"
+
+[node name="SettingsPanel" type="PanelContainer" parent="SafeMargin/MainLayout/ContentRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="SettingsMargin" type="MarginContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="SettingsVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SettingsHeader" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.972549, 0.980392, 0.988235, 1)
+theme_override_font_sizes/font_size = 20
+text = "Galaxy A32 Runtime Settings (Offline)"
+
+[node name="FpsLabel" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
+theme_override_font_sizes/font_size = 15
+text = "Target Frame Rate (30 FPS Stability Priority)"
+
+[node name="FpsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BtnFps30" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "30 FPS (Stable)"
+
+[node name="BtnFps60" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "60 FPS (Test)"
+
+[node name="QualityLabel" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
+theme_override_font_sizes/font_size = 15
+text = "Quality Preset"
+
+[node name="QualityRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BtnLow" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Low"
+
+[node name="BtnMedium" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Medium"
+
+[node name="BtnHigh" type="Button" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "High"
+
+[node name="CameraInfoLabel" type="Label" parent="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.580392, 0.639216, 0.721569, 1)
+theme_override_font_sizes/font_size = 14
+text = "BombSquad Camera Defaults: Pitch 57.5 deg | Distance 19.5 m"
+autowrap_mode = 2
+
+[node name="FooterBar" type="HBoxContainer" parent="SafeMargin/MainLayout"]
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="SafeMargin/MainLayout/FooterBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.580392, 0.639216, 0.721569, 1)
+theme_override_font_sizes/font_size = 14
+text = "Offline Mode Ready"
+
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnCameraTest" to="." method="_on_btn_camera_test_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnToggleSettings" to="." method="_on_btn_toggle_settings_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow/BtnFps30" to="." method="_on_btn_fps_30_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow/BtnFps60" to="." method="_on_btn_fps_60_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnLow" to="." method="_on_btn_low_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnMedium" to="." method="_on_btn_medium_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnHigh" to="." method="_on_btn_high_pressed"]

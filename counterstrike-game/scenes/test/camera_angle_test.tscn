@@ -1,0 +1,441 @@
+[gd_scene load_steps=26 format=3]
+
+[ext_resource type="Script" path="res://scripts/test/camera_angle_test.gd" id="1_testctrl"]
+[ext_resource type="PackedScene" path="res://scenes/camera/arena_camera_rig.tscn" id="2_camrig"]
+[ext_resource type="Script" path="res://scripts/test/patrol_proxy.gd" id="3_patrol"]
+
+[sub_resource type="Environment" id="Environment_arena"]
+background_mode = 1
+background_color = Color(0.0666667, 0.0901961, 0.145098, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.78, 0.84, 0.92, 1)
+ambient_light_energy = 0.58
+
+[sub_resource type="StandardMaterial3D" id="Mat_floor"]
+albedo_color = Color(0.176471, 0.219608, 0.305882, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="Mesh_floor"]
+material = SubResource("Mat_floor")
+size = Vector3(28, 0.4, 20)
+
+[sub_resource type="StandardMaterial3D" id="Mat_wall"]
+albedo_color = Color(0.105882, 0.137255, 0.207843, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="Mesh_wall_h"]
+material = SubResource("Mat_wall")
+size = Vector3(29, 1.8, 0.8)
+
+[sub_resource type="BoxMesh" id="Mesh_wall_v"]
+material = SubResource("Mat_wall")
+size = Vector3(0.8, 1.8, 20)
+
+[sub_resource type="StandardMaterial3D" id="Mat_cover"]
+albedo_color = Color(0.305882, 0.392157, 0.490196, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="Mesh_cover_wide"]
+material = SubResource("Mat_cover")
+size = Vector3(3.4, 1.5, 1.3)
+
+[sub_resource type="BoxMesh" id="Mesh_cover_pillar"]
+material = SubResource("Mat_cover")
+size = Vector3(1.8, 2.2, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_platform"]
+albedo_color = Color(0.243137, 0.309804, 0.423529, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="Mesh_center_pad"]
+material = SubResource("Mat_platform")
+size = Vector3(5.6, 0.18, 3.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_zone_a"]
+albedo_color = Color(0.08, 0.72, 0.96, 1)
+roughness = 0.6
+emission_enabled = true
+emission = Color(0.08, 0.72, 0.96, 1)
+emission_energy_multiplier = 0.55
+
+[sub_resource type="CylinderMesh" id="Mesh_zone_a"]
+material = SubResource("Mat_zone_a")
+top_radius = 2.3
+bottom_radius = 2.3
+height = 0.08
+radial_segments = 16
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="Mat_zone_b"]
+albedo_color = Color(0.96, 0.62, 0.08, 1)
+roughness = 0.6
+emission_enabled = true
+emission = Color(0.96, 0.62, 0.08, 1)
+emission_energy_multiplier = 0.55
+
+[sub_resource type="CylinderMesh" id="Mesh_zone_b"]
+material = SubResource("Mat_zone_b")
+top_radius = 2.3
+bottom_radius = 2.3
+height = 0.08
+radial_segments = 16
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="Mat_blue_team"]
+albedo_color = Color(0.145098, 0.619608, 0.960784, 1)
+roughness = 0.55
+
+[sub_resource type="CapsuleMesh" id="Mesh_player_body"]
+material = SubResource("Mat_blue_team")
+radius = 0.42
+height = 1.45
+radial_segments = 8
+rings = 2
+
+[sub_resource type="StandardMaterial3D" id="Mat_visor"]
+albedo_color = Color(0.93, 0.97, 1.0, 1)
+roughness = 0.35
+emission_enabled = true
+emission = Color(0.55, 0.9, 1.0, 1)
+emission_energy_multiplier = 0.5
+
+[sub_resource type="BoxMesh" id="Mesh_visor"]
+material = SubResource("Mat_visor")
+size = Vector3(0.54, 0.22, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="Mat_orange_team"]
+albedo_color = Color(0.960784, 0.415686, 0.168627, 1)
+roughness = 0.55
+
+[sub_resource type="CapsuleMesh" id="Mesh_bot_body"]
+material = SubResource("Mat_orange_team")
+radius = 0.42
+height = 1.45
+radial_segments = 8
+rings = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud"]
+bg_color = Color(0.0588235, 0.0862745, 0.141176, 0.84)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.219608, 0.741176, 0.972549, 0.45)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[node name="CameraAngleTest" type="Node3D"]
+script = ExtResource("1_testctrl")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_arena")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.848048, -0.417582, 0.32625, 0, 0.615661, 0.788011, -0.529919, -0.668271, 0.52211, 0, 14, 6)
+light_energy = 1.15
+shadow_enabled = true
+directional_shadow_mode = 0
+directional_shadow_max_distance = 45.0
+
+[node name="LowPolyArena" type="Node3D" parent="."]
+
+[node name="Floor" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+mesh = SubResource("Mesh_floor")
+
+[node name="CenterPlatform" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.09, 0)
+mesh = SubResource("Mesh_center_pad")
+
+[node name="WallNorth" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -10.2)
+mesh = SubResource("Mesh_wall_h")
+
+[node name="WallSouth" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 10.2)
+mesh = SubResource("Mesh_wall_h")
+
+[node name="WallWest" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.2, 0.9, 0)
+mesh = SubResource("Mesh_wall_v")
+
+[node name="WallEast" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.2, 0.9, 0)
+mesh = SubResource("Mesh_wall_v")
+
+[node name="CoverBlockNW" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(0.939693, 0, 0.34202, 0, 1, 0, -0.34202, 0, 0.939693, -5.2, 0.75, -4.6)
+mesh = SubResource("Mesh_cover_wide")
+
+[node name="CoverBlockSE" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(0.939693, 0, 0.34202, 0, 1, 0, -0.34202, 0, 0.939693, 5.2, 0.75, 4.6)
+mesh = SubResource("Mesh_cover_wide")
+
+[node name="CoverBlockSW" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 0.75, 4.4)
+mesh = SubResource("Mesh_cover_wide")
+
+[node name="CoverBlockNE" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.5, 0.75, -4.4)
+mesh = SubResource("Mesh_cover_wide")
+
+[node name="PillarLeft" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.2, 1.1, 0)
+mesh = SubResource("Mesh_cover_pillar")
+
+[node name="PillarRight" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2, 1.1, 0)
+mesh = SubResource("Mesh_cover_pillar")
+
+[node name="CaptureZoneA" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.2, 0.04, -1.6)
+mesh = SubResource("Mesh_zone_a")
+
+[node name="CaptureZoneB" type="MeshInstance3D" parent="LowPolyArena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.2, 0.04, 1.6)
+mesh = SubResource("Mesh_zone_b")
+
+[node name="Units" type="Node3D" parent="."]
+
+[node name="PlayerProxy" type="Node3D" parent="Units"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.5)
+script = ExtResource("3_patrol")
+
+[node name="VisualBody" type="Node3D" parent="Units/PlayerProxy"]
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Units/PlayerProxy/VisualBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("Mesh_player_body")
+
+[node name="VisorMesh" type="MeshInstance3D" parent="Units/PlayerProxy/VisualBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, -0.32)
+mesh = SubResource("Mesh_visor")
+
+[node name="TeamRing" type="MeshInstance3D" parent="Units/PlayerProxy"]
+transform = Transform3D(0.32, 0, 0, 0, 1, 0, 0, 0, 0.32, 0, 0.04, 0)
+mesh = SubResource("Mesh_zone_a")
+
+[node name="BotProxyA" type="Node3D" parent="Units"]
+transform = Transform3D(0.906308, 0, -0.422618, 0, 1, 0, 0.422618, 0, 0.906308, -8.2, 0, -2.0)
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Units/BotProxyA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("Mesh_bot_body")
+
+[node name="VisorMesh" type="MeshInstance3D" parent="Units/BotProxyA"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, -0.32)
+mesh = SubResource("Mesh_visor")
+
+[node name="BotProxyB" type="Node3D" parent="Units"]
+transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 8.2, 0, 1.8)
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Units/BotProxyB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("Mesh_bot_body")
+
+[node name="VisorMesh" type="MeshInstance3D" parent="Units/BotProxyB"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, -0.32)
+mesh = SubResource("Mesh_visor")
+
+[node name="BotProxyC" type="Node3D" parent="Units"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.18, -0.4)
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Units/BotProxyC"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("Mesh_bot_body")
+
+[node name="VisorMesh" type="MeshInstance3D" parent="Units/BotProxyC"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, -0.32)
+mesh = SubResource("Mesh_visor")
+
+[node name="ArenaCameraRig" parent="." instance=ExtResource("2_camrig")]
+target_path = NodePath("../Units/PlayerProxy")
+
+[node name="HUDLayer" type="CanvasLayer" parent="."]
+
+[node name="SafeMargin" type="MarginContainer" parent="HUDLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="RootVBox" type="VBoxContainer" parent="HUDLayer/SafeMargin"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TopBar" type="HBoxContainer" parent="HUDLayer/SafeMargin/RootVBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="MetricsPanel" type="PanelContainer" parent="HUDLayer/SafeMargin/RootVBox/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud")
+
+[node name="MetricsMargin" type="MarginContainer" parent="HUDLayer/SafeMargin/RootVBox/TopBar/MetricsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
+
+[node name="MetricsVBox" type="VBoxContainer" parent="HUDLayer/SafeMargin/RootVBox/TopBar/MetricsPanel/MetricsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="CameraMetricsLabel" type="Label" parent="HUDLayer/SafeMargin/RootVBox/TopBar/MetricsPanel/MetricsMargin/MetricsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
+theme_override_font_sizes/font_size = 14
+text = "BombSquad View | Pitch: 57.5 deg | Dist: 19.5 m"
+
+[node name="PerfMetricsLabel" type="Label" parent="HUDLayer/SafeMargin/RootVBox/TopBar/MetricsPanel/MetricsMargin/MetricsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.92, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "FPS: 30 / 30 | Draw Calls: 0 | Primitives: 0"
+
+[node name="BtnBack" type="Button" parent="HUDLayer/SafeMargin/RootVBox/TopBar"]
+custom_minimum_size = Vector2(124, 52)
+layout_mode = 2
+text = "Back to Menu"
+
+[node name="Spacer" type="Control" parent="HUDLayer/SafeMargin/RootVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="BottomPanel" type="PanelContainer" parent="HUDLayer/SafeMargin/RootVBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud")
+
+[node name="BottomMargin" type="MarginContainer" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="ControlsVBox" type="VBoxContainer" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="RowPitch" type="HBoxContainer" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PitchTitle" type="Label" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Angle (Pitch):"
+
+[node name="BtnPitch55" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "55 deg"
+
+[node name="BtnPitch575" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "57.5 deg (Default)"
+
+[node name="BtnPitch60" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "60 deg"
+
+[node name="BtnPitchMinus" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
+custom_minimum_size = Vector2(56, 42)
+layout_mode = 2
+text = "-1"
+
+[node name="BtnPitchPlus" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch"]
+custom_minimum_size = Vector2(56, 42)
+layout_mode = 2
+text = "+1"
+
+[node name="RowDist" type="HBoxContainer" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DistTitle" type="Label" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Distance:"
+
+[node name="BtnDist165" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "16.5 m (Close)"
+
+[node name="BtnDist195" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "19.5 m (Default)"
+
+[node name="BtnDist230" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "23.0 m (Wide)"
+
+[node name="BtnDistMinus" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
+custom_minimum_size = Vector2(56, 42)
+layout_mode = 2
+text = "-1"
+
+[node name="BtnDistPlus" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist"]
+custom_minimum_size = Vector2(56, 42)
+layout_mode = 2
+text = "+1"
+
+[node name="RowUtility" type="HBoxContainer" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnPatrol" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowUtility"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Patrol: ON"
+
+[node name="BtnToggleFps" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowUtility"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Target: 30 FPS"
+
+[node name="BtnReset" type="Button" parent="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowUtility"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Reset ProjectSettings"
+
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/TopBar/BtnBack" to="." method="_on_btn_back_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch/BtnPitch55" to="." method="_on_btn_pitch_55_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch/BtnPitch575" to="." method="_on_btn_pitch_575_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch/BtnPitch60" to="." method="_on_btn_pitch_60_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch/BtnPitchMinus" to="." method="_on_btn_pitch_minus_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowPitch/BtnPitchPlus" to="." method="_on_btn_pitch_plus_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist/BtnDist165" to="." method="_on_btn_dist_165_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist/BtnDist195" to="." method="_on_btn_dist_195_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist/BtnDist230" to="." method="_on_btn_dist_230_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist/BtnDistMinus" to="." method="_on_btn_dist_minus_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowDist/BtnDistPlus" to="." method="_on_btn_dist_plus_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowUtility/BtnPatrol" to="." method="_on_btn_patrol_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowUtility/BtnToggleFps" to="." method="_on_btn_toggle_fps_pressed"]
+[connection signal="pressed" from="HUDLayer/SafeMargin/RootVBox/BottomPanel/BottomMargin/ControlsVBox/RowUtility/BtnReset" to="." method="_on_btn_reset_pressed"]
