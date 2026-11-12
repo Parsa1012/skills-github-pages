@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ArenaModeConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_mode_config.gd" id="1_mode"]
+
+[resource]
+script = ExtResource("1_mode")
+mode_id = &"zone_blitz"
+display_name = "تسخیر برق‌آسا"
+mode_type = 0
+enable_capture_zones = true
+rounds_to_win = 1
+round_duration_sec = 90.0
+zone_capture_seconds = 2.5
+zone_capture_bonus = 3
+zone_hold_tick_interval = 3.5
+zone_hold_points = 2
+target_score = 30
+bots_per_team = 3

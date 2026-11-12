@@ -1,12 +1,14 @@
 extends CanvasLayer
-## رابط کاربری چندلمسی میدان نبرد (جان/انرژی، تایمر، امتیاز، توقف بازی و نتیجه نهایی).
+## رابط کاربری چندلمسی میدان نبرد (جان/انرژی گرافیکی، دکمه جهش، نشانگر اصابت، خوراک کشته‌ها، تایمر و نتیجه نهایی).
 
 @onready var _damage_flash: ColorRect = $DamageFlashRect
+@onready var _hitmarker_label: Label = $HitmarkerLabel
 @onready var _top_safe_margin: MarginContainer = $TopSafeMargin
 @onready var _bottom_safe_margin: MarginContainer = $BottomSafeMargin
 @onready var _left_move_stick: VirtualJoystick = $BottomSafeMargin/TouchControlsRow/LeftMoveStick
 @onready var _right_aim_stick: VirtualJoystick = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/RightAimStick
 @onready var _dedicated_fire_pad: TouchFirePad = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/FirePadAnchor/DedicatedFirePad
+@onready var _btn_dash: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnDash
 @onready var _btn_switch_blaster: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnSwitchBlaster
 @onready var _btn_recharge: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnRecharge
 
@@ -16,18 +18,23 @@ extends CanvasLayer
 @onready var _zone_mini_b: PanelContainer = $TopSafeMargin/TopHudBar/ZoneMiniB
 @onready var _zone_mini_b_label: Label = $TopSafeMargin/TopHudBar/ZoneMiniB/Label
 @onready var _timer_label: Label = $TopSafeMargin/TopHudBar/TimerBadge/TimerLabel
-@onready var _stats_label: Label = $TopSafeMargin/TopHudBar/StatsBadge/StatsLabel
+@onready var _stats_label: Label = $TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/StatsLabel
+@onready var _hp_bar: ProgressBar = $TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow/HpBar
+@onready var _energy_bar: ProgressBar = $TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow/EnergyBar
 @onready var _buff_badge: PanelContainer = $TopSafeMargin/TopHudBar/BuffBadge
 @onready var _buff_label: Label = $TopSafeMargin/TopHudBar/BuffBadge/BuffLabel
 @onready var _zone_label: Label = $TopSafeMargin/TopHudBar/ZoneBadge/ZoneLabel
 @onready var _perf_label: Label = $TopSafeMargin/TopHudBar/PerfBadge/PerfLabel
 @onready var _aim_mode_btn: Button = $TopSafeMargin/TopHudBar/BtnAimMode
 
+@onready var _kill_feed_panel: PanelContainer = $KillFeedPanel
+@onready var _kill_feed_box: VBoxContainer = $KillFeedPanel/KillFeedBox
 @onready var _toast_panel: PanelContainer = $CenterToastPanel
 @onready var _toast_label: Label = $CenterToastPanel/ToastLabel
 @onready var _pause_overlay: Control = $PauseOverlay
 @onready var _pause_aim_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseAimMode
-@onready var _pause_sfx_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseSfx
+@onready var _pause_music_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseMusic
+@onready var _pause_sfx_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseSfx
 @onready var _match_end_overlay: Control = $MatchEndOverlay
 @onready var _end_title_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndTitleLabel
 @onready var _end_detail_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndDetailLabel
@@ -35,6 +42,8 @@ extends CanvasLayer
 var _active_zone_title: String = "میدان آزاد"
 var _fps_sample_timer: float = 0.0
 var _toast_timer: float = 0.0
+var _hitmarker_timer: float = 0.0
+var _kill_feed_expire_timer: float = 0.0
 var _respawn_active: bool = false
 var _match_ended: bool = false
 var _damage_alpha: float = 0.0
@@ -46,6 +55,9 @@ func _ready() -> void:
 		_top_safe_margin.layout_direction = Control.LAYOUT_DIRECTION_RTL
 	if _bottom_safe_margin != null:
 		_bottom_safe_margin.layout_direction = Control.LAYOUT_DIRECTION_LTR
+	if _kill_feed_panel != null:
+		_kill_feed_panel.layout_direction = Control.LAYOUT_DIRECTION_RTL
+		_kill_feed_panel.visible = false
 	if _pause_overlay != null:
 		_pause_overlay.layout_direction = Control.LAYOUT_DIRECTION_RTL
 		_pause_overlay.visible = false
@@ -54,11 +66,13 @@ func _ready() -> void:
 		_match_end_overlay.visible = false
 	if _toast_panel != null:
 		_toast_panel.visible = false
+	if _hitmarker_label != null:
+		_hitmarker_label.visible = false
 
 	_setup_excluded_controls()
 	_apply_safe_area_margins()
 	_apply_aim_fire_mode()
-	_refresh_pause_sfx_button()
+	_refresh_pause_audio_buttons()
 	_init_zone_mini_badges()
 	_update_zone_badge("میدان آزاد")
 	_update_score_badge(0, 0)
@@ -70,6 +84,9 @@ func _ready() -> void:
 	EventBus.player_zone_changed.connect(_on_player_zone_changed)
 	EventBus.player_stats_updated.connect(_on_player_stats_updated)
 	EventBus.player_buff_updated.connect(_on_player_buff_updated)
+	EventBus.player_dash_updated.connect(_on_player_dash_updated)
+	EventBus.enemy_hit_confirmed.connect(_on_enemy_hit_confirmed)
+	EventBus.kill_feed_event.connect(_on_kill_feed_event)
 	EventBus.player_damaged_feedback.connect(_on_player_damaged_feedback)
 	EventBus.player_respawn_countdown.connect(_on_player_respawn_countdown)
 	EventBus.zone_capture_progress.connect(_on_zone_capture_progress)
@@ -80,6 +97,8 @@ func _ready() -> void:
 	EventBus.match_paused_changed.connect(_on_match_paused_changed)
 	EventBus.match_ended.connect(_on_match_ended)
 
+	if _btn_dash != null:
+		_btn_dash.action_triggered.connect(_on_dash_triggered)
 	if _btn_switch_blaster != null:
 		_btn_switch_blaster.action_triggered.connect(_on_switch_blaster_triggered)
 	if _btn_recharge != null:
@@ -97,6 +116,12 @@ func _exit_tree() -> void:
 		EventBus.player_stats_updated.disconnect(_on_player_stats_updated)
 	if EventBus.player_buff_updated.is_connected(_on_player_buff_updated):
 		EventBus.player_buff_updated.disconnect(_on_player_buff_updated)
+	if EventBus.player_dash_updated.is_connected(_on_player_dash_updated):
+		EventBus.player_dash_updated.disconnect(_on_player_dash_updated)
+	if EventBus.enemy_hit_confirmed.is_connected(_on_enemy_hit_confirmed):
+		EventBus.enemy_hit_confirmed.disconnect(_on_enemy_hit_confirmed)
+	if EventBus.kill_feed_event.is_connected(_on_kill_feed_event):
+		EventBus.kill_feed_event.disconnect(_on_kill_feed_event)
 	if EventBus.player_damaged_feedback.is_connected(_on_player_damaged_feedback):
 		EventBus.player_damaged_feedback.disconnect(_on_player_damaged_feedback)
 	if EventBus.player_respawn_countdown.is_connected(_on_player_respawn_countdown):
@@ -139,6 +164,16 @@ func _process(delta: float) -> void:
 		_damage_alpha = maxf(0.0, _damage_alpha - delta * 1.1)
 		_damage_flash.color = Color(0.937255, 0.266667, 0.266667, _damage_alpha)
 
+	if _hitmarker_timer > 0.0 and _hitmarker_label != null:
+		_hitmarker_timer -= delta
+		if _hitmarker_timer <= 0.0:
+			_hitmarker_label.visible = false
+
+	if _kill_feed_expire_timer > 0.0 and _kill_feed_panel != null:
+		_kill_feed_expire_timer -= delta
+		if _kill_feed_expire_timer <= 0.0:
+			_kill_feed_panel.visible = false
+
 	if not _respawn_active and _toast_timer > 0.0:
 		_toast_timer -= delta
 		if _toast_timer <= 0.0 and _toast_panel != null:
@@ -151,6 +186,8 @@ func _setup_excluded_controls() -> void:
 	var excl: Array[Control] = []
 	if _dedicated_fire_pad != null:
 		excl.append(_dedicated_fire_pad)
+	if _btn_dash != null:
+		excl.append(_btn_dash)
 	if _btn_switch_blaster != null:
 		excl.append(_btn_switch_blaster)
 	if _btn_recharge != null:
@@ -211,6 +248,7 @@ func _on_match_paused_changed(is_paused: bool) -> void:
 		return
 	if is_paused:
 		_reset_touch_controls()
+		_refresh_pause_audio_buttons()
 	if _pause_overlay != null:
 		_pause_overlay.visible = is_paused
 	if _bottom_safe_margin != null:
@@ -225,6 +263,8 @@ func _on_match_ended(winning_team: int, blue_score: int, orange_score: int, play
 		_pause_overlay.visible = false
 	if _toast_panel != null:
 		_toast_panel.visible = false
+	if _kill_feed_panel != null:
+		_kill_feed_panel.visible = false
 	if _bottom_safe_margin != null:
 		_bottom_safe_margin.visible = false
 
@@ -239,12 +279,27 @@ func _on_match_ended(winning_team: int, blue_score: int, orange_score: int, play
 			_end_title_label.text = "نتیجه مساوی!"
 			_end_title_label.add_theme_color_override("font_color", Color(0.984314, 0.74902, 0.141176, 1.0))
 
+	var xp_gained: int = 50 + (75 if winning_team == 0 else 0) + maxi(0, player_eliminations) * 15
+	var ctrl: Node = get_parent()
+	if ctrl != null and ctrl.has_method("get_last_xp_gained"):
+		xp_gained = int(ctrl.call("get_last_xp_gained"))
+	var rank: Dictionary = SaveManager.get_rank_info()
+
 	if _end_detail_label != null:
 		_end_detail_label.text = (
-			"امتیاز نهایی: آبی %d  —  %d نارنجی\n"
-			+ "تعداد حذف تیم آبی: %d\n"
-			+ "آمار کلی ذخیره شده: %d پیروزی از %d نبرد"
-		) % [blue_score, orange_score, player_eliminations, SaveManager.total_wins, SaveManager.total_matches]
+			"امتیاز نهایی: آبی %d  —  %d نارنجی  |  حذف تیم آبی: %d\n"
+			+ "تجربه کسب‌شده: +%d XP  •  رتبه %d (%s)\n"
+			+ "کارنامه کل: %d پیروزی از %d نبرد"
+		) % [
+			blue_score,
+			orange_score,
+			player_eliminations,
+			xp_gained,
+			int(rank["level"]),
+			str(rank["title_fa"]),
+			SaveManager.total_wins,
+			SaveManager.total_matches
+		]
 
 	if _match_end_overlay != null:
 		_match_end_overlay.visible = true
@@ -267,6 +322,13 @@ func _on_player_stats_updated(hp: int, max_hp: int, energy: int, max_energy: int
 			_stats_label.add_theme_color_override("font_color", Color(0.984314, 0.45098, 0.086275, 1.0))
 		else:
 			_stats_label.add_theme_color_override("font_color", Color(0.901961, 0.960784, 1.0, 1.0))
+	if _hp_bar != null:
+		_hp_bar.max_value = maxf(1.0, float(max_hp))
+		_hp_bar.value = clampf(float(hp), 0.0, float(max_hp))
+	if _energy_bar != null:
+		_energy_bar.max_value = maxf(1.0, float(max_energy))
+		_energy_bar.value = 0.0 if recharging else clampf(float(energy), 0.0, float(max_energy))
+
 	if _btn_switch_blaster != null:
 		if "رگبار" in blaster_name_fa:
 			_btn_switch_blaster.title_text = "رگبار"
@@ -274,10 +336,53 @@ func _on_player_stats_updated(hp: int, max_hp: int, energy: int, max_energy: int
 		elif "پلاسما" in blaster_name_fa:
 			_btn_switch_blaster.title_text = "پلاسما"
 			_btn_switch_blaster.accent_color = Color(0.658824, 0.333333, 0.968627, 1.0)
+		elif "ریل" in blaster_name_fa:
+			_btn_switch_blaster.title_text = "ریل‌گان"
+			_btn_switch_blaster.accent_color = Color(0.984314, 0.74902, 0.141176, 1.0)
 		else:
 			_btn_switch_blaster.title_text = "پالس"
 			_btn_switch_blaster.accent_color = Color(0.219608, 0.741176, 0.972549, 1.0)
 		_btn_switch_blaster.queue_redraw()
+
+
+func _on_player_dash_updated(cooldown_left: float, cooldown_total: float, ready: bool) -> void:
+	if _btn_dash == null:
+		return
+	if ready or cooldown_left <= 0.05:
+		_btn_dash.set_cooldown_state(0.0, "جهش")
+	else:
+		var ratio: float = clampf(cooldown_left / maxf(cooldown_total, 0.1), 0.0, 1.0)
+		_btn_dash.set_cooldown_state(ratio, "%.1fث" % cooldown_left)
+
+
+func _on_enemy_hit_confirmed(_damage: float, is_kill: bool) -> void:
+	if _hitmarker_label == null:
+		return
+	_hitmarker_label.visible = true
+	_hitmarker_timer = 0.18 if is_kill else 0.11
+	_hitmarker_label.add_theme_color_override(
+		"font_color",
+		Color(0.937255, 0.266667, 0.266667, 1.0) if is_kill else Color(0.984314, 0.74902, 0.141176, 1.0)
+	)
+
+
+func _on_kill_feed_event(killer_fa: String, victim_fa: String, killer_team: int) -> void:
+	if _kill_feed_panel == null or _kill_feed_box == null:
+		return
+	var row := Label.new()
+	row.text = "%s ← %s" % [killer_fa, victim_fa]
+	row.add_theme_font_size_override("font_size", 12)
+	row.add_theme_color_override(
+		"font_color",
+		Color(0.219608, 0.741176, 0.972549, 1.0) if killer_team == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)
+	)
+	_kill_feed_box.add_child(row)
+	while _kill_feed_box.get_child_count() > 3:
+		var old: Node = _kill_feed_box.get_child(0)
+		_kill_feed_box.remove_child(old)
+		old.queue_free()
+	_kill_feed_panel.visible = true
+	_kill_feed_expire_timer = 4.5
 
 
 func _init_zone_mini_badges() -> void:
@@ -332,9 +437,18 @@ func _on_player_buff_updated(damage_secs: float, speed_secs: float) -> void:
 			_buff_label.add_theme_color_override("font_color", Color(0.752941, 0.517647, 0.988235, 1.0))
 
 
-func _refresh_pause_sfx_button() -> void:
+func _refresh_pause_audio_buttons() -> void:
+	if _pause_music_btn != null:
+		_pause_music_btn.text = "موسیقی: روشن" if SaveManager.music_enabled else "موسیقی: خاموش"
 	if _pause_sfx_btn != null:
-		_pause_sfx_btn.text = "صدای نبرد: روشن" if SaveManager.sfx_enabled else "صدای نبرد: خاموش"
+		_pause_sfx_btn.text = "افکت: روشن" if SaveManager.sfx_enabled else "افکت: خاموش"
+
+
+func _on_btn_pause_music_pressed() -> void:
+	var next_music: bool = not SaveManager.music_enabled
+	AudioManager.set_music_enabled(next_music)
+	AudioManager.play_ui_click()
+	_refresh_pause_audio_buttons()
 
 
 func _on_btn_pause_sfx_pressed() -> void:
@@ -342,7 +456,7 @@ func _on_btn_pause_sfx_pressed() -> void:
 	AudioManager.set_sfx_enabled(next_sfx)
 	if next_sfx:
 		AudioManager.play_ui_pop()
-	_refresh_pause_sfx_button()
+	_refresh_pause_audio_buttons()
 
 
 func _on_player_damaged_feedback(_hp_ratio: float) -> void:
@@ -418,6 +532,10 @@ func is_fire_active() -> bool:
 	return _right_aim_stick != null and _right_aim_stick.is_fire_engaged
 
 
+func _on_dash_triggered() -> void:
+	EventBus.player_dash_requested.emit()
+
+
 func _on_switch_blaster_triggered() -> void:
 	EventBus.blaster_switch_requested.emit()
 
@@ -438,7 +556,7 @@ func _on_btn_resume_pressed() -> void:
 
 func _on_btn_restart_pressed() -> void:
 	AudioManager.play_ui_pop()
-	GameManager.go_to_arena_sector_01()
+	GameManager.go_to_selected_arena()
 
 
 func _on_btn_back_menu_pressed() -> void:

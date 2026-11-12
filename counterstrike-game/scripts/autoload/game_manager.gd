@@ -1,5 +1,5 @@
 extends Node
-## هماهنگ‌کننده اصلی جلسه آفلاین، مدیریت نرخ فریم/کیفیت، حالت مسابقه و جابه‌جایی بین صحنه‌ها.
+## هماهنگ‌کننده اصلی جلسه آفلاین، مدیریت نرخ فریم/کیفیت، نقشه، حالت مسابقه و جابه‌جایی بین صحنه‌ها.
 
 enum AppState {
 	BOOT,
@@ -12,8 +12,10 @@ enum AppState {
 const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
 const CAMERA_TEST_SCENE: String = "res://scenes/test/camera_angle_test.tscn"
 const ARENA_SECTOR_01_SCENE: String = "res://scenes/maps/arena_sector_01.tscn"
+const ARENA_SECTOR_02_SCENE: String = "res://scenes/maps/arena_sector_02.tscn"
 const MODE_ZONE_CONTROL_PATH: String = "res://data/modes/zone_control.tres"
 const MODE_TEAM_RUSH_PATH: String = "res://data/modes/team_score_rush.tres"
+const MODE_ZONE_BLITZ_PATH: String = "res://data/modes/zone_blitz.tres"
 
 var current_state: AppState = AppState.BOOT
 
@@ -25,6 +27,7 @@ func _ready() -> void:
 		get_tree().set_quit_on_go_back(false)
 	_apply_persian_theme()
 	_register_camera_project_settings()
+	_apply_camera_preset_settings(SaveManager.camera_preset)
 	apply_performance_settings()
 	EventBus.scene_change_requested.connect(change_scene)
 
@@ -59,6 +62,22 @@ func _ensure_setting(setting_name: String, default_value: Variant, prop_type: in
 		"hint": hint,
 		"hint_string": hint_string
 	})
+
+
+func _apply_camera_preset_settings(preset: String) -> void:
+	match preset:
+		"tactical":
+			ProjectSettings.set_setting("arena_camera/pitch_degrees", 63.0)
+			ProjectSettings.set_setting("arena_camera/distance", 21.5)
+			ProjectSettings.set_setting("arena_camera/fov_degrees", 46.0)
+		"close":
+			ProjectSettings.set_setting("arena_camera/pitch_degrees", 52.0)
+			ProjectSettings.set_setting("arena_camera/distance", 17.5)
+			ProjectSettings.set_setting("arena_camera/fov_degrees", 42.0)
+		_:
+			ProjectSettings.set_setting("arena_camera/pitch_degrees", 57.5)
+			ProjectSettings.set_setting("arena_camera/distance", 19.5)
+			ProjectSettings.set_setting("arena_camera/fov_degrees", 44.0)
 
 
 func apply_performance_settings() -> void:
@@ -104,15 +123,35 @@ func set_aim_fire_mode(mode: String) -> void:
 		EventBus.aim_fire_mode_changed.emit(mode)
 
 
+func set_joystick_sensitivity(sens: float) -> void:
+	SaveManager.joystick_sensitivity = clampf(sens, 0.85, 1.35)
+	SaveManager.save_settings()
+
+
+func set_camera_preset(preset: String) -> void:
+	if preset in ["classic", "tactical", "close"]:
+		SaveManager.camera_preset = preset
+		SaveManager.save_settings()
+		_apply_camera_preset_settings(preset)
+		EventBus.camera_settings_changed.emit()
+
+
 func set_selected_mode(mode_id: String) -> void:
-	if mode_id in ["zone_control", "team_score_rush"]:
+	if mode_id in ["zone_control", "team_score_rush", "zone_blitz"]:
 		SaveManager.selected_mode_id = mode_id
 		SaveManager.save_settings()
 		EventBus.selected_mode_changed.emit(mode_id)
 
 
+func set_selected_map(map_id: String) -> void:
+	if map_id in ["sector_01", "sector_02"]:
+		SaveManager.selected_map_id = map_id
+		SaveManager.save_settings()
+		EventBus.selected_map_changed.emit(map_id)
+
+
 func set_starting_blaster(blaster_id: String) -> void:
-	if blaster_id in ["pulse_blaster", "rapid_repeater", "plasma_scatter"]:
+	if blaster_id in ["pulse_blaster", "rapid_repeater", "plasma_scatter", "arc_railgun"]:
 		SaveManager.starting_blaster_id = blaster_id
 		SaveManager.save_settings()
 		EventBus.starting_blaster_changed.emit(blaster_id)
@@ -124,12 +163,19 @@ func get_starting_blaster_index() -> int:
 			return 1
 		"plasma_scatter":
 			return 2
+		"arc_railgun":
+			return 3
 		_:
 			return 0
 
 
 func get_active_mode_config() -> ArenaModeConfig:
-	var path: String = MODE_TEAM_RUSH_PATH if SaveManager.selected_mode_id == "team_score_rush" else MODE_ZONE_CONTROL_PATH
+	var path: String = MODE_ZONE_CONTROL_PATH
+	match SaveManager.selected_mode_id:
+		"team_score_rush":
+			path = MODE_TEAM_RUSH_PATH
+		"zone_blitz":
+			path = MODE_ZONE_BLITZ_PATH
 	if ResourceLoader.exists(path):
 		var res: Resource = ResourceLoader.load(path)
 		if res is ArenaModeConfig:
@@ -138,34 +184,55 @@ func get_active_mode_config() -> ArenaModeConfig:
 	return fallback
 
 
-func record_match_result(won: bool, eliminations: int) -> void:
+func record_match_result(won: bool, eliminations: int) -> int:
+	var safe_elims: int = maxi(0, eliminations)
+	var xp_earned: int = 50 + (75 if won else 0) + safe_elims * 15
 	SaveManager.total_matches += 1
 	if won:
 		SaveManager.total_wins += 1
-	SaveManager.total_eliminations += maxi(0, eliminations)
+	SaveManager.total_eliminations += safe_elims
+	SaveManager.best_match_eliminations = maxi(SaveManager.best_match_eliminations, safe_elims)
+	SaveManager.career_xp += xp_earned
 	SaveManager.save_settings()
+	return xp_earned
 
 
 func set_match_paused(paused: bool) -> void:
 	if get_tree() != null:
 		get_tree().paused = paused
 	current_state = AppState.PAUSED if paused else AppState.ARENA_PLAY
+	AudioManager.set_music_ducked(paused)
 	EventBus.match_paused_changed.emit(paused)
 
 
 func go_to_main_menu() -> void:
 	current_state = AppState.MAIN_MENU
+	AudioManager.stop_all_music()
 	change_scene(MAIN_MENU_SCENE)
 
 
 func go_to_camera_test() -> void:
 	current_state = AppState.CAMERA_TEST
+	AudioManager.stop_all_music()
 	change_scene(CAMERA_TEST_SCENE)
 
 
 func go_to_arena_sector_01() -> void:
+	SaveManager.selected_map_id = "sector_01"
 	current_state = AppState.ARENA_PLAY
 	change_scene(ARENA_SECTOR_01_SCENE)
+
+
+func go_to_arena_sector_02() -> void:
+	SaveManager.selected_map_id = "sector_02"
+	current_state = AppState.ARENA_PLAY
+	change_scene(ARENA_SECTOR_02_SCENE)
+
+
+func go_to_selected_arena() -> void:
+	current_state = AppState.ARENA_PLAY
+	var scene_path: String = ARENA_SECTOR_02_SCENE if SaveManager.selected_map_id == "sector_02" else ARENA_SECTOR_01_SCENE
+	change_scene(scene_path)
 
 
 func change_scene(scene_path: String) -> void:

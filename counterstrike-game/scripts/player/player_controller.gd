@@ -4,6 +4,10 @@ extends CharacterBody3D
 
 signal player_defeated(attacker_team: int)
 
+const DASH_DURATION: float = 0.18
+const DASH_SPEED: float = 14.8
+const DASH_COOLDOWN: float = 2.4
+
 @export var team_id: int = 0
 @export var walk_speed: float = 3.9
 @export var run_speed: float = 6.5
@@ -22,6 +26,7 @@ signal player_defeated(attacker_team: int)
 @onready var _muzzle_marker: Marker3D = $VisualRoot/WeaponMount/MuzzleMarker
 @onready var _muzzle_flash: MeshInstance3D = $VisualRoot/WeaponMount/MuzzleMarker/MuzzleFlashMesh
 @onready var _team_ring: MeshInstance3D = $TeamRingMesh
+@onready var _buff_aura: MeshInstance3D = $BuffAuraMesh
 @onready var _aim_indicator: Node3D = $AimIndicatorPivot
 @onready var _aim_beam: MeshInstance3D = $AimIndicatorPivot/AimBeamMesh
 @onready var _aim_tip: MeshInstance3D = $AimIndicatorPivot/AimTipMesh
@@ -33,6 +38,7 @@ var _anim_player: AnimationPlayer = null
 var _aim_beam_mat: StandardMaterial3D = null
 var _muzzle_flash_mat: StandardMaterial3D = null
 var _team_ring_mat: StandardMaterial3D = null
+var _buff_aura_mat: StandardMaterial3D = null
 var _facing_yaw: float = -PI * 0.5
 var _spawn_pos: Vector3 = Vector3.ZERO
 
@@ -53,7 +59,12 @@ var _muzzle_flash_timer: float = 0.0
 var _hit_flash_timer: float = 0.0
 var _damage_boost_timer: float = 0.0
 var _speed_boost_timer: float = 0.0
+var _dash_timer: float = 0.0
+var _dash_cooldown: float = 0.0
+var _dash_dir: Vector3 = Vector3.FORWARD
+var _dash_emit_timer: float = 0.0
 var _buff_emit_timer: float = 0.0
+var _aura_pulse_time: float = 0.0
 var _step_timer: float = 0.0
 var _respawn_last_sec: int = -1
 
@@ -74,8 +85,10 @@ func _ready() -> void:
 
 	EventBus.blaster_switch_requested.connect(switch_next_blaster)
 	EventBus.blaster_recharge_requested.connect(start_recharge)
+	EventBus.player_dash_requested.connect(trigger_dash)
 	_emit_stats()
 	EventBus.player_buff_updated.emit(0.0, 0.0)
+	EventBus.player_dash_updated.emit(0.0, DASH_COOLDOWN, true)
 
 
 func _exit_tree() -> void:
@@ -83,6 +96,8 @@ func _exit_tree() -> void:
 		EventBus.blaster_switch_requested.disconnect(switch_next_blaster)
 	if EventBus.blaster_recharge_requested.is_connected(start_recharge):
 		EventBus.blaster_recharge_requested.disconnect(start_recharge)
+	if EventBus.player_dash_requested.is_connected(trigger_dash):
+		EventBus.player_dash_requested.disconnect(trigger_dash)
 
 
 func is_alive() -> bool:
@@ -121,6 +136,14 @@ func _setup_materials() -> void:
 		_team_ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		_team_ring_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.65)
 		_team_ring.material_override = _team_ring_mat
+
+	if _buff_aura != null:
+		_buff_aura_mat = StandardMaterial3D.new()
+		_buff_aura_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_buff_aura_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_buff_aura_mat.albedo_color = Color(0.984314, 0.74902, 0.141176, 0.72)
+		_buff_aura.material_override = _buff_aura_mat
+		_buff_aura.visible = false
 
 
 func _setup_animations() -> void:
@@ -167,15 +190,16 @@ func _setup_animations() -> void:
 func _ensure_default_blasters() -> void:
 	if not blasters.is_empty():
 		return
-	var p1: Resource = ResourceLoader.load("res://data/blasters/pulse_blaster.tres")
-	var p2: Resource = ResourceLoader.load("res://data/blasters/rapid_repeater.tres")
-	var p3: Resource = ResourceLoader.load("res://data/blasters/plasma_scatter.tres")
-	if p1 is EnergyBlasterData:
-		blasters.append(p1 as EnergyBlasterData)
-	if p2 is EnergyBlasterData:
-		blasters.append(p2 as EnergyBlasterData)
-	if p3 is EnergyBlasterData:
-		blasters.append(p3 as EnergyBlasterData)
+	for p in [
+		"res://data/blasters/pulse_blaster.tres",
+		"res://data/blasters/rapid_repeater.tres",
+		"res://data/blasters/plasma_scatter.tres",
+		"res://data/blasters/arc_railgun.tres"
+	]:
+		if ResourceLoader.exists(p):
+			var res: Resource = ResourceLoader.load(p)
+			if res is EnergyBlasterData:
+				blasters.append(res as EnergyBlasterData)
 
 
 func _get_active_blaster() -> EnergyBlasterData:
@@ -242,6 +266,32 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			switch_next_blaster()
 		elif key_ev.keycode == KEY_R:
 			start_recharge()
+		elif key_ev.keycode == KEY_SHIFT:
+			trigger_dash()
+
+
+func trigger_dash() -> bool:
+	if not _alive or _dash_cooldown > 0.0 or _dash_timer > 0.0:
+		return false
+	var move_2d: Vector2 = _read_move_input()
+	var cam_yaw_rad: float = _get_camera_yaw_radians()
+	var move_world: Vector3 = _stick_to_world_dir(move_2d, cam_yaw_rad)
+	if move_world.length_squared() > 0.02:
+		_dash_dir = move_world.normalized()
+	else:
+		_dash_dir = Vector3(-sin(_facing_yaw), 0.0, -cos(_facing_yaw)).normalized()
+
+	_dash_timer = DASH_DURATION
+	_dash_cooldown = DASH_COOLDOWN
+	_dash_emit_timer = 0.0
+	AudioManager.play_dash_sfx()
+	EventBus.camera_trauma_requested.emit(0.08)
+	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
+	if flash is ImpactFlash:
+		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.55, 0.0), Color(0.219608, 0.741176, 0.972549, 1.0))
+	EventBus.player_dash_updated.emit(_dash_cooldown, DASH_COOLDOWN, false)
+	return true
 
 
 func _physics_process(delta: float) -> void:
@@ -280,6 +330,21 @@ func _physics_process(delta: float) -> void:
 			_buff_emit_timer = 0.0
 			EventBus.player_buff_updated.emit(_damage_boost_timer, _speed_boost_timer)
 
+	if _dash_cooldown > 0.0:
+		_dash_cooldown = maxf(0.0, _dash_cooldown - delta)
+		_dash_emit_timer += delta
+		if _dash_cooldown <= 0.0:
+			_dash_emit_timer = 0.0
+			EventBus.player_dash_updated.emit(0.0, DASH_COOLDOWN, true)
+		elif _dash_emit_timer >= 0.16:
+			_dash_emit_timer = 0.0
+			EventBus.player_dash_updated.emit(_dash_cooldown, DASH_COOLDOWN, false)
+
+	if _dash_timer > 0.0:
+		_dash_timer = maxf(0.0, _dash_timer - delta)
+
+	_update_buff_aura(delta)
+
 	_time_since_damage += delta
 	if _time_since_damage >= 4.0 and _hp < max_hp:
 		var prev_hp: int = int(ceil(_hp))
@@ -308,19 +373,22 @@ func _physics_process(delta: float) -> void:
 	var move_world: Vector3 = _stick_to_world_dir(move_2d, cam_yaw_rad)
 	var aim_world: Vector3 = _stick_to_world_dir(aim_2d, cam_yaw_rad)
 
-	var speed_mult: float = 1.30 if _speed_boost_timer > 0.0 else 1.0
-	var move_mag: float = clampf(move_2d.length(), 0.0, 1.0)
-	var target_speed: float = 0.0
-	if move_mag > 0.01:
-		target_speed = lerpf(walk_speed, run_speed, clampf((move_mag - 0.15) / 0.85, 0.0, 1.0)) * speed_mult
+	if _dash_timer > 0.0:
+		velocity.x = _dash_dir.x * DASH_SPEED
+		velocity.z = _dash_dir.z * DASH_SPEED
+	else:
+		var speed_mult: float = 1.30 if _speed_boost_timer > 0.0 else 1.0
+		var move_mag: float = clampf(move_2d.length(), 0.0, 1.0)
+		var target_speed: float = 0.0
+		if move_mag > 0.01:
+			target_speed = lerpf(walk_speed, run_speed, clampf((move_mag - 0.15) / 0.85, 0.0, 1.0)) * speed_mult
 
-	var desired_vel_xz: Vector3 = move_world * target_speed
-	var current_vel_xz := Vector3(velocity.x, 0.0, velocity.z)
-	var rate: float = acceleration if desired_vel_xz.length_squared() > 0.01 else deceleration
-	current_vel_xz = current_vel_xz.move_toward(desired_vel_xz, rate * delta)
-
-	velocity.x = current_vel_xz.x
-	velocity.z = current_vel_xz.z
+		var desired_vel_xz: Vector3 = move_world * target_speed
+		var current_vel_xz := Vector3(velocity.x, 0.0, velocity.z)
+		var rate: float = acceleration if desired_vel_xz.length_squared() > 0.01 else deceleration
+		current_vel_xz = current_vel_xz.move_toward(desired_vel_xz, rate * delta)
+		velocity.x = current_vel_xz.x
+		velocity.z = current_vel_xz.z
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	elif velocity.y < 0.0:
@@ -389,7 +457,14 @@ func _try_fire(horiz_speed: float) -> void:
 		if collider != null and collider.has_method("take_damage"):
 			var target_team: Variant = collider.get("team_id")
 			if target_team == null or int(target_team) != team_id:
-				collider.call("take_damage", b.energy_damage * dmg_mult * float(b.pellets_per_shot), team_id)
+				var total_dmg: float = b.energy_damage * dmg_mult * float(b.pellets_per_shot)
+				if collider is ArenaBot:
+					collider.call("take_damage", total_dmg, team_id, true)
+				else:
+					collider.call("take_damage", total_dmg, team_id)
+				var killed: bool = collider.has_method("is_alive") and not bool(collider.call("is_alive"))
+				AudioManager.play_hitmarker_sfx(killed)
+				EventBus.enemy_hit_confirmed.emit(total_dmg, killed)
 		var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 		if flash is ImpactFlash:
 			(flash as ImpactFlash).trigger(hit_pos, b.projectile_color)
@@ -413,7 +488,10 @@ func _try_fire(horiz_speed: float) -> void:
 					b.energy_damage * dmg_mult,
 					team_id,
 					self,
-					b.projectile_color
+					b.projectile_color,
+					b.bolt_scale,
+					b.pierce_count,
+					true
 				)
 
 	AudioManager.play_sfx_path(b.shoot_sfx_path, randf_range(0.95, 1.05))
@@ -452,8 +530,26 @@ func apply_pickup(pickup_type: int, value: float) -> bool:
 	return false
 
 
+func _update_buff_aura(delta: float) -> void:
+	if _buff_aura == null or _buff_aura_mat == null:
+		return
+	var show_aura: bool = (_damage_boost_timer > 0.0 or _speed_boost_timer > 0.0 or _dash_timer > 0.0)
+	_buff_aura.visible = show_aura
+	if not show_aura:
+		return
+	_aura_pulse_time += delta * 9.0
+	var s: float = 1.0 + 0.07 * sin(_aura_pulse_time)
+	_buff_aura.scale = Vector3(s, 1.0, s)
+	if _dash_timer > 0.0:
+		_buff_aura_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.85)
+	elif _damage_boost_timer > 0.0:
+		_buff_aura_mat.albedo_color = Color(0.984314, 0.74902, 0.141176, 0.75)
+	else:
+		_buff_aura_mat.albedo_color = Color(0.658824, 0.333333, 0.968627, 0.75)
+
+
 func take_damage(amount: float, attacker_team: int) -> void:
-	if not _alive or attacker_team == team_id:
+	if not _alive or attacker_team == team_id or _dash_timer > 0.05:
 		return
 	_time_since_damage = 0.0
 	_hit_flash_timer = 0.14
@@ -473,9 +569,12 @@ func _enter_respawn(attacker_team: int) -> void:
 	_respawn_last_sec = 3
 	_damage_boost_timer = 0.0
 	_speed_boost_timer = 0.0
+	_dash_timer = 0.0
 	_muzzle_flash_timer = 0.0
 	if _muzzle_flash != null:
 		_muzzle_flash.visible = false
+	if _buff_aura != null:
+		_buff_aura.visible = false
 	velocity = Vector3.ZERO
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", 0.85)
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
@@ -525,8 +624,11 @@ func _respawn() -> void:
 	_hp = max_hp
 	_alive = true
 	_recharging = false
+	_dash_timer = 0.0
+	_dash_cooldown = 0.0
 	_time_since_damage = 10.0
 	_death_hide_timer = 0.0
+	EventBus.player_dash_updated.emit(0.0, DASH_COOLDOWN, true)
 	var b: EnergyBlasterData = _get_active_blaster()
 	if b != null:
 		_current_energy = b.energy_cell_capacity
@@ -557,6 +659,10 @@ func _read_move_input() -> Vector2:
 	var vec: Vector2 = Vector2.ZERO
 	if _touch_hud != null and _touch_hud.has_method("get_move_vector"):
 		vec = _touch_hud.call("get_move_vector")
+		if vec.length_squared() > 0.001:
+			vec *= SaveManager.joystick_sensitivity
+			if vec.length() > 1.0:
+				vec = vec.normalized()
 	if vec.length_squared() < 0.001:
 		var kb := Vector2(
 			float(Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)),

@@ -19,4 +19,5 @@ projectile_color = Color(0.133333, 0.827451, 0.933333, 1)
 model_scene_path = "res://assets/kenney/fps/blaster-repeater.glb"
 model_scale = 0.44
 shoot_sfx_path = "res://assets/kenney/audio/blaster_repeater.ogg"
+bolt_scale = Vector3(0.75, 0.75, 1.35)
 arena_credit_cost = 0

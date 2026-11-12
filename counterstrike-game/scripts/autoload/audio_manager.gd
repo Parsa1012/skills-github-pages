@@ -1,17 +1,22 @@
 extends Node
-## مدیر صدای مستقل و آفلاین برای افکت‌های رابط کاربری و صدای گیم‌پلی (اختصاصی + Kenney CC0/MIT).
+## مدیر صدای مستقل و آفلاین برای موسیقی منو و نبرد + افکت‌های صوتی اختصاصی و Kenney.
 
 const UI_TAP_PATH: String = "res://assets/audio/sfx_ui_tap.wav"
 const UI_SWITCH_PATH: String = "res://assets/audio/sfx_ui_switch.wav"
 const UI_CONFIRM_PATH: String = "res://assets/audio/sfx_ui_confirm.wav"
 const MENU_BGM_PATH: String = "res://assets/audio/bgm_menu_arcade.wav"
+const ARENA_BGM_PATH: String = "res://assets/audio/bgm_arena_combat.wav"
 const PICKUP_SFX_PATH: String = "res://assets/audio/sfx_pickup_item.wav"
 const RECHARGE_SFX_PATH: String = "res://assets/audio/sfx_recharge_done.wav"
 const ZONE_CAPTURE_SFX_PATH: String = "res://assets/audio/sfx_zone_capture.wav"
 const PLAYER_HIT_SFX_PATH: String = "res://assets/audio/sfx_player_hit.wav"
+const DASH_SFX_PATH: String = "res://assets/audio/sfx_dash_whoosh.wav"
+const HITMARKER_SFX_PATH: String = "res://assets/audio/sfx_hitmarker.wav"
+const VICTORY_SFX_PATH: String = "res://assets/audio/sfx_match_victory.wav"
+const DEFEAT_SFX_PATH: String = "res://assets/audio/sfx_match_defeat.wav"
 
 const MAX_UI_PLAYERS: int = 4
-const MAX_SFX_PLAYERS: int = 10
+const MAX_SFX_PLAYERS: int = 12
 
 var _music_player: AudioStreamPlayer = null
 var _ui_players: Array[AudioStreamPlayer] = []
@@ -20,11 +25,13 @@ var _ui_cursor: int = 0
 var _sfx_cursor: int = 0
 
 var _menu_music: AudioStream = null
+var _arena_music: AudioStream = null
 var _ui_tap_sfx: AudioStream = null
 var _ui_switch_sfx: AudioStream = null
 var _ui_confirm_sfx: AudioStream = null
 var _sfx_cache: Dictionary = {}
-var _menu_music_requested: bool = false
+var _music_mode: String = "" # "" | "menu" | "arena"
+var _music_ducked: bool = false
 
 
 func _ready() -> void:
@@ -35,7 +42,7 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
-	_menu_music_requested = false
+	_music_mode = ""
 	if _music_player != null:
 		_music_player.stop()
 		_music_player.stream = null
@@ -48,6 +55,7 @@ func _exit_tree() -> void:
 			p.stop()
 			p.stream = null
 	_menu_music = null
+	_arena_music = null
 	_ui_tap_sfx = null
 	_ui_switch_sfx = null
 	_ui_confirm_sfx = null
@@ -84,16 +92,21 @@ func _load_bundled_audio() -> void:
 		var bgm: Resource = ResourceLoader.load(MENU_BGM_PATH)
 		if bgm is AudioStream:
 			_menu_music = bgm as AudioStream
+	if ResourceLoader.exists(ARENA_BGM_PATH):
+		var abgm: Resource = ResourceLoader.load(ARENA_BGM_PATH)
+		if abgm is AudioStream:
+			_arena_music = abgm as AudioStream
 
 
 func register_menu_music(stream: AudioStream) -> void:
 	_menu_music = stream
-	if _menu_music_requested:
+	if _music_mode == "menu":
 		play_menu_music()
 
 
 func apply_volumes() -> void:
-	var music_lin: float = SaveManager.master_volume * SaveManager.music_volume if SaveManager.music_enabled else 0.0
+	var music_scale: float = (0.38 if _music_ducked else 1.0) * (0.42 if _music_mode == "arena" else 1.0)
+	var music_lin: float = SaveManager.master_volume * SaveManager.music_volume * music_scale if SaveManager.music_enabled else 0.0
 	var ui_lin: float = SaveManager.master_volume * SaveManager.ui_volume if SaveManager.sfx_enabled else 0.0
 	var sfx_lin: float = SaveManager.master_volume * SaveManager.sfx_volume if SaveManager.sfx_enabled else 0.0
 
@@ -101,8 +114,11 @@ func apply_volumes() -> void:
 		_music_player.volume_db = linear_to_db(music_lin) if music_lin > 0.001 else -80.0
 		if not SaveManager.music_enabled and _music_player.playing:
 			_music_player.stop()
-		elif SaveManager.music_enabled and _menu_music_requested and _menu_music != null and not _music_player.playing:
-			play_menu_music()
+		elif SaveManager.music_enabled and not _music_mode.is_empty() and not _music_player.playing:
+			if _music_mode == "menu":
+				play_menu_music()
+			elif _music_mode == "arena":
+				play_arena_music()
 
 	var ui_db: float = linear_to_db(ui_lin) if ui_lin > 0.001 else -80.0
 	var sfx_db: float = linear_to_db(sfx_lin) if sfx_lin > 0.001 else -80.0
@@ -113,10 +129,13 @@ func apply_volumes() -> void:
 
 
 func play_menu_music() -> void:
-	_menu_music_requested = true
+	_music_mode = "menu"
+	_music_ducked = false
+	apply_volumes()
 	if not SaveManager.music_enabled or _music_player == null or _menu_music == null:
 		return
 	if _music_player.stream != _menu_music:
+		_music_player.stop()
 		_music_player.stream = _menu_music
 	if _is_dummy_audio_driver():
 		return
@@ -124,10 +143,35 @@ func play_menu_music() -> void:
 		_music_player.play()
 
 
+func play_arena_music() -> void:
+	_music_mode = "arena"
+	_music_ducked = false
+	apply_volumes()
+	if not SaveManager.music_enabled or _music_player == null or _arena_music == null:
+		return
+	if _music_player.stream != _arena_music:
+		_music_player.stop()
+		_music_player.stream = _arena_music
+	if _is_dummy_audio_driver():
+		return
+	if not _music_player.playing:
+		_music_player.play()
+
+
 func stop_menu_music() -> void:
-	_menu_music_requested = false
+	if _music_mode == "menu":
+		stop_all_music()
+
+
+func stop_all_music() -> void:
+	_music_mode = ""
 	if _music_player != null and _music_player.playing:
 		_music_player.stop()
+
+
+func set_music_ducked(ducked: bool) -> void:
+	_music_ducked = ducked
+	apply_volumes()
 
 
 func set_music_enabled(enabled: bool) -> void:
@@ -162,6 +206,18 @@ func play_zone_capture_sfx(pitch_scale: float = 1.0) -> void:
 
 func play_player_hit_sfx() -> void:
 	play_sfx_path(PLAYER_HIT_SFX_PATH, randf_range(0.92, 1.05), -1.0)
+
+
+func play_dash_sfx() -> void:
+	play_sfx_path(DASH_SFX_PATH, randf_range(0.96, 1.06), -2.5)
+
+
+func play_hitmarker_sfx(is_kill: bool = false) -> void:
+	play_sfx_path(HITMARKER_SFX_PATH, 1.24 if is_kill else randf_range(0.96, 1.04), -1.5 if is_kill else -5.5)
+
+
+func play_match_end_sfx(won: bool) -> void:
+	play_sfx_path(VICTORY_SFX_PATH if won else DEFEAT_SFX_PATH, 1.0, 0.0)
 
 
 func play_ui_click(pitch_scale: float = 1.0) -> void:
@@ -215,9 +271,11 @@ func play_sfx_stream(stream: AudioStream, pitch_scale: float = 1.0, volume_offse
 
 
 func _on_music_finished() -> void:
-	if _is_dummy_audio_driver():
+	if _is_dummy_audio_driver() or not SaveManager.music_enabled or _music_player == null:
 		return
-	if _menu_music_requested and SaveManager.music_enabled and _music_player != null and _menu_music != null:
+	if _music_mode == "menu" and _menu_music != null:
+		_music_player.play()
+	elif _music_mode == "arena" and _arena_music != null:
 		_music_player.play()
 
 

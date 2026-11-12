@@ -20,10 +20,25 @@ signal aim_fire_mode_changed(mode_name: String)
 signal selected_mode_changed(mode_id: String)
 
 @warning_ignore("unused_signal")
+signal selected_map_changed(map_id: String)
+
+@warning_ignore("unused_signal")
 signal starting_blaster_changed(blaster_id: String)
 
 @warning_ignore("unused_signal")
 signal player_buff_updated(damage_secs: float, speed_secs: float)
+
+@warning_ignore("unused_signal")
+signal player_dash_updated(cooldown_left: float, cooldown_total: float, ready: bool)
+
+@warning_ignore("unused_signal")
+signal enemy_hit_confirmed(damage: float, is_kill: bool)
+
+@warning_ignore("unused_signal")
+signal kill_feed_event(killer_fa: String, victim_fa: String, killer_team: int)
+
+@warning_ignore("unused_signal")
+signal kill_streak_announced(streak_count: int, title_fa: String)
 
 @warning_ignore("unused_signal")
 signal camera_trauma_requested(amount: float)
@@ -45,6 +60,9 @@ signal blaster_switch_requested()
 
 @warning_ignore("unused_signal")
 signal blaster_recharge_requested()
+
+@warning_ignore("unused_signal")
+signal player_dash_requested()
 
 @warning_ignore("unused_signal")
 signal match_started(mode_id: String, target_score: int)

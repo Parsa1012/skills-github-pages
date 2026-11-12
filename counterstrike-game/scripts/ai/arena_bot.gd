@@ -55,6 +55,7 @@ var _hit_flash_timer: float = 0.0
 var _damage_boost_timer: float = 0.0
 var _speed_boost_timer: float = 0.0
 var _base_pivot_scale: Vector3 = Vector3.ONE
+var _last_attacker_is_player: bool = false
 
 
 func _ready() -> void:
@@ -74,6 +75,10 @@ func _ready() -> void:
 
 func is_alive() -> bool:
 	return _state != BotState.RESPAWN
+
+
+func was_last_hit_by_player() -> bool:
+	return _last_attacker_is_player
 
 
 func _setup_team_visuals() -> void:
@@ -300,7 +305,9 @@ func _process_engage(delta: float) -> void:
 
 	_fire_timer -= delta
 	if _fire_timer <= 0.0:
-		_fire_timer = fire_cooldown
+		var is_scout: bool = (profile != null and profile.profile_id == &"scout_drone")
+		var is_heavy: bool = (profile != null and profile.profile_id == &"heavy_sentinel")
+		_fire_timer = fire_cooldown * (0.72 if is_scout else (1.28 if is_heavy else 1.0))
 		_fire_energy_bolt(dir_to_target)
 
 
@@ -356,7 +363,8 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 	var pre_hit: Dictionary = space_state.intersect_ray(pre_query)
 
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
-	var bolt_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)
+	var is_heavy: bool = (profile != null and profile.profile_id == &"heavy_sentinel")
+	var bolt_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else (Color(0.937255, 0.266667, 0.266667, 1.0) if is_heavy else Color(0.984314, 0.45098, 0.086275, 1.0))
 
 	var dmg: float = projectile_damage * (1.30 if _damage_boost_timer > 0.0 else 1.0)
 	if not pre_hit.is_empty():
@@ -372,21 +380,25 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 	else:
 		var precision: float = profile.aim_precision if profile != null else 0.72
 		var max_err_rad: float = deg_to_rad((1.0 - precision) * 14.0)
-		var shoot_dir: Vector3 = aim_dir.rotated(Vector3.UP, randf_range(-max_err_rad, max_err_rad))
-
-		var proj: Node = PoolManager.acquire(EnergyProjectile.POOL_ID, proj_parent)
-		if proj is EnergyProjectile:
-			(proj as EnergyProjectile).launch(
-				spawn_pos,
-				shoot_dir,
-				projectile_speed,
-				dmg,
-				team_id,
-				self,
-				bolt_col
-			)
+		var offsets_deg: Array[float] = [-4.5, 4.5] if is_heavy else [0.0]
+		var bolt_scale: Vector3 = Vector3(1.25, 1.25, 1.1) if is_heavy else Vector3.ONE
+		for off_deg in offsets_deg:
+			var shoot_dir: Vector3 = aim_dir.rotated(Vector3.UP, deg_to_rad(off_deg) + randf_range(-max_err_rad, max_err_rad))
+			var proj: Node = PoolManager.acquire(EnergyProjectile.POOL_ID, proj_parent)
+			if proj is EnergyProjectile:
+				(proj as EnergyProjectile).launch(
+					spawn_pos,
+					shoot_dir,
+					projectile_speed,
+					dmg,
+					team_id,
+					self,
+					bolt_col,
+					bolt_scale
+				)
 	var sfx: String = "res://assets/kenney/audio/blaster.ogg" if team_id == 0 else "res://assets/kenney/audio/enemy_attack.ogg"
-	AudioManager.play_sfx_path(sfx, randf_range(0.94, 1.06), -3.0)
+	var pitch: float = randf_range(0.76, 0.84) if is_heavy else randf_range(0.94, 1.06)
+	AudioManager.play_sfx_path(sfx, pitch, -3.0)
 
 
 func apply_pickup(pickup_type: int, value: float) -> bool:
@@ -408,10 +420,11 @@ func apply_pickup(pickup_type: int, value: float) -> bool:
 	return false
 
 
-func take_damage(amount: float, attacker_team: int) -> void:
+func take_damage(amount: float, attacker_team: int, from_player: bool = false) -> void:
 	if _state == BotState.RESPAWN or attacker_team == team_id:
 		return
 
+	_last_attacker_is_player = from_player
 	_hit_flash_timer = 0.09
 	_hp = maxf(_hp - amount, 0.0)
 	_update_hp_bar()
@@ -491,6 +504,7 @@ func _respawn_at_home() -> void:
 	_has_los = false
 	_target_ref = null
 	_fire_timer = 0.85
+	_last_attacker_is_player = false
 	_state = BotState.PATROL
 	_update_hp_bar()
 

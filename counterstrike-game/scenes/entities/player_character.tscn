@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/character-soldier.glb" id="2_soldier"]
@@ -17,6 +17,12 @@ radial_segments = 24
 shading_mode = 0
 transparency = 1
 albedo_color = Color(0.219608, 0.741176, 0.972549, 0.65)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_buff_aura"]
+top_radius = 0.86
+bottom_radius = 0.92
+height = 0.04
+radial_segments = 24
 
 [sub_resource type="BoxMesh" id="BoxMesh_aim_beam"]
 size = Vector3(0.08, 0.02, 5.2)
@@ -53,6 +59,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
 cast_shadow = 0
 mesh = SubResource("CylinderMesh_team_ring")
 surface_material_override/0 = SubResource("StandardMaterial3D_ring")
+
+[node name="BuffAuraMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.045, 0)
+visible = false
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_buff_aura")
 
 [node name="AimIndicatorPivot" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.07, 0)

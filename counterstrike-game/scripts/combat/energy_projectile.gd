@@ -1,6 +1,6 @@
 class_name EnergyProjectile
 extends Node3D
-## گلوله انرژی استخری (Pooled) با رهگیری پیوسته RayCast برای جلوگیری از رد شدن از دیوار در ۳۰ فریم.
+## گلوله انرژی استخری (Pooled) با رهگیری پیوسته RayCast، نفوذ انتخابی ریل‌گان و بازخورد اصابت.
 
 const POOL_ID: StringName = &"energy_projectile"
 const IMPACT_POOL_ID: StringName = &"impact_flash"
@@ -16,6 +16,8 @@ var _color: Color = Color(0.219608, 0.741176, 0.972549, 1.0)
 var _age: float = 0.0
 var _max_lifetime: float = 1.35
 var _active: bool = false
+var _pierce_left: int = 0
+var _shooter_is_player: bool = false
 var _outer_mat: StandardMaterial3D = null
 
 
@@ -31,7 +33,18 @@ func _ensure_material() -> void:
 		_bolt_mesh.material_override = _outer_mat
 
 
-func launch(origin: Vector3, direction: Vector3, speed: float, damage: float, team_id: int, shooter: CollisionObject3D, bolt_color: Color) -> void:
+func launch(
+	origin: Vector3,
+	direction: Vector3,
+	speed: float,
+	damage: float,
+	team_id: int,
+	shooter: CollisionObject3D,
+	bolt_color: Color,
+	bolt_scale: Vector3 = Vector3.ONE,
+	pierce_count: int = 0,
+	shooter_is_player: bool = false
+) -> void:
 	_ensure_material()
 	global_position = origin
 	var flat_dir := Vector3(direction.x, direction.y * 0.25, direction.z)
@@ -44,6 +57,9 @@ func launch(origin: Vector3, direction: Vector3, speed: float, damage: float, te
 	_color = bolt_color
 	_age = 0.0
 	_active = true
+	_pierce_left = maxi(0, pierce_count)
+	_shooter_is_player = shooter_is_player
+	scale = bolt_scale
 
 	_exclude_rids.clear()
 	if shooter != null and is_instance_valid(shooter):
@@ -51,7 +67,7 @@ func launch(origin: Vector3, direction: Vector3, speed: float, damage: float, te
 
 	rotation.y = atan2(-_direction.x, -_direction.z)
 	if _outer_mat != null:
-		_outer_mat.albedo_color = Color(bolt_color.r, bolt_color.g, bolt_color.b, 0.88)
+		_outer_mat.albedo_color = Color(bolt_color.r, bolt_color.g, bolt_color.b, 0.90)
 
 
 func _physics_process(delta: float) -> void:
@@ -76,11 +92,27 @@ func _physics_process(delta: float) -> void:
 	if not hit.is_empty():
 		var hit_pos: Vector3 = hit.get("position", end_pos)
 		var collider: Object = hit.get("collider", null)
+		var hit_damageable: bool = false
 		if collider != null and collider.has_method("take_damage"):
 			var target_team: Variant = collider.get("team_id")
 			if target_team == null or int(target_team) != _team_id:
-				collider.call("take_damage", _damage, _team_id)
+				hit_damageable = true
+				if _shooter_is_player and collider is ArenaBot:
+					collider.call("take_damage", _damage, _team_id, true)
+				else:
+					collider.call("take_damage", _damage, _team_id)
+				if _shooter_is_player:
+					var killed: bool = collider.has_method("is_alive") and not bool(collider.call("is_alive"))
+					AudioManager.play_hitmarker_sfx(killed)
+					EventBus.enemy_hit_confirmed.emit(_damage, killed)
+
 		_spawn_impact(hit_pos)
+		if hit_damageable and _pierce_left > 0 and collider is CollisionObject3D:
+			_pierce_left -= 1
+			_exclude_rids.append((collider as CollisionObject3D).get_rid())
+			global_position = hit_pos + _direction * 0.18
+			return
+
 		_recycle()
 		return
 
@@ -96,4 +128,5 @@ func _spawn_impact(world_pos: Vector3) -> void:
 
 func _recycle() -> void:
 	_active = false
+	scale = Vector3.ONE
 	PoolManager.release(POOL_ID, self)

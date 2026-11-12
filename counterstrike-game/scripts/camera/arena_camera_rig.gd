@@ -43,6 +43,8 @@ func _ready() -> void:
 		if event_bus != null:
 			if not event_bus.is_connected("camera_settings_changed", reload_from_project_settings):
 				event_bus.connect("camera_settings_changed", reload_from_project_settings)
+			if event_bus.has_signal("camera_preset_changed") and not event_bus.is_connected("camera_preset_changed", _on_camera_preset_changed):
+				event_bus.connect("camera_preset_changed", _on_camera_preset_changed)
 			if event_bus.has_signal("camera_trauma_requested") and not event_bus.is_connected("camera_trauma_requested", add_trauma):
 				event_bus.connect("camera_trauma_requested", add_trauma)
 
@@ -53,6 +55,8 @@ func _exit_tree() -> void:
 		if event_bus != null:
 			if event_bus.is_connected("camera_settings_changed", reload_from_project_settings):
 				event_bus.disconnect("camera_settings_changed", reload_from_project_settings)
+			if event_bus.has_signal("camera_preset_changed") and event_bus.is_connected("camera_preset_changed", _on_camera_preset_changed):
+				event_bus.disconnect("camera_preset_changed", _on_camera_preset_changed)
 			if event_bus.has_signal("camera_trauma_requested") and event_bus.is_connected("camera_trauma_requested", add_trauma):
 				event_bus.disconnect("camera_trauma_requested", add_trauma)
 
@@ -85,6 +89,10 @@ func add_trauma(amount: float) -> void:
 	_trauma = clampf(_trauma + amount, 0.0, 1.0)
 
 
+func _on_camera_preset_changed(_preset: String) -> void:
+	apply_camera_settings()
+
+
 func reload_from_project_settings() -> void:
 	config_override = null
 	apply_camera_settings()
@@ -96,6 +104,16 @@ func apply_camera_settings() -> void:
 	# Yaw remains fixed (no 360-degree free rotation in mobile 2.5D mode).
 	_active_yaw = clampf(cfg.yaw_degrees, -45.0, 45.0)
 	_active_distance = clampf(cfg.distance, 12.0, 32.0)
+	if not Engine.is_editor_hint() and config_override == null:
+		var sm: Node = get_node_or_null("/root/SaveManager")
+		if sm != null:
+			var preset: String = str(sm.get("camera_preset"))
+			if preset == "tactical":
+				_active_pitch = 63.0
+				_active_distance = 22.5
+			elif preset == "close":
+				_active_pitch = 52.0
+				_active_distance = 16.5
 	_active_fov = clampf(cfg.fov_degrees, 32.0, 60.0)
 	_follow_smoothness = clampf(cfg.follow_smoothness, 1.0, 20.0)
 	_look_ahead_distance = clampf(cfg.look_ahead_distance, 0.0, 4.0)

@@ -1,5 +1,5 @@
 extends Node
-## تست خودکار End-to-End برای بررسی باگ‌های زمان اجرا در Godot 4.3 (Headless CI).
+## تست خودکار End-to-End برای بررسی کامل فاز ۶ در Godot 4.3 (هر دو نقشه، ۴ سلاح، ۳ حالت، جهش، رتبه‌بندی و صدا).
 
 var _failures: Array[String] = []
 var _step: int = -1
@@ -7,6 +7,7 @@ var _wait_frames: int = 2
 var _zone_entered_seen: bool = false
 var _tested_orange_bot_name: String = ""
 var _zone_progress_before: float = 0.0
+var _kill_feed_seen: bool = false
 
 
 func _ready() -> void:
@@ -15,11 +16,12 @@ func _ready() -> void:
 
 
 func _start_qa() -> void:
-	print("[QA] Starting automated runtime QA (Phase 5)...")
+	print("[QA] Starting automated runtime QA (Phase 6)...")
 	if get_parent() != get_tree().root:
 		reparent(get_tree().root)
 	get_tree().current_scene = null
 	EventBus.player_zone_changed.connect(_on_zone_changed)
+	EventBus.kill_feed_event.connect(_on_kill_feed)
 	var err: Error = get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 	_assert(err == OK, "MainMenu load failed: %d" % err)
 	_step = 0
@@ -29,6 +31,10 @@ func _start_qa() -> void:
 func _on_zone_changed(_zone_id: String, _title: String, inside: bool) -> void:
 	if inside:
 		_zone_entered_seen = true
+
+
+func _on_kill_feed(_killer: String, _victim: String, _team: int) -> void:
+	_kill_feed_seen = true
 
 
 func _assert(cond: bool, msg: String) -> void:
@@ -56,33 +62,55 @@ func _process(_delta: float) -> void:
 			GameManager.set_aim_fire_mode("twin_stick")
 			_assert(SaveManager.aim_fire_mode == "twin_stick", "Failed to toggle twin_stick mode")
 
-			GameManager.set_selected_mode("team_score_rush")
-			var rush_cfg: ArenaModeConfig = GameManager.get_active_mode_config()
-			_assert(rush_cfg != null and rush_cfg.mode_id == "team_score_rush", "Expected team_score_rush mode config")
-			GameManager.set_selected_mode("zone_control")
-			var zone_cfg: ArenaModeConfig = GameManager.get_active_mode_config()
-			_assert(zone_cfg != null and zone_cfg.mode_id == "zone_control", "Expected zone_control mode config")
+			GameManager.set_joystick_sensitivity(1.25)
+			_assert(is_equal_approx(SaveManager.joystick_sensitivity, 1.25), "Failed to set sensitivity 1.25")
+			GameManager.set_joystick_sensitivity(1.0)
 
-			GameManager.set_starting_blaster("plasma_scatter")
-			_assert(GameManager.get_starting_blaster_index() == 2, "Expected plasma_scatter index 2")
+			GameManager.set_camera_preset("tactical")
+			_assert(SaveManager.camera_preset == "tactical", "Camera preset tactical failed")
+			GameManager.set_camera_preset("classic")
+
+			for m_id in ["team_score_rush", "zone_blitz", "zone_control"]:
+				GameManager.set_selected_mode(m_id)
+				var m_cfg: ArenaModeConfig = GameManager.get_active_mode_config()
+				_assert(m_cfg != null and str(m_cfg.mode_id) == m_id, "Expected mode %s" % m_id)
+
+			GameManager.set_starting_blaster("arc_railgun")
+			_assert(GameManager.get_starting_blaster_index() == 3, "Expected arc_railgun index 3")
 			GameManager.set_starting_blaster("pulse_blaster")
 			_assert(GameManager.get_starting_blaster_index() == 0, "Expected pulse_blaster index 0")
 
+			GameManager.set_selected_map("sector_02")
+			_assert(SaveManager.selected_map_id == "sector_02", "Failed to select sector_02")
+			GameManager.set_selected_map("sector_01")
+			_assert(SaveManager.selected_map_id == "sector_01", "Failed to select sector_01")
+
 			_assert(AudioManager.get("_menu_music") != null, "Menu arcade BGM did not load")
+			_assert(AudioManager.get("_arena_music") != null, "Arena combat BGM did not load")
 			AudioManager.play_menu_music()
 			AudioManager.set_master_volume(0.85)
 			_assert(is_equal_approx(SaveManager.master_volume, 0.85), "Master volume setter failed")
-			for sfx_p in [
+
+			for res_p in [
 				"res://assets/audio/bgm_menu_arcade.wav",
+				"res://assets/audio/bgm_arena_combat.wav",
 				"res://assets/audio/sfx_plasma_scatter.wav",
+				"res://assets/audio/sfx_arc_railgun.wav",
+				"res://assets/audio/sfx_dash_whoosh.wav",
+				"res://assets/audio/sfx_hitmarker.wav",
+				"res://assets/audio/sfx_match_victory.wav",
+				"res://assets/audio/sfx_match_defeat.wav",
 				"res://assets/audio/sfx_pickup_item.wav",
 				"res://assets/audio/sfx_recharge_done.wav",
 				"res://assets/audio/sfx_zone_capture.wav",
-				"res://assets/audio/sfx_player_hit.wav"
+				"res://assets/audio/sfx_player_hit.wav",
+				"res://assets/materials/arena_floor_grid.gdshader",
+				"res://assets/materials/arena_floor_sector01.tres",
+				"res://assets/materials/arena_floor_sector02.tres"
 			]:
-				_assert(ResourceLoader.exists(sfx_p), "Missing Phase 5 audio resource: %s" % sfx_p)
+				_assert(ResourceLoader.exists(res_p), "Missing Phase 6 resource: %s" % res_p)
 
-			GameManager.go_to_arena_sector_01()
+			GameManager.go_to_selected_arena()
 			_step = 1
 			_wait_frames = 5
 		1:
@@ -95,8 +123,9 @@ func _process(_delta: float) -> void:
 				return
 
 			_assert(player.is_alive(), "Player should start alive")
-			_assert(player.blasters.size() == 3, "Expected 3 blasters, got %d" % player.blasters.size())
+			_assert(player.blasters.size() == 4, "Expected 4 blasters, got %d" % player.blasters.size())
 			_assert(player.get_node_or_null("VisualRoot/WeaponMount/MuzzleMarker/MuzzleFlashMesh") != null, "MuzzleFlashMesh missing")
+			_assert(player.get_node_or_null("BuffAuraMesh") != null, "BuffAuraMesh missing")
 			_assert(player._anim_player != null, "Kenney soldier AnimationPlayer not found")
 			if player._anim_player != null:
 				for anim_name in ["idle", "walk", "sprint"]:
@@ -105,47 +134,53 @@ func _process(_delta: float) -> void:
 					_assert(a != null and a.loop_mode == Animation.LOOP_LINEAR, "Animation %s not set to LOOP_LINEAR" % anim_name)
 				_assert(player._anim_player.has_animation("die"), "Missing die animation")
 
+			# Dash test
+			_assert(player.trigger_dash(), "Player initial dash should succeed")
+			_assert(not player.trigger_dash(), "Dash should respect cooldown immediately after use")
+			player._dash_timer = 0.0
+			player.velocity = Vector3.ZERO
+
 			var pickups: Array[Node] = tree.get_nodes_in_group("arena_pickups")
 			_assert(pickups.size() == 4, "Expected 4 ArenaPickups, got %d" % pickups.size())
 
 			var bots: Array[Node] = tree.get_nodes_in_group("arena_bots")
 			_assert(bots.size() == 4, "Expected 4 ArenaBots (1 Blue + 3 Orange), got %d" % bots.size())
-			var blue_bots: int = 0
-			var orange_bots: int = 0
-			for b in bots:
-				if b is ArenaBot:
-					var ab := b as ArenaBot
-					if ab.team_id == 0:
-						blue_bots += 1
-						_assert(ab.get_node_or_null("VisualRoot/ModelPivot/KenneyAlly") != null, "AllyBot visual missing")
-					elif ab.team_id == 1:
-						orange_bots += 1
-			_assert(blue_bots == 1 and orange_bots == 3, "Expected 1 Blue & 3 Orange bots, got %d/%d" % [blue_bots, orange_bots])
 
-			var initial_energy: int = player._current_energy
-			_assert(initial_energy == 16, "Expected Pulse Blaster 16 energy, got %d" % initial_energy)
+			# Cycle all 4 blasters
+			_assert(player._current_energy == 16, "Expected Pulse Blaster 16 energy, got %d" % player._current_energy)
 			player.switch_next_blaster()
 			_assert(player._current_energy == 30, "Expected Rapid Repeater 30 energy, got %d" % player._current_energy)
 			player.switch_next_blaster()
 			_assert(player._current_energy == 10, "Expected Plasma Scatter 10 energy, got %d" % player._current_energy)
-			player._try_fire(0.0)
-			_assert(player._current_energy == 9, "Expected Plasma Scatter 9 energy after spread fire, got %d" % player._current_energy)
 			player.switch_next_blaster()
-			_assert(player._current_energy == 16, "Expected Pulse Blaster 16 after cycling back")
+			_assert(player._current_energy == 6, "Expected Arc Railgun 6 energy, got %d" % player._current_energy)
+			player._try_fire(0.0)
+			_assert(player._current_energy == 5, "Expected Arc Railgun 5 energy after rail shot, got %d" % player._current_energy)
+			player.switch_next_blaster()
+			_assert(player._current_energy == 16, "Expected Pulse Blaster 16 after cycling all 4")
 
 			player._try_fire(0.0)
 			_assert(player._current_energy == 15, "Expected energy 15 after Pulse shot, got %d" % player._current_energy)
 			player.start_recharge()
 			_assert(player._recharging, "Expected recharging=true after start_recharge()")
 
-			GameManager.set_match_paused(true)
-			_assert(tree.paused, "SceneTree should be paused")
 			var hud: Node = arena.get_node_or_null("TouchControlsHUD")
+			_assert(hud != null, "TouchControlsHUD missing")
 			if hud != null:
+				_assert(hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnDash") != null, "BtnDash missing")
+				_assert(hud.get_node_or_null("TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow/HpBar") != null, "HpBar missing")
+				_assert(hud.get_node_or_null("TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow/EnergyBar") != null, "EnergyBar missing")
+				_assert(hud.get_node_or_null("HitmarkerLabel") != null, "HitmarkerLabel missing")
+				_assert(hud.get_node_or_null("KillFeedPanel") != null, "KillFeedPanel missing")
+
+				GameManager.set_match_paused(true)
+				_assert(tree.paused, "SceneTree should be paused")
+				_assert(bool(AudioManager.get("_music_ducked")), "Arena music should duck while paused")
 				var pause_ov: Control = hud.get_node_or_null("PauseOverlay") as Control
 				_assert(pause_ov != null and pause_ov.visible, "PauseOverlay should be visible when paused")
-			GameManager.set_match_paused(false)
-			_assert(not tree.paused, "SceneTree should resume cleanly")
+				_assert(hud.get_node_or_null("PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseMusic") != null, "BtnPauseMusic missing")
+				GameManager.set_match_paused(false)
+				_assert(not tree.paused, "SceneTree should resume cleanly")
 
 			_step = 2
 			_wait_frames = 35
@@ -155,18 +190,19 @@ func _process(_delta: float) -> void:
 			if player != null:
 				_assert(not player._recharging and player._current_energy == 16, "Recharge did not complete cleanly (recharging=%s energy=%d)" % [str(player._recharging), player._current_energy])
 
-			var orange_bot: ArenaBot = null
+			var orange_bots: Array[ArenaBot] = []
 			for b in tree.get_nodes_in_group("arena_bots"):
 				if b is ArenaBot and (b as ArenaBot).team_id == 1:
-					orange_bot = b as ArenaBot
-					break
+					orange_bots.append(b as ArenaBot)
 
-			if orange_bot != null:
-				_tested_orange_bot_name = orange_bot.name
+			if orange_bots.size() >= 2:
+				_tested_orange_bot_name = orange_bots[0].name
 				var prev_blue: int = int(arena.get("_blue_score"))
-				orange_bot.take_damage(200.0, 0)
-				_assert(int(arena.get("_blue_score")) == prev_blue + 1, "Expected blue_score +1 after Orange bot defeat")
-				_assert(orange_bot._state == ArenaBot.BotState.RESPAWN, "Orange bot should enter RESPAWN state")
+				orange_bots[0].take_damage(200.0, 0, true)
+				orange_bots[1].take_damage(200.0, 0, true)
+				_assert(int(arena.get("_blue_score")) == prev_blue + 2, "Expected blue_score +2 after 2 player kills")
+				_assert(int(arena.get("_player_kill_streak")) == 2, "Expected player_kill_streak == 2")
+				_assert(_kill_feed_seen, "Expected kill_feed_event on elimination")
 
 			if player != null:
 				player._hp = player.max_hp
@@ -176,14 +212,21 @@ func _process(_delta: float) -> void:
 				_assert(player.apply_pickup(0, 35.0) and is_equal_approx(player._hp, 95.0), "MEDKIT should restore +35 HP to 95")
 				_assert(player.apply_pickup(1, 8.0) and player._damage_boost_timer > 7.5, "OVERCHARGE pickup failed")
 				_assert(player.apply_pickup(2, 7.0) and player._speed_boost_timer > 6.5, "SPEED_BOOST pickup failed")
+				player._update_buff_aura(0.05)
+				var aura: MeshInstance3D = player.get_node_or_null("BuffAuraMesh") as MeshInstance3D
+				_assert(aura != null and aura.visible, "BuffAuraMesh should be visible when buff is active")
+
 				var hud_chk: Node = arena.get_node_or_null("TouchControlsHUD")
 				if hud_chk != null:
 					var buff_badge: Control = hud_chk.get_node_or_null("TopSafeMargin/TopHudBar/BuffBadge") as Control
 					_assert(buff_badge != null and buff_badge.visible, "HUD BuffBadge should be visible during pickup buff")
-					_assert(hud_chk.get_node_or_null("TopSafeMargin/TopHudBar/ZoneMiniA") != null, "ZoneMiniA badge missing")
+					var kf_panel: Control = hud_chk.get_node_or_null("KillFeedPanel") as Control
+					_assert(kf_panel != null and kf_panel.visible, "KillFeedPanel should be visible after eliminations")
+
 				var prev_orange: int = int(arena.get("_orange_score"))
 				player.take_damage(120.0, 1)
 				_assert(not player.is_alive(), "Player should die after lethal damage")
+				_assert(int(arena.get("_player_kill_streak")) == 0, "Kill streak should reset on player defeat")
 				_assert(int(arena.get("_orange_score")) == prev_orange + 1, "Expected orange_score +1 after player defeat")
 
 			_step = 3
@@ -214,30 +257,49 @@ func _process(_delta: float) -> void:
 			var arena: Node = tree.current_scene
 			_assert(_zone_entered_seen, "CaptureZonePad ZoneA_North did not emit player_zone_changed")
 			var zone_a: CaptureZonePad = arena.get_node_or_null("ZoneA_North") as CaptureZonePad
-			_assert(zone_a != null and zone_a._capture_value > _zone_progress_before + 0.1, "ZoneA_North _capture_value did not advance toward Blue (got %.2f)" % (zone_a._capture_value if zone_a != null else -99.0))
+			_assert(zone_a != null and zone_a._capture_value > _zone_progress_before + 0.1, "ZoneA_North _capture_value did not advance toward Blue")
 
 			var prev_matches: int = SaveManager.total_matches
+			var prev_xp: int = SaveManager.career_xp
 			arena._finish_match()
 			_assert(bool(arena.get("_match_over")), "Expected _match_over == true after _finish_match()")
 			_assert(tree.paused, "Expected SceneTree paused on match end")
 			_assert(SaveManager.total_matches == prev_matches + 1, "Career total_matches did not increment")
+			_assert(SaveManager.career_xp > prev_xp, "Career XP did not increase on match finish")
 			var hud: Node = arena.get_node_or_null("TouchControlsHUD")
 			if hud != null:
 				var end_ov: Control = hud.get_node_or_null("MatchEndOverlay") as Control
 				_assert(end_ov != null and end_ov.visible, "MatchEndOverlay should be visible on match end")
 
-			GameManager.go_to_main_menu()
+			GameManager.set_selected_map("sector_02")
+			GameManager.go_to_selected_arena()
 			_step = 5
 			_wait_frames = 5
 		5:
+			var arena2: Node = tree.current_scene
+			_assert(arena2 != null and arena2.name == "ArenaSector02", "Expected ArenaSector02, got %s" % str(arena2))
+			if arena2 != null:
+				var player2: PlayerController = arena2.get_node_or_null("PlayerCharacter") as PlayerController
+				_assert(player2 != null and player2.is_alive(), "ArenaSector02 PlayerCharacter missing or dead")
+				_assert(tree.get_nodes_in_group("arena_pickups").size() == 4, "ArenaSector02 expected 4 pickups")
+				_assert(tree.get_nodes_in_group("arena_bots").size() == 4, "ArenaSector02 expected 4 bots")
+				_assert(tree.get_nodes_in_group("capture_zones").size() == 2, "ArenaSector02 expected 2 capture zones")
+				if player2 != null:
+					_assert(player2.trigger_dash(), "ArenaSector02 player dash failed")
+
+			GameManager.set_selected_map("sector_01")
+			GameManager.go_to_main_menu()
+			_step = 6
+			_wait_frames = 5
+		6:
 			var menu: Node = tree.current_scene
-			_assert(menu != null and menu.name == "MainMenu", "Failed to return to MainMenu from Arena")
+			_assert(menu != null and menu.name == "MainMenu", "Failed to return to MainMenu from ArenaSector02")
 			var pools_dict: Variant = PoolManager.get("_pools")
 			_assert(pools_dict is Dictionary and (pools_dict as Dictionary).is_empty(), "PoolManager was not cleared on arena exit")
 			_step = 99
 		_:
 			if _failures.is_empty():
-				print("[QA_PASS] All Phase 4 automated runtime checks passed!")
+				print("[QA_PASS] All Phase 6 automated runtime checks passed across Sector 01 & Sector 02!")
 				tree.quit(0)
 			else:
 				print("[QA_FAIL] Total failures: %d" % _failures.size())

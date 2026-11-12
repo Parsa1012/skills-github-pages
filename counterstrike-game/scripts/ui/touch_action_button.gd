@@ -1,6 +1,6 @@
 class_name TouchActionButton
 extends Control
-## دکمه اکشن چندلمسی (تغییر سلاح / شارژ مجدد) بدون تداخل با جوی‌استیک‌های حرکت و نشانه.
+## دکمه اکشن چندلمسی (تغییر سلاح / شارژ مجدد / جهش تاکتیکی) با پشتیبانی از نوار انتظار (Cooldown).
 
 signal action_triggered()
 
@@ -9,6 +9,8 @@ signal action_triggered()
 
 var _pressed: bool = false
 var _touch_index: int = -1
+var _cooldown_ratio: float = 0.0
+var _override_text: String = ""
 
 
 func _ready() -> void:
@@ -20,6 +22,12 @@ func _notification(what: int) -> void:
 		_reset_button()
 	elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_reset_button()
+
+
+func set_cooldown_state(cooldown_ratio: float, label_override: String = "") -> void:
+	_cooldown_ratio = clampf(cooldown_ratio, 0.0, 1.0)
+	_override_text = label_override
+	queue_redraw()
 
 
 func _reset_button() -> void:
@@ -49,12 +57,20 @@ func _input(event: InputEvent) -> void:
 
 func _draw() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
-	var bg_col := Color(accent_color.r, accent_color.g, accent_color.b, 0.42 if _pressed else 0.18)
-	var border_col := Color(accent_color.r, accent_color.g, accent_color.b, 0.95 if _pressed else 0.65)
+	var ready_alpha: float = 0.10 if _cooldown_ratio > 0.001 else (0.42 if _pressed else 0.18)
+	var bg_col := Color(accent_color.r, accent_color.g, accent_color.b, ready_alpha)
+	var border_col := Color(accent_color.r, accent_color.g, accent_color.b, 0.38 if _cooldown_ratio > 0.001 else (0.95 if _pressed else 0.68))
 	draw_rect(rect, bg_col, true)
+
+	if _cooldown_ratio > 0.001:
+		var ready_w: float = size.x * (1.0 - _cooldown_ratio)
+		draw_rect(Rect2(Vector2.ZERO, Vector2(ready_w, size.y)), Color(accent_color.r, accent_color.g, accent_color.b, 0.24), true)
+
 	draw_rect(rect, border_col, false, 2.0)
 
+	var label_str: String = _override_text if not _override_text.is_empty() else title_text
 	var font: Font = get_theme_default_font()
-	if font != null and not title_text.is_empty():
+	if font != null and not label_str.is_empty():
 		var text_y: float = size.y * 0.5 + 5.0
-		draw_string(font, Vector2(0.0, text_y), title_text, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, Color(0.97, 0.98, 1.0, 0.95), TextServer.JUSTIFICATION_NONE, TextServer.DIRECTION_RTL)
+		var text_col := Color(0.85, 0.90, 0.96, 0.72) if _cooldown_ratio > 0.001 else Color(0.97, 0.98, 1.0, 0.96)
+		draw_string(font, Vector2(0.0, text_y), label_str, HORIZONTAL_ALIGNMENT_CENTER, size.x, 14, text_col, TextServer.JUSTIFICATION_NONE, TextServer.DIRECTION_RTL)

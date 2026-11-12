@@ -24,4 +24,6 @@ enum BlasterCategory {
 @export var model_scene_path: String = "res://assets/kenney/fps/blaster.glb"
 @export var model_scale: float = 0.46
 @export var shoot_sfx_path: String = "res://assets/kenney/audio/blaster.ogg"
+@export var bolt_scale: Vector3 = Vector3(1.0, 1.0, 1.0)
+@export_range(0, 3, 1) var pierce_count: int = 0
 @export var arena_credit_cost: int = 0

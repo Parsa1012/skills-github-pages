@@ -12,7 +12,7 @@ config_version=5
 
 config/name="کانتر استرایک آرنا"
 config/description="بازی آفلاین آرکید 2.5D با گرافیک Low-Poly برای اندروید و بهینه‌شده برای گلکسی A32"
-config/version="0.3.0-kenney-combat"
+config/version="0.6.0-phase6-arena"
 run/main_scene="res://scenes/main/boot.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 config/icon="res://icon.svg"

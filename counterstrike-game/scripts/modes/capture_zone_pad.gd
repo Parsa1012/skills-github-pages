@@ -119,7 +119,18 @@ func _update_visual_color(contested: bool, delta: float) -> void:
 		_pulse_time += delta * 8.0
 		var a: float = 0.55 + 0.30 * sin(_pulse_time)
 		_mat.albedo_color = Color(contested_color.r, contested_color.g, contested_color.b, a)
+		if _pad_mesh != null:
+			var sc: float = 1.0 + 0.045 * sin(_pulse_time)
+			_pad_mesh.scale = Vector3(sc, 1.0, sc)
 		return
+
+	if _pad_mesh != null:
+		if owner_team >= 0:
+			_pulse_time += delta * 3.0
+			var sc_own: float = 1.0 + 0.02 * sin(_pulse_time)
+			_pad_mesh.scale = Vector3(sc_own, 1.0, sc_own)
+		else:
+			_pad_mesh.scale = Vector3.ONE
 
 	if _capture_value >= 0.0:
 		_mat.albedo_color = idle_color.lerp(blue_color, _capture_value)

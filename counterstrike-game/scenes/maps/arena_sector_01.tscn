@@ -23,6 +23,7 @@
 [ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/floor-detail.glb" id="21_fdetail"]
 [ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/wall.glb" id="22_mwall"]
 [ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/wall-corner.glb" id="23_mwcorner"]
+[ext_resource type="Material" path="res://assets/materials/arena_floor_sector01.tres" id="24_floor_mat"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_arena"]
 sky_top_color = Color(0.105882, 0.168627, 0.278431, 1)
@@ -39,10 +40,6 @@ sky = SubResource("Sky_arena")
 ambient_light_source = 2
 ambient_light_color = Color(0.752941, 0.819608, 0.909804, 1)
 ambient_light_energy = 0.62
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
-albedo_color = Color(0.109804, 0.14902, 0.219608, 1)
-roughness = 0.92
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
 albedo_color = Color(0.2, 0.254902, 0.333333, 1)
@@ -151,7 +148,7 @@ shape = SubResource("BoxShape3D_floor")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/FloorBody"]
 mesh = SubResource("BoxMesh_floor")
-surface_material_override/0 = SubResource("StandardMaterial3D_floor")
+surface_material_override/0 = ExtResource("24_floor_mat")
 
 [node name="WallNorth" type="StaticBody3D" parent="ArenaEnvironment"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -11.5)

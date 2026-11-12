@@ -19,4 +19,5 @@ projectile_color = Color(0.658824, 0.333333, 0.968627, 1)
 model_scene_path = "res://assets/kenney/fps/blaster.glb"
 model_scale = 0.5
 shoot_sfx_path = "res://assets/audio/sfx_plasma_scatter.wav"
+bolt_scale = Vector3(1.42, 1.42, 0.95)
 arena_credit_cost = 0

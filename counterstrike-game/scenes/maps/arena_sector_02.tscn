@@ -1,0 +1,479 @@
+[gd_scene load_steps=45 format=3]
+
+[ext_resource type="Script" path="res://scripts/maps/arena_sector_controller.gd" id="1_ctrl"]
+[ext_resource type="PackedScene" path="res://scenes/camera/arena_camera_rig.tscn" id="2_cam"]
+[ext_resource type="PackedScene" path="res://scenes/entities/player_character.tscn" id="3_player"]
+[ext_resource type="PackedScene" path="res://scenes/hud/touch_controls_hud.tscn" id="4_hud"]
+[ext_resource type="Script" path="res://scripts/modes/capture_zone_pad.gd" id="5_zone"]
+[ext_resource type="PackedScene" path="res://scenes/entities/arena_bot.tscn" id="6_bot"]
+[ext_resource type="PackedScene" path="res://assets/kenney/fps/wall-low.glb" id="7_wlow"]
+[ext_resource type="PackedScene" path="res://assets/kenney/fps/wall-high.glb" id="8_whigh"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/column.glb" id="9_col"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/column-damaged.glb" id="10_coldmg"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/bricks.glb" id="11_bricks"]
+[ext_resource type="PackedScene" path="res://assets/kenney/platformer/platform.glb" id="12_plat"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/banner.glb" id="13_banner"]
+[ext_resource type="PackedScene" path="res://assets/kenney/platformer/flag.glb" id="14_flag"]
+[ext_resource type="PackedScene" path="res://scenes/entities/ally_bot.tscn" id="15_ally"]
+[ext_resource type="Resource" path="res://data/bots/scout_drone.tres" id="16_scout"]
+[ext_resource type="Resource" path="res://data/bots/heavy_sentinel.tres" id="17_heavy"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/trophy.glb" id="18_trophy"]
+[ext_resource type="PackedScene" path="res://scenes/items/arena_pickup.tscn" id="19_pickup"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/stairs.glb" id="20_stairs"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/wall.glb" id="21_mwall"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/wall-corner.glb" id="22_mwcorner"]
+[ext_resource type="Material" path="res://assets/materials/arena_floor_sector02.tres" id="23_floor_mat"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_s2"]
+sky_top_color = Color(0.145098, 0.133333, 0.215686, 1)
+sky_horizon_color = Color(0.286275, 0.219608, 0.258824, 1)
+ground_bottom_color = Color(0.0823529, 0.0745098, 0.109804, 1)
+ground_horizon_color = Color(0.168627, 0.145098, 0.184314, 1)
+
+[sub_resource type="Sky" id="Sky_s2"]
+sky_material = SubResource("ProceduralSkyMaterial_s2")
+
+[sub_resource type="Environment" id="Environment_s2"]
+background_mode = 2
+sky = SubResource("Sky_s2")
+ambient_light_source = 2
+ambient_light_color = Color(0.92, 0.84, 0.76, 1)
+ambient_light_energy = 0.65
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
+albedo_color = Color(0.24, 0.22, 0.27, 1)
+roughness = 0.85
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(34, 1, 24)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(34, 1, 24)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_ns"]
+size = Vector3(34, 1.8, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ns"]
+size = Vector3(34, 1.8, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_ew"]
+size = Vector3(1, 1.8, 22)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ew"]
+size = Vector3(1, 1.8, 22)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_plat"]
+size = Vector3(2.2, 0.88, 2.2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_low"]
+size = Vector3(3.15, 1.16, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_high"]
+size = Vector3(2.15, 2.3, 0.98)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_column"]
+size = Vector3(1.18, 1.95, 1.18)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bricks"]
+size = Vector3(1.24, 0.66, 1.36)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_flagpole"]
+height = 1.8
+radius = 0.18
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_zone"]
+height = 1.6
+radius = 2.2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_zone"]
+top_radius = 2.2
+bottom_radius = 2.25
+height = 0.04
+radial_segments = 24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue_pad"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.219608, 0.741176, 0.972549, 0.24)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_orange_pad"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.984314, 0.45098, 0.086275, 0.24)
+
+[sub_resource type="BoxMesh" id="BoxMesh_team_pad"]
+size = Vector3(3.4, 0.03, 5.4)
+
+[node name="ArenaSector02" type="Node3D"]
+script = ExtResource("1_ctrl")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_s2")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.819152, 0.451984, -0.353129, 0, 0.615661, 0.788011, 0.573576, -0.645501, 0.50432, -8, 18, 10)
+light_color = Color(1, 0.917647, 0.796078, 1)
+light_energy = 1.24
+shadow_enabled = true
+
+[node name="ArenaEnvironment" type="Node3D" parent="."]
+
+[node name="FloorBody" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/FloorBody"]
+shape = SubResource("BoxShape3D_floor")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/FloorBody"]
+mesh = SubResource("BoxMesh_floor")
+surface_material_override/0 = ExtResource("23_floor_mat")
+
+[node name="WallNorth" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -11.5)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/WallNorth"]
+shape = SubResource("BoxShape3D_wall_ns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/WallNorth"]
+mesh = SubResource("BoxMesh_wall_ns")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="WallSouth" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 11.5)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/WallSouth"]
+shape = SubResource("BoxShape3D_wall_ns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/WallSouth"]
+mesh = SubResource("BoxMesh_wall_ns")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="WallWest" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 0.9, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/WallWest"]
+shape = SubResource("BoxShape3D_wall_ew")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/WallWest"]
+mesh = SubResource("BoxMesh_wall_ew")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="WallEast" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.5, 0.9, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/WallEast"]
+shape = SubResource("BoxShape3D_wall_ew")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/WallEast"]
+mesh = SubResource("BoxMesh_wall_ew")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="CitadelPillar_NW" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.8, 0, -3.4)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CitadelPillar_NW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.44, 0)
+shape = SubResource("BoxShape3D_plat")
+
+[node name="Model" parent="ArenaEnvironment/CitadelPillar_NW" instance=ExtResource("12_plat")]
+transform = Transform3D(1.1, 0, 0, 0, 1.5, 0, 0, 0, 1.1, 0, 0, 0)
+
+[node name="Trophy" parent="ArenaEnvironment/CitadelPillar_NW" instance=ExtResource("18_trophy")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0.84, 0)
+
+[node name="CitadelPillar_NE" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.8, 0, -3.4)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CitadelPillar_NE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.44, 0)
+shape = SubResource("BoxShape3D_plat")
+
+[node name="Model" parent="ArenaEnvironment/CitadelPillar_NE" instance=ExtResource("12_plat")]
+transform = Transform3D(1.1, 0, 0, 0, 1.5, 0, 0, 0, 1.1, 0, 0, 0)
+
+[node name="CitadelPillar_SW" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.8, 0, 3.4)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CitadelPillar_SW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.44, 0)
+shape = SubResource("BoxShape3D_plat")
+
+[node name="Model" parent="ArenaEnvironment/CitadelPillar_SW" instance=ExtResource("12_plat")]
+transform = Transform3D(1.1, 0, 0, 0, 1.5, 0, 0, 0, 1.1, 0, 0, 0)
+
+[node name="CitadelPillar_SE" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.8, 0, 3.4)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CitadelPillar_SE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.44, 0)
+shape = SubResource("BoxShape3D_plat")
+
+[node name="Model" parent="ArenaEnvironment/CitadelPillar_SE" instance=ExtResource("12_plat")]
+transform = Transform3D(1.1, 0, 0, 0, 1.5, 0, 0, 0, 1.1, 0, 0, 0)
+
+[node name="Trophy" parent="ArenaEnvironment/CitadelPillar_SE" instance=ExtResource("18_trophy")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0.84, 0)
+
+[node name="BunkerWest_Mid" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -7.8, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/BunkerWest_Mid"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+shape = SubResource("BoxShape3D_wall_high")
+
+[node name="Model" parent="ArenaEnvironment/BunkerWest_Mid" instance=ExtResource("8_whigh")]
+transform = Transform3D(1.45, 0, 0, 0, 1.35, 0, 0, 0, 1.45, 0, 0, 0)
+
+[node name="BunkerEast_Mid" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 7.8, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/BunkerEast_Mid"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+shape = SubResource("BoxShape3D_wall_high")
+
+[node name="Model" parent="ArenaEnvironment/BunkerEast_Mid" instance=ExtResource("8_whigh")]
+transform = Transform3D(1.45, 0, 0, 0, 1.35, 0, 0, 0, 1.45, 0, 0, 0)
+
+[node name="CoverLow_NW" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -4.8, 0, -7.6)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CoverLow_NW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)
+shape = SubResource("BoxShape3D_wall_low")
+
+[node name="Model" parent="ArenaEnvironment/CoverLow_NW" instance=ExtResource("7_wlow")]
+transform = Transform3D(1.45, 0, 0, 0, 1.45, 0, 0, 0, 1.45, 0, 0, 0)
+
+[node name="CoverLow_NE" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 4.8, 0, -7.6)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CoverLow_NE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)
+shape = SubResource("BoxShape3D_wall_low")
+
+[node name="Model" parent="ArenaEnvironment/CoverLow_NE" instance=ExtResource("7_wlow")]
+transform = Transform3D(1.45, 0, 0, 0, 1.45, 0, 0, 0, 1.45, 0, 0, 0)
+
+[node name="CoverLow_SW" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -4.8, 0, 7.6)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CoverLow_SW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)
+shape = SubResource("BoxShape3D_wall_low")
+
+[node name="Model" parent="ArenaEnvironment/CoverLow_SW" instance=ExtResource("7_wlow")]
+transform = Transform3D(1.45, 0, 0, 0, 1.45, 0, 0, 0, 1.45, 0, 0, 0)
+
+[node name="CoverLow_SE" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 4.8, 0, 7.6)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CoverLow_SE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)
+shape = SubResource("BoxShape3D_wall_low")
+
+[node name="Model" parent="ArenaEnvironment/CoverLow_SE" instance=ExtResource("7_wlow")]
+transform = Transform3D(1.45, 0, 0, 0, 1.45, 0, 0, 0, 1.45, 0, 0, 0)
+
+[node name="CitadelColumn_W" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.4, 0, -5.2)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CitadelColumn_W"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.975, 0)
+shape = SubResource("BoxShape3D_column")
+
+[node name="Model" parent="ArenaEnvironment/CitadelColumn_W" instance=ExtResource("9_col")]
+transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
+
+[node name="CitadelColumn_E" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.4, 0, 5.2)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CitadelColumn_E"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.975, 0)
+shape = SubResource("BoxShape3D_column")
+
+[node name="Model" parent="ArenaEnvironment/CitadelColumn_E" instance=ExtResource("10_coldmg")]
+transform = Transform3D(1.95, 0, 0, 0, 1.95, 0, 0, 0, 1.95, 0, 0, 0)
+
+[node name="BricksCover_SW" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.4, 0, 6.4)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/BricksCover_SW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.33, 0)
+shape = SubResource("BoxShape3D_bricks")
+
+[node name="Model" parent="ArenaEnvironment/BricksCover_SW" instance=ExtResource("11_bricks")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 0, 0)
+
+[node name="BricksCover_NE" type="StaticBody3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.4, 0, -6.4)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/BricksCover_NE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.33, 0)
+shape = SubResource("BoxShape3D_bricks")
+
+[node name="Model" parent="ArenaEnvironment/BricksCover_NE" instance=ExtResource("11_bricks")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 0, 0)
+
+[node name="StairsTrim_NW" parent="ArenaEnvironment" instance=ExtResource("20_stairs")]
+transform = Transform3D(2.4, 0, 0, 0, 1.2, 0, 0, 0, 1.6, -8.5, 0, -10.2)
+
+[node name="StairsTrim_NE" parent="ArenaEnvironment" instance=ExtResource("20_stairs")]
+transform = Transform3D(2.4, 0, 0, 0, 1.2, 0, 0, 0, 1.6, 8.5, 0, -10.2)
+
+[node name="StairsTrim_SW" parent="ArenaEnvironment" instance=ExtResource("20_stairs")]
+transform = Transform3D(-2.4, 0, 0, 0, 1.2, 0, 0, 0, -1.6, -8.5, 0, 10.2)
+
+[node name="StairsTrim_SE" parent="ArenaEnvironment" instance=ExtResource("20_stairs")]
+transform = Transform3D(-2.4, 0, 0, 0, 1.2, 0, 0, 0, -1.6, 8.5, 0, 10.2)
+
+[node name="WallTrim_N" parent="ArenaEnvironment" instance=ExtResource("21_mwall")]
+transform = Transform3D(4.2, 0, 0, 0, 1.8, 0, 0, 0, 1.1, 0, 0, -10.85)
+
+[node name="WallTrim_S" parent="ArenaEnvironment" instance=ExtResource("21_mwall")]
+transform = Transform3D(4.2, 0, 0, 0, 1.8, 0, 0, 0, 1.1, 0, 0, 10.85)
+
+[node name="WallCorner_NW" parent="ArenaEnvironment" instance=ExtResource("22_mwcorner")]
+transform = Transform3D(1.5, 0, 0, 0, 1.8, 0, 0, 0, 1.5, -15.4, 0, -10.4)
+
+[node name="WallCorner_NE" parent="ArenaEnvironment" instance=ExtResource("22_mwcorner")]
+transform = Transform3D(0, 0, -1.5, 0, 1.8, 0, 1.5, 0, 0, 15.4, 0, -10.4)
+
+[node name="WallCorner_SW" parent="ArenaEnvironment" instance=ExtResource("22_mwcorner")]
+transform = Transform3D(0, 0, 1.5, 0, 1.8, 0, -1.5, 0, 0, -15.4, 0, 10.4)
+
+[node name="WallCorner_SE" parent="ArenaEnvironment" instance=ExtResource("22_mwcorner")]
+transform = Transform3D(-1.5, 0, 0, 0, 1.8, 0, 0, 0, -1.5, 15.4, 0, 10.4)
+
+[node name="BannerBlue_North" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
+transform = Transform3D(-4.37114e-08, 0, 2.2, 0, 2.2, 0, -2.2, 0, -4.37114e-08, -15.2, 0, -5)
+
+[node name="BannerBlue_South" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
+transform = Transform3D(-4.37114e-08, 0, 2.2, 0, 2.2, 0, -2.2, 0, -4.37114e-08, -15.2, 0, 5)
+
+[node name="BannerOrange_North" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
+transform = Transform3D(-4.37114e-08, 0, -2.2, 0, 2.2, 0, 2.2, 0, -4.37114e-08, 15.2, 0, -5)
+
+[node name="BannerOrange_South" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
+transform = Transform3D(-4.37114e-08, 0, -2.2, 0, 2.2, 0, 2.2, 0, -4.37114e-08, 15.2, 0, 5)
+
+[node name="BlueBasePad" type="MeshInstance3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.6, 0.015, 0)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_team_pad")
+surface_material_override/0 = SubResource("StandardMaterial3D_blue_pad")
+
+[node name="OrangeBasePad" type="MeshInstance3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.6, 0.015, 0)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_team_pad")
+surface_material_override/0 = SubResource("StandardMaterial3D_orange_pad")
+
+[node name="ArenaPickups" type="Node3D" parent="."]
+
+[node name="Pickup_Medkit_West" parent="ArenaPickups" instance=ExtResource("19_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.4, 0.02, 3.6)
+pickup_type = 0
+respawn_seconds = 14.0
+pickup_value = 35.0
+
+[node name="Pickup_Medkit_East" parent="ArenaPickups" instance=ExtResource("19_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.4, 0.02, -3.6)
+pickup_type = 0
+respawn_seconds = 14.0
+pickup_value = 35.0
+
+[node name="Pickup_Overcharge_Center" parent="ArenaPickups" instance=ExtResource("19_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+pickup_type = 1
+respawn_seconds = 18.0
+pickup_value = 8.0
+
+[node name="Pickup_Speed_Flank" parent="ArenaPickups" instance=ExtResource("19_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -3.8)
+pickup_type = 2
+respawn_seconds = 16.0
+pickup_value = 7.0
+
+[node name="ZoneA_North" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -7.6)
+script = ExtResource("5_zone")
+zone_id = "zone_a"
+zone_title_fa = "برجک شمال"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneA_North"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("CylinderShape3D_zone")
+
+[node name="PadRingMesh" type="MeshInstance3D" parent="ZoneA_North"]
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_zone")
+
+[node name="ZoneFlag" parent="ZoneA_North" instance=ExtResource("14_flag")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, -1.8)
+
+[node name="ZoneFlagBody" type="StaticBody3D" parent="ZoneA_North"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -1.8)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneA_North/ZoneFlagBody"]
+shape = SubResource("CylinderShape3D_flagpole")
+
+[node name="ZoneB_South" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 7.6)
+script = ExtResource("5_zone")
+zone_id = "zone_b"
+zone_title_fa = "حیاط جنوب"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneB_South"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("CylinderShape3D_zone")
+
+[node name="PadRingMesh" type="MeshInstance3D" parent="ZoneB_South"]
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_zone")
+
+[node name="ZoneFlag" parent="ZoneB_South" instance=ExtResource("14_flag")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 1.8)
+
+[node name="ZoneFlagBody" type="StaticBody3D" parent="ZoneB_South"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 1.8)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneB_South/ZoneFlagBody"]
+shape = SubResource("CylinderShape3D_flagpole")
+
+[node name="ArenaBots" type="Node3D" parent="."]
+
+[node name="Ally_Blue_01" parent="ArenaBots" instance=ExtResource("15_ally")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.2, 0.02, -3.2)
+patrol_offset_a = Vector3(5.6, 0, -2.8)
+patrol_offset_b = Vector3(11.2, 0, -4.4)
+
+[node name="Bot_Heavy_Center" parent="ArenaBots" instance=ExtResource("6_bot")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.8, 0.02, 0)
+profile = ExtResource("17_heavy")
+patrol_offset_a = Vector3(-6.2, 0, -2.5)
+patrol_offset_b = Vector3(-6.2, 0, 2.5)
+
+[node name="Bot_Scout_North" parent="ArenaBots" instance=ExtResource("6_bot")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0.02, -7.6)
+profile = ExtResource("16_scout")
+patrol_offset_a = Vector3(-6.5, 0, 0)
+patrol_offset_b = Vector3(0.5, 0, 2.4)
+
+[node name="Bot_Tactical_South" parent="ArenaBots" instance=ExtResource("6_bot")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0.02, 7.6)
+patrol_offset_a = Vector3(-6.5, 0, 0)
+patrol_offset_b = Vector3(0.5, 0, -2.4)
+
+[node name="PlayerCharacter" parent="." instance=ExtResource("3_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.6, 0.02, 0)
+camera_rig_path = NodePath("../ArenaCameraRig")
+touch_hud_path = NodePath("../TouchControlsHUD")
+
+[node name="ArenaCameraRig" parent="." instance=ExtResource("2_cam")]
+target_path = NodePath("../PlayerCharacter")
+bounds_min = Vector2(-11.5, -6.5)
+bounds_max = Vector2(11.5, 6.5)
+
+[node name="TouchControlsHUD" parent="." instance=ExtResource("4_hud")]
