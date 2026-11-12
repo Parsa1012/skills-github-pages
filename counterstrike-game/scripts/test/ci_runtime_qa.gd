@@ -3,13 +3,30 @@ extends SceneTree
 
 var _failures: Array[String] = []
 var _step: int = 0
-var _wait_frames: int = 0
+var _wait_frames: int = 2
 var _zone_entered_seen: bool = false
+
+var _event_bus: Node = null
+var _game_mgr: Node = null
+var _save_mgr: Node = null
+var _pool_mgr: Node = null
 
 
 func _initialize() -> void:
 	print("[QA] Starting automated runtime QA...")
-	EventBus.player_zone_changed.connect(_on_zone_changed)
+	_event_bus = root.get_node_or_null("EventBus")
+	_game_mgr = root.get_node_or_null("GameManager")
+	_save_mgr = root.get_node_or_null("SaveManager")
+	_pool_mgr = root.get_node_or_null("PoolManager")
+
+	_assert(_event_bus != null, "EventBus autoload missing")
+	_assert(_game_mgr != null, "GameManager autoload missing")
+	_assert(_save_mgr != null, "SaveManager autoload missing")
+	_assert(_pool_mgr != null, "PoolManager autoload missing")
+
+	if _event_bus != null:
+		_event_bus.connect("player_zone_changed", _on_zone_changed)
+
 	var err: Error = change_scene_to_file("res://scenes/ui/main_menu.tscn")
 	_assert(err == OK, "MainMenu load failed: %d" % err)
 	_wait_frames = 2
@@ -26,7 +43,7 @@ func _assert(cond: bool, msg: String) -> void:
 		push_error("[QA_FAIL] " + msg)
 
 
-func _process(delta: float) -> bool:
+func _process(_delta: float) -> bool:
 	if _wait_frames > 0:
 		_wait_frames -= 1
 		return false
@@ -36,11 +53,12 @@ func _process(delta: float) -> bool:
 			var menu: Node = current_scene
 			_assert(menu != null and menu.name == "MainMenu", "Expected MainMenu, got %s" % str(menu))
 			_assert(root.theme != null, "Persian theme not applied on root viewport")
-			GameManager.set_aim_fire_mode("fire_button")
-			_assert(SaveManager.aim_fire_mode == "fire_button", "Failed to toggle fire_button mode")
-			GameManager.set_aim_fire_mode("twin_stick")
-			_assert(SaveManager.aim_fire_mode == "twin_stick", "Failed to toggle twin_stick mode")
-			GameManager.go_to_arena_sector_01()
+			if _game_mgr != null and _save_mgr != null:
+				_game_mgr.call("set_aim_fire_mode", "fire_button")
+				_assert(str(_save_mgr.get("aim_fire_mode")) == "fire_button", "Failed to toggle fire_button mode")
+				_game_mgr.call("set_aim_fire_mode", "twin_stick")
+				_assert(str(_save_mgr.get("aim_fire_mode")) == "twin_stick", "Failed to toggle twin_stick mode")
+				_game_mgr.call("go_to_arena_sector_01")
 			_step = 1
 			_wait_frames = 4
 		1:
@@ -111,7 +129,6 @@ func _process(delta: float) -> bool:
 			var bots: Array[Node] = get_nodes_in_group("arena_bots")
 			if player != null:
 				_assert(player.is_alive() and is_equal_approx(player._hp, 100.0), "Player did not respawn cleanly")
-				# Move player into ZoneA_North to verify CaptureZonePad trigger
 				player.global_position = Vector3(0.0, 0.05, -7.2)
 			if not bots.is_empty() and bots[0] is ArenaBot:
 				var bot := bots[0] as ArenaBot
@@ -120,14 +137,16 @@ func _process(delta: float) -> bool:
 			_wait_frames = 6
 		4:
 			_assert(_zone_entered_seen, "CaptureZonePad ZoneA_North did not emit player_zone_changed")
-			GameManager.go_to_main_menu()
+			if _game_mgr != null:
+				_game_mgr.call("go_to_main_menu")
 			_step = 5
-			_wait_frames = 3
+			_wait_frames = 4
 		5:
 			var menu: Node = current_scene
 			_assert(menu != null and menu.name == "MainMenu", "Failed to return to MainMenu from Arena")
-			var pools_dict: Variant = PoolManager.get("_pools")
-			_assert(pools_dict is Dictionary and (pools_dict as Dictionary).is_empty(), "PoolManager was not cleared on arena exit")
+			if _pool_mgr != null:
+				var pools_dict: Variant = _pool_mgr.get("_pools")
+				_assert(pools_dict is Dictionary and (pools_dict as Dictionary).is_empty(), "PoolManager was not cleared on arena exit")
 			_step = 99
 		_:
 			if _failures.is_empty():
