@@ -1,0 +1,76 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.parsa1012.mirrordash'
+    compileSdk 36
+
+    // CI supplies a dedicated keystore outside the repository. Never fall back to
+    // the compromised historical key. Debug uses Android's normal debug signing.
+    def signingFile = System.getenv('MIRROR_KEYSTORE_PATH')
+    def signingStorePassword = System.getenv('MIRROR_STORE_PASSWORD')
+    def signingAlias = System.getenv('MIRROR_KEY_ALIAS')
+    def signingKeyPassword = System.getenv('MIRROR_KEY_PASSWORD')
+    def signingReady = [signingFile, signingStorePassword, signingAlias, signingKeyPassword].every { it }
+    signingConfigs {
+        release {
+            if (signingReady) {
+                storeFile file(signingFile)
+                storePassword signingStorePassword
+                keyAlias signingAlias
+                keyPassword signingKeyPassword
+                storeType 'PKCS12'
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
+            }
+        }
+    }
+
+    defaultConfig {
+        applicationId 'io.github.parsa1012.mirrordash'
+        minSdk 21
+        targetSdk 36
+        versionCode 10
+        versionName '1.9'
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            debuggable false
+            // R8 stays off: the app is already ~60 KB and has no reflection to strip.
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    aaptOptions {
+        // Typeface.createFromAsset() needs the fonts uncompressed in the APK.
+        noCompress 'ttf'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        encoding 'UTF-8'
+    }
+}
+
+// Prevent unsigned release outputs even for local builds.
+tasks.configureEach { task ->
+    if (task.name == 'packageRelease' || task.name == 'bundleRelease' || task.name == 'assembleRelease') {
+        task.doFirst {
+            if (!signingReady) throw new GradleException('Release signing credentials are required')
+        }
+    }
+}

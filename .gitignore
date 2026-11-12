@@ -35,3 +35,13 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Python tooling
+__pycache__/
+*.pyc
+
+# Signing keys must remain outside the repository
+*.p12
+*.jks
+*.keystore
+*.pem
