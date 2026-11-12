@@ -222,4 +222,4 @@ func _on_music_finished() -> void:
 
 
 func _is_dummy_audio_driver() -> bool:
-	return AudioServer.get_driver_name().to_lower() == "dummy"
+	return DisplayServer.get_name().to_lower() == "headless"
