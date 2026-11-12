@@ -180,7 +180,13 @@ jobs:
 
           cfg_dir = Path.home() / ".config" / "godot"
           cfg_dir.mkdir(parents=True, exist_ok=True)
-          settings_file = cfg_dir / "editor_settings-4.3.tres"
+          print("Existing godot config files:", [p.name for p in cfg_dir.iterdir()])
+
+          targets = sorted(cfg_dir.glob("editor_settings-*.tres"))
+          for name in ["editor_settings-4.3.tres", "editor_settings-4.tres"]:
+              p = cfg_dir / name
+              if p not in targets:
+                  targets.append(p)
 
           updates = {
               "export/android/android_sdk_path": os.environ["ANDROID_HOME"],
@@ -190,25 +196,26 @@ jobs:
               "export/android/debug_keystore_pass": "android",
           }
 
-          if settings_file.exists():
-              text = settings_file.read_text(encoding="utf-8")
-          else:
-              text = '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n'
-
-          if "[resource]" not in text:
-              text += "\n[resource]\n"
-
-          for key, val in updates.items():
-              escaped = val.replace("\\", "\\\\").replace('"', '\\"')
-              line = f'{key} = "{escaped}"'
-              pattern = re.compile(rf'^{re.escape(key)}\s*=.*$', re.M)
-              if pattern.search(text):
-                  text = pattern.sub(line, text)
+          for settings_file in targets:
+              if settings_file.exists():
+                  text = settings_file.read_text(encoding="utf-8")
               else:
-                  text = text.rstrip() + "\n" + line + "\n"
+                  text = '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n'
 
-          settings_file.write_text(text, encoding="utf-8")
-          print(f"Configured {settings_file}")
+              if "[resource]" not in text:
+                  text += "\n[resource]\n"
+
+              for key, val in updates.items():
+                  escaped = val.replace("\\", "\\\\").replace('"', '\\"')
+                  line = f'{key} = "{escaped}"'
+                  pattern = re.compile(rf'^{re.escape(key)}\s*=.*$', re.M)
+                  if pattern.search(text):
+                      text = pattern.sub(line, text)
+                  else:
+                      text = text.rstrip() + "\n" + line + "\n"
+
+              settings_file.write_text(text, encoding="utf-8")
+              print(f"Configured {settings_file}")
           PY
 
       - name: Export Android Debug APK (arm64-v8a)
@@ -219,11 +226,9 @@ jobs:
           mkdir -p "${OUT_DIR}"
           if ! godot4 --headless --verbose --path "${PROJECT_DIR}" --export-debug "Android" "${OUT_APK}" >/tmp/godot-export.log 2>&1; then
             cat /tmp/godot-export.log
-            summary="$(grep -iE "ERROR|Failed|Could not|not found" /tmp/godot-export.log | head -n 10 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
-            if [ -z "${summary}" ]; then
-              summary="$(tail -n 10 /tmp/godot-export.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
-            fi
-            echo "::error title=Godot Android export failed::${summary}"
+            summary="$(tail -n 30 /tmp/godot-export.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            cfg_files="$(ls -la "${HOME}/.config/godot" 2>&1 | tr '\n' ' ')"
+            echo "::error title=Godot Android export failed::${summary} | CFG: ${cfg_files}"
             exit 1
           fi
           cat /tmp/godot-export.log
