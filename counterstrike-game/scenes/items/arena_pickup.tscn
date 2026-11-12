@@ -1,0 +1,44 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/items/arena_pickup.gd" id="1_pickup"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_pickup"]
+height = 1.4
+radius = 0.85
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_pad"]
+top_radius = 0.72
+bottom_radius = 0.78
+height = 0.04
+radial_segments = 20
+
+[sub_resource type="BoxMesh" id="BoxMesh_core"]
+size = Vector3(0.48, 0.22, 0.18)
+
+[sub_resource type="BoxMesh" id="BoxMesh_cross"]
+size = Vector3(0.18, 0.22, 0.48)
+
+[node name="ArenaPickup" type="Area3D"]
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("1_pickup")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+shape = SubResource("CylinderShape3D_pickup")
+
+[node name="PadRingMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_pad")
+
+[node name="VisualPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.48, 0)
+
+[node name="PickupCoreMesh" type="MeshInstance3D" parent="VisualPivot"]
+cast_shadow = 0
+mesh = SubResource("BoxMesh_core")
+
+[node name="CrossBarMesh" type="MeshInstance3D" parent="VisualPivot"]
+cast_shadow = 0
+mesh = SubResource("BoxMesh_cross")

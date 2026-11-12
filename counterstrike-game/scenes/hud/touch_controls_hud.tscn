@@ -124,6 +124,34 @@ theme_override_font_sizes/font_size = 14
 text = "آبی 0 — 0 نارنجی"
 vertical_alignment = 1
 
+[node name="ZoneMiniA" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="Label" type="Label" parent="TopSafeMargin/TopHudBar/ZoneMiniA"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 13
+text = "الف"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ZoneMiniB" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="Label" type="Label" parent="TopSafeMargin/TopHudBar/ZoneMiniB"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 13
+text = "ب"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="TimerBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
 layout_mode = 2
 mouse_filter = 2
@@ -146,6 +174,20 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.901961, 0.960784, 1, 1)
 theme_override_font_sizes/font_size = 14
 text = "جان: 100/100 | پالس بلاستر: 16/16"
+vertical_alignment = 1
+
+[node name="BuffBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="BuffLabel" type="Label" parent="TopSafeMargin/TopHudBar/BuffBadge"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 13
+text = "تقویت: 8ث"
 vertical_alignment = 1
 
 [node name="ZoneBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
@@ -328,10 +370,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -165.0
-offset_right = 200.0
-offset_bottom = 165.0
+offset_left = -205.0
+offset_top = -195.0
+offset_right = 205.0
+offset_bottom = 195.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_overlay_card")
@@ -367,6 +409,12 @@ custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
 text = "حالت: دو جوی‌استیک"
+
+[node name="BtnPauseSfx" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "صدای نبرد: روشن"
 
 [node name="BtnPauseRestart" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
 custom_minimum_size = Vector2(0, 46)
@@ -448,6 +496,7 @@ text = "بازگشت به منوی اصلی"
 [connection signal="pressed" from="TopSafeMargin/TopHudBar/BtnAimMode" to="." method="_on_btn_aim_mode_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnResume" to="." method="_on_btn_resume_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseAimMode" to="." method="_on_btn_aim_mode_pressed"]
+[connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseSfx" to="." method="_on_btn_pause_sfx_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseRestart" to="." method="_on_btn_restart_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseMenu" to="." method="_on_btn_back_menu_pressed"]
 [connection signal="pressed" from="MatchEndOverlay/EndCard/EndMargin/EndVBox/BtnPlayAgain" to="." method="_on_btn_restart_pressed"]

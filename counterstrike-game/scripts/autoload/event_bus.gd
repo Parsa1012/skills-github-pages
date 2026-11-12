@@ -20,6 +20,15 @@ signal aim_fire_mode_changed(mode_name: String)
 signal selected_mode_changed(mode_id: String)
 
 @warning_ignore("unused_signal")
+signal starting_blaster_changed(blaster_id: String)
+
+@warning_ignore("unused_signal")
+signal player_buff_updated(damage_secs: float, speed_secs: float)
+
+@warning_ignore("unused_signal")
+signal camera_trauma_requested(amount: float)
+
+@warning_ignore("unused_signal")
 signal player_zone_changed(zone_id: String, zone_title_fa: String, inside: bool)
 
 @warning_ignore("unused_signal")

@@ -20,6 +20,7 @@ signal player_defeated(attacker_team: int)
 @onready var _kenney_soldier: Node3D = $VisualRoot/KenneySoldier
 @onready var _weapon_mount: Node3D = $VisualRoot/WeaponMount
 @onready var _muzzle_marker: Marker3D = $VisualRoot/WeaponMount/MuzzleMarker
+@onready var _muzzle_flash: MeshInstance3D = $VisualRoot/WeaponMount/MuzzleMarker/MuzzleFlashMesh
 @onready var _team_ring: MeshInstance3D = $TeamRingMesh
 @onready var _aim_indicator: Node3D = $AimIndicatorPivot
 @onready var _aim_beam: MeshInstance3D = $AimIndicatorPivot/AimBeamMesh
@@ -30,12 +31,15 @@ var _camera_rig: Node3D = null
 var _touch_hud: Node = null
 var _anim_player: AnimationPlayer = null
 var _aim_beam_mat: StandardMaterial3D = null
+var _muzzle_flash_mat: StandardMaterial3D = null
+var _team_ring_mat: StandardMaterial3D = null
 var _facing_yaw: float = -PI * 0.5
 var _spawn_pos: Vector3 = Vector3.ZERO
 
 var _hp: float = 100.0
 var _alive: bool = true
 var _respawn_timer: float = 0.0
+var _death_hide_timer: float = 0.0
 var _time_since_damage: float = 10.0
 
 var _blaster_index: int = 0
@@ -45,6 +49,11 @@ var _fire_cooldown: float = 0.0
 var _recharging: bool = false
 var _recharge_timer: float = 0.0
 var _recoil_offset: float = 0.0
+var _muzzle_flash_timer: float = 0.0
+var _hit_flash_timer: float = 0.0
+var _damage_boost_timer: float = 0.0
+var _speed_boost_timer: float = 0.0
+var _buff_emit_timer: float = 0.0
 var _step_timer: float = 0.0
 var _respawn_last_sec: int = -1
 
@@ -61,11 +70,12 @@ func _ready() -> void:
 	_setup_materials()
 	_setup_animations()
 	_ensure_default_blasters()
-	_equip_blaster(0, false)
+	_equip_blaster(GameManager.get_starting_blaster_index(), false)
 
 	EventBus.blaster_switch_requested.connect(switch_next_blaster)
 	EventBus.blaster_recharge_requested.connect(start_recharge)
 	_emit_stats()
+	EventBus.player_buff_updated.emit(0.0, 0.0)
 
 
 func _exit_tree() -> void:
@@ -97,6 +107,21 @@ func _setup_materials() -> void:
 			_aim_tip.material_override = mat
 		_aim_beam_mat = mat
 
+	if _muzzle_flash != null:
+		_muzzle_flash_mat = StandardMaterial3D.new()
+		_muzzle_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_muzzle_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_muzzle_flash_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.9)
+		_muzzle_flash.material_override = _muzzle_flash_mat
+		_muzzle_flash.visible = false
+
+	if _team_ring != null:
+		_team_ring_mat = StandardMaterial3D.new()
+		_team_ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_team_ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_team_ring_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.65)
+		_team_ring.material_override = _team_ring_mat
+
 
 func _setup_animations() -> void:
 	if _kenney_soldier == null:
@@ -111,6 +136,10 @@ func _setup_animations() -> void:
 			var anim: Animation = _anim_player.get_animation(anim_name)
 			if anim != null:
 				anim.loop_mode = Animation.LOOP_LINEAR
+	if _anim_player.has_animation("die"):
+		var die_anim: Animation = _anim_player.get_animation("die")
+		if die_anim != null:
+			die_anim.loop_mode = Animation.LOOP_NONE
 
 	# Kenney's 'idle' omits leg/root tracks, which leaves legs stuck mid-stride after walking.
 	if _anim_player.has_animation("idle") and _anim_player.has_animation("static"):
@@ -217,6 +246,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	if not _alive:
+		if _death_hide_timer > 0.0:
+			_death_hide_timer -= delta
+			if _death_hide_timer <= 0.0 and _visual_root != null:
+				_visual_root.visible = false
 		_respawn_timer -= delta
 		var sec_left: int = maxi(1, int(ceil(_respawn_timer)))
 		if sec_left != _respawn_last_sec and _respawn_timer > 0.0:
@@ -225,6 +258,27 @@ func _physics_process(delta: float) -> void:
 		if _respawn_timer <= 0.0:
 			_respawn()
 		return
+
+	if _muzzle_flash_timer > 0.0:
+		_muzzle_flash_timer -= delta
+		if _muzzle_flash_timer <= 0.0 and _muzzle_flash != null:
+			_muzzle_flash.visible = false
+
+	if _hit_flash_timer > 0.0:
+		_hit_flash_timer -= delta
+		if _team_ring_mat != null:
+			_team_ring_mat.albedo_color = Color(0.984314, 0.25, 0.25, 0.9) if _hit_flash_timer > 0.0 else Color(0.219608, 0.741176, 0.972549, 0.65)
+
+	var had_buff: bool = (_damage_boost_timer > 0.0 or _speed_boost_timer > 0.0)
+	if _damage_boost_timer > 0.0:
+		_damage_boost_timer = maxf(0.0, _damage_boost_timer - delta)
+	if _speed_boost_timer > 0.0:
+		_speed_boost_timer = maxf(0.0, _speed_boost_timer - delta)
+	if had_buff:
+		_buff_emit_timer += delta
+		if _buff_emit_timer >= 0.45 or (_damage_boost_timer <= 0.0 and _speed_boost_timer <= 0.0):
+			_buff_emit_timer = 0.0
+			EventBus.player_buff_updated.emit(_damage_boost_timer, _speed_boost_timer)
 
 	_time_since_damage += delta
 	if _time_since_damage >= 4.0 and _hp < max_hp:
@@ -243,7 +297,7 @@ func _physics_process(delta: float) -> void:
 			var b: EnergyBlasterData = _get_active_blaster()
 			if b != null:
 				_current_energy = b.energy_cell_capacity
-			AudioManager.play_ui_pop(1.1)
+			AudioManager.play_recharge_done_sfx()
 			_emit_stats()
 
 	var move_2d: Vector2 = _read_move_input()
@@ -254,10 +308,11 @@ func _physics_process(delta: float) -> void:
 	var move_world: Vector3 = _stick_to_world_dir(move_2d, cam_yaw_rad)
 	var aim_world: Vector3 = _stick_to_world_dir(aim_2d, cam_yaw_rad)
 
+	var speed_mult: float = 1.30 if _speed_boost_timer > 0.0 else 1.0
 	var move_mag: float = clampf(move_2d.length(), 0.0, 1.0)
 	var target_speed: float = 0.0
 	if move_mag > 0.01:
-		target_speed = lerpf(walk_speed, run_speed, clampf((move_mag - 0.15) / 0.85, 0.0, 1.0))
+		target_speed = lerpf(walk_speed, run_speed, clampf((move_mag - 0.15) / 0.85, 0.0, 1.0)) * speed_mult
 
 	var desired_vel_xz: Vector3 = move_world * target_speed
 	var current_vel_xz := Vector3(velocity.x, 0.0, velocity.z)
@@ -301,8 +356,17 @@ func _try_fire(horiz_speed: float) -> void:
 		return
 
 	_current_energy -= 1
-	_fire_cooldown = b.pulse_cooldown
+	var cd_mult: float = 0.78 if _damage_boost_timer > 0.0 else 1.0
+	var dmg_mult: float = 1.35 if _damage_boost_timer > 0.0 else 1.0
+	_fire_cooldown = b.pulse_cooldown * cd_mult
 	_recoil_offset = 0.09
+	_muzzle_flash_timer = 0.055
+	if _muzzle_flash != null:
+		_muzzle_flash.visible = true
+		if _muzzle_flash_mat != null:
+			_muzzle_flash_mat.albedo_color = Color(b.projectile_color.r, b.projectile_color.g, b.projectile_color.b, 0.92)
+	if b.pellets_per_shot > 1:
+		EventBus.camera_trauma_requested.emit(0.11)
 
 	var forward_dir := Vector3(-sin(_facing_yaw), 0.0, -cos(_facing_yaw)).normalized()
 	var chest_origin := global_position + Vector3(0.0, 0.74, 0.0)
@@ -325,7 +389,7 @@ func _try_fire(horiz_speed: float) -> void:
 		if collider != null and collider.has_method("take_damage"):
 			var target_team: Variant = collider.get("team_id")
 			if target_team == null or int(target_team) != team_id:
-				collider.call("take_damage", b.energy_damage * float(b.pellets_per_shot), team_id)
+				collider.call("take_damage", b.energy_damage * dmg_mult * float(b.pellets_per_shot), team_id)
 		var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 		if flash is ImpactFlash:
 			(flash as ImpactFlash).trigger(hit_pos, b.projectile_color)
@@ -346,7 +410,7 @@ func _try_fire(horiz_speed: float) -> void:
 					spawn_pos,
 					bolt_dir,
 					b.projectile_speed,
-					b.energy_damage,
+					b.energy_damage * dmg_mult,
 					team_id,
 					self,
 					b.projectile_color
@@ -359,12 +423,43 @@ func _try_fire(horiz_speed: float) -> void:
 		_emit_stats()
 
 
+func apply_pickup(pickup_type: int, value: float) -> bool:
+	if not _alive:
+		return false
+	match pickup_type:
+		0: # MEDKIT
+			if _hp >= max_hp - 0.5:
+				return false
+			_hp = minf(max_hp, _hp + value)
+			_emit_stats()
+			return true
+		1: # OVERCHARGE
+			var b: EnergyBlasterData = _get_active_blaster()
+			if b != null:
+				_current_energy = b.energy_cell_capacity
+			_recharging = false
+			_recharge_timer = 0.0
+			_damage_boost_timer = maxf(_damage_boost_timer, value)
+			_buff_emit_timer = 0.0
+			_emit_stats()
+			EventBus.player_buff_updated.emit(_damage_boost_timer, _speed_boost_timer)
+			return true
+		2: # SPEED_BOOST
+			_speed_boost_timer = maxf(_speed_boost_timer, value)
+			_buff_emit_timer = 0.0
+			EventBus.player_buff_updated.emit(_damage_boost_timer, _speed_boost_timer)
+			return true
+	return false
+
+
 func take_damage(amount: float, attacker_team: int) -> void:
 	if not _alive or attacker_team == team_id:
 		return
 	_time_since_damage = 0.0
+	_hit_flash_timer = 0.14
 	_hp = maxf(_hp - amount, 0.0)
-	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_hurt.ogg", 0.78)
+	AudioManager.play_player_hit_sfx()
+	EventBus.camera_trauma_requested.emit(0.24)
 	EventBus.player_damaged_feedback.emit(_hp / maxf(max_hp, 1.0))
 	_emit_stats()
 	if _hp <= 0.0:
@@ -374,7 +469,13 @@ func take_damage(amount: float, attacker_team: int) -> void:
 func _enter_respawn(attacker_team: int) -> void:
 	_alive = false
 	_respawn_timer = 2.5
+	_death_hide_timer = 0.58
 	_respawn_last_sec = 3
+	_damage_boost_timer = 0.0
+	_speed_boost_timer = 0.0
+	_muzzle_flash_timer = 0.0
+	if _muzzle_flash != null:
+		_muzzle_flash.visible = false
 	velocity = Vector3.ZERO
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", 0.85)
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
@@ -383,12 +484,16 @@ func _enter_respawn(attacker_team: int) -> void:
 		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.85, 0.0), Color(0.219608, 0.741176, 0.972549, 1.0))
 	if _collision_shape != null:
 		_collision_shape.set_deferred("disabled", true)
-	if _visual_root != null:
+	if _anim_player != null and _anim_player.has_animation("die"):
+		_anim_player.speed_scale = 1.4
+		_anim_player.play("die", 0.05)
+	elif _visual_root != null:
 		_visual_root.visible = false
 	if _team_ring != null:
 		_team_ring.visible = false
 	if _aim_indicator != null:
 		_aim_indicator.visible = false
+	EventBus.player_buff_updated.emit(0.0, 0.0)
 	EventBus.player_respawn_countdown.emit(_respawn_timer, true)
 	player_defeated.emit(attacker_team)
 	_emit_stats()
@@ -421,6 +526,7 @@ func _respawn() -> void:
 	_alive = true
 	_recharging = false
 	_time_since_damage = 10.0
+	_death_hide_timer = 0.0
 	var b: EnergyBlasterData = _get_active_blaster()
 	if b != null:
 		_current_energy = b.energy_cell_capacity
@@ -428,6 +534,9 @@ func _respawn() -> void:
 		_collision_shape.set_deferred("disabled", false)
 	if _visual_root != null:
 		_visual_root.visible = true
+	if _anim_player != null and _anim_player.has_animation("idle"):
+		_anim_player.speed_scale = 1.0
+		_anim_player.play("idle")
 	if _team_ring != null:
 		_team_ring.visible = true
 	if _aim_indicator != null:
@@ -514,7 +623,10 @@ func _update_facing_and_aim(move_world: Vector3, aim_world: Vector3, move_len: f
 			_aim_tip.visible = show_beam or has_move
 
 	if _aim_beam_mat != null:
-		_aim_beam_mat.albedo_color = Color(0.984314, 0.45098, 0.086275, 0.85) if fire_active else Color(0.219608, 0.741176, 0.972549, 0.58)
+		var b: EnergyBlasterData = _get_active_blaster()
+		var base_col: Color = b.projectile_color if b != null else Color(0.219608, 0.741176, 0.972549, 1.0)
+		var alpha: float = 0.85 if fire_active else 0.56
+		_aim_beam_mat.albedo_color = Color(base_col.r, base_col.g, base_col.b, alpha)
 
 
 func _update_soldier_animation(horiz_speed: float, delta: float) -> void:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=44 format=3]
+[gd_scene load_steps=52 format=3]
 
 [ext_resource type="Script" path="res://scripts/maps/arena_sector_controller.gd" id="1_ctrl"]
 [ext_resource type="PackedScene" path="res://scenes/camera/arena_camera_rig.tscn" id="2_cam"]
@@ -18,6 +18,11 @@
 [ext_resource type="Resource" path="res://data/bots/scout_drone.tres" id="16_scout"]
 [ext_resource type="Resource" path="res://data/bots/heavy_sentinel.tres" id="17_heavy"]
 [ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/trophy.glb" id="18_trophy"]
+[ext_resource type="PackedScene" path="res://scenes/items/arena_pickup.tscn" id="19_pickup"]
+[ext_resource type="PackedScene" path="res://assets/kenney/platformer/platform-medium.glb" id="20_platmed"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/floor-detail.glb" id="21_fdetail"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/wall.glb" id="22_mwall"]
+[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/wall-corner.glb" id="23_mwcorner"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_arena"]
 sky_top_color = Color(0.105882, 0.168627, 0.278431, 1)
@@ -108,6 +113,19 @@ top_radius = 2.2
 bottom_radius = 2.25
 height = 0.04
 radial_segments = 24
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue_pad"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.219608, 0.741176, 0.972549, 0.22)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_orange_pad"]
+shading_mode = 0
+transparency = 1
+albedo_color = Color(0.984314, 0.45098, 0.086275, 0.22)
+
+[sub_resource type="BoxMesh" id="BoxMesh_team_pad"]
+size = Vector3(3.4, 0.03, 5.4)
 
 [node name="ArenaSector01" type="Node3D"]
 script = ExtResource("1_ctrl")
@@ -329,6 +347,77 @@ transform = Transform3D(-4.37114e-08, 0, -2.2, 0, 2.2, 0, 2.2, 0, -4.37114e-08, 
 
 [node name="BannerOrange_South" parent="ArenaEnvironment" instance=ExtResource("13_banner")]
 transform = Transform3D(-4.37114e-08, 0, -2.2, 0, 2.2, 0, 2.2, 0, -4.37114e-08, 14.2, 0, 5.5)
+
+[node name="BlueBasePad" type="MeshInstance3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.4, 0.015, 0)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_team_pad")
+surface_material_override/0 = SubResource("StandardMaterial3D_blue_pad")
+
+[node name="OrangeBasePad" type="MeshInstance3D" parent="ArenaEnvironment"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.4, 0.015, 0)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_team_pad")
+surface_material_override/0 = SubResource("StandardMaterial3D_orange_pad")
+
+[node name="KenneyDeckCap" parent="ArenaEnvironment" instance=ExtResource("20_platmed")]
+transform = Transform3D(1.86, 0, 0, 0, 0.68, 0, 0, 0, 1.6, 0, 0, 0)
+
+[node name="FloorTile_West" parent="ArenaEnvironment" instance=ExtResource("21_fdetail")]
+transform = Transform3D(2.8, 0, 0, 0, 1, 0, 0, 0, 2.8, -6.8, -0.02, 0)
+
+[node name="FloorTile_East" parent="ArenaEnvironment" instance=ExtResource("21_fdetail")]
+transform = Transform3D(2.8, 0, 0, 0, 1, 0, 0, 0, 2.8, 6.8, -0.02, 0)
+
+[node name="WallTrim_NorthW" parent="ArenaEnvironment" instance=ExtResource("22_mwall")]
+transform = Transform3D(3.6, 0, 0, 0, 1.8, 0, 0, 0, 1.1, -6.2, 0, -10.85)
+
+[node name="WallTrim_NorthE" parent="ArenaEnvironment" instance=ExtResource("22_mwall")]
+transform = Transform3D(3.6, 0, 0, 0, 1.8, 0, 0, 0, 1.1, 6.2, 0, -10.85)
+
+[node name="WallTrim_SouthW" parent="ArenaEnvironment" instance=ExtResource("22_mwall")]
+transform = Transform3D(3.6, 0, 0, 0, 1.8, 0, 0, 0, 1.1, -6.2, 0, 10.85)
+
+[node name="WallTrim_SouthE" parent="ArenaEnvironment" instance=ExtResource("22_mwall")]
+transform = Transform3D(3.6, 0, 0, 0, 1.8, 0, 0, 0, 1.1, 6.2, 0, 10.85)
+
+[node name="WallCorner_NW" parent="ArenaEnvironment" instance=ExtResource("23_mwcorner")]
+transform = Transform3D(1.5, 0, 0, 0, 1.8, 0, 0, 0, 1.5, -14.4, 0, -10.4)
+
+[node name="WallCorner_NE" parent="ArenaEnvironment" instance=ExtResource("23_mwcorner")]
+transform = Transform3D(0, 0, -1.5, 0, 1.8, 0, 1.5, 0, 0, 14.4, 0, -10.4)
+
+[node name="WallCorner_SW" parent="ArenaEnvironment" instance=ExtResource("23_mwcorner")]
+transform = Transform3D(0, 0, 1.5, 0, 1.8, 0, -1.5, 0, 0, -14.4, 0, 10.4)
+
+[node name="WallCorner_SE" parent="ArenaEnvironment" instance=ExtResource("23_mwcorner")]
+transform = Transform3D(-1.5, 0, 0, 0, 1.8, 0, 0, 0, -1.5, 14.4, 0, 10.4)
+
+[node name="ArenaPickups" type="Node3D" parent="."]
+
+[node name="Pickup_Medkit_West" parent="ArenaPickups" instance=ExtResource("19_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.8, 0.02, 0)
+pickup_type = 0
+respawn_seconds = 14.0
+pickup_value = 35.0
+
+[node name="Pickup_Medkit_East" parent="ArenaPickups" instance=ExtResource("19_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.8, 0.02, 0)
+pickup_type = 0
+respawn_seconds = 14.0
+pickup_value = 35.0
+
+[node name="Pickup_Overcharge_North" parent="ArenaPickups" instance=ExtResource("19_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -3.6)
+pickup_type = 1
+respawn_seconds = 18.0
+pickup_value = 8.0
+
+[node name="Pickup_Speed_South" parent="ArenaPickups" instance=ExtResource("19_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 3.6)
+pickup_type = 2
+respawn_seconds = 16.0
+pickup_value = 7.0
 
 [node name="ZoneA_North" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -7.2)

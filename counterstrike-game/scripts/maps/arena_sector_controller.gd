@@ -21,6 +21,7 @@ var _match_over: bool = false
 
 func _ready() -> void:
 	get_tree().paused = false
+	AudioManager.stop_menu_music()
 	GameManager.current_state = GameManager.AppState.ARENA_PLAY
 	_mode_config = GameManager.get_active_mode_config()
 	if _mode_config != null:

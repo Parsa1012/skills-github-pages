@@ -30,6 +30,8 @@ var _follow_smoothness: float = 6.5
 var _look_ahead_distance: float = 1.25
 var _last_target_pos: Vector3 = Vector3.ZERO
 var _has_last_target_pos: bool = false
+var _trauma: float = 0.0
+var _shake_time: float = 0.0
 
 
 func _ready() -> void:
@@ -38,20 +40,37 @@ func _ready() -> void:
 		_resolve_target()
 		snap_to_target()
 		var event_bus: Node = get_node_or_null("/root/EventBus")
-		if event_bus != null and not event_bus.is_connected("camera_settings_changed", reload_from_project_settings):
-			event_bus.connect("camera_settings_changed", reload_from_project_settings)
+		if event_bus != null:
+			if not event_bus.is_connected("camera_settings_changed", reload_from_project_settings):
+				event_bus.connect("camera_settings_changed", reload_from_project_settings)
+			if event_bus.has_signal("camera_trauma_requested") and not event_bus.is_connected("camera_trauma_requested", add_trauma):
+				event_bus.connect("camera_trauma_requested", add_trauma)
 
 
 func _exit_tree() -> void:
 	if not Engine.is_editor_hint():
 		var event_bus: Node = get_node_or_null("/root/EventBus")
-		if event_bus != null and event_bus.is_connected("camera_settings_changed", reload_from_project_settings):
-			event_bus.disconnect("camera_settings_changed", reload_from_project_settings)
+		if event_bus != null:
+			if event_bus.is_connected("camera_settings_changed", reload_from_project_settings):
+				event_bus.disconnect("camera_settings_changed", reload_from_project_settings)
+			if event_bus.has_signal("camera_trauma_requested") and event_bus.is_connected("camera_trauma_requested", add_trauma):
+				event_bus.disconnect("camera_trauma_requested", add_trauma)
 
 
 func _process(delta: float) -> void:
 	if Engine.is_editor_hint():
 		return
+	if _trauma > 0.0:
+		_trauma = maxf(0.0, _trauma - delta * 2.2)
+		_shake_time += delta * 42.0
+		if _camera != null:
+			var mag: float = _trauma * _trauma * 0.14
+			_camera.h_offset = sin(_shake_time * 1.13) * mag
+			_camera.v_offset = cos(_shake_time * 1.37) * mag
+	elif _camera != null and (_camera.h_offset != 0.0 or _camera.v_offset != 0.0):
+		_camera.h_offset = 0.0
+		_camera.v_offset = 0.0
+
 	if _target_node == null or not is_instance_valid(_target_node):
 		_resolve_target()
 		if _target_node == null:
@@ -60,6 +79,10 @@ func _process(delta: float) -> void:
 	var desired_focus: Vector3 = _compute_desired_focus(_target_node, delta)
 	var blend: float = 1.0 - exp(-_follow_smoothness * maxf(delta, 0.0001))
 	global_position = global_position.lerp(desired_focus, blend)
+
+
+func add_trauma(amount: float) -> void:
+	_trauma = clampf(_trauma + amount, 0.0, 1.0)
 
 
 func reload_from_project_settings() -> void:

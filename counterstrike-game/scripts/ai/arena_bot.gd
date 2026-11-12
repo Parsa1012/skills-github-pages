@@ -49,6 +49,12 @@ var _strafe_timer: float = 0.0
 var _use_left_muzzle: bool = true
 var _gravity: float = 18.0
 var _anim_player: AnimationPlayer = null
+var _hp_bar_mat: StandardMaterial3D = null
+var _base_hp_col: Color = Color(0.984314, 0.45098, 0.086275, 1.0)
+var _hit_flash_timer: float = 0.0
+var _damage_boost_timer: float = 0.0
+var _speed_boost_timer: float = 0.0
+var _base_pivot_scale: Vector3 = Vector3.ONE
 
 
 func _ready() -> void:
@@ -71,21 +77,40 @@ func is_alive() -> bool:
 
 
 func _setup_team_visuals() -> void:
+	var is_heavy: bool = (profile != null and profile.profile_id == &"heavy_sentinel")
+	var is_scout: bool = (profile != null and profile.profile_id == &"scout_drone")
+
 	var ring_col := Color(0.219608, 0.741176, 0.972549, 0.65) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 0.62)
 	var hp_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)
+	if is_heavy:
+		ring_col = Color(0.937255, 0.266667, 0.266667, 0.75)
+		hp_col = Color(0.937255, 0.266667, 0.266667, 1.0)
+	elif is_scout:
+		hp_col = Color(0.984314, 0.74902, 0.141176, 1.0)
+	_base_hp_col = hp_col
+
+	if _model_pivot != null:
+		var scale_mult: float = 1.28 if is_heavy else (0.86 if is_scout else 1.0)
+		_base_pivot_scale = Vector3(scale_mult, scale_mult, scale_mult)
+		_model_pivot.scale = _base_pivot_scale
 
 	if _team_ring != null:
+		if is_heavy:
+			_team_ring.scale = Vector3(1.25, 1.0, 1.25)
 		var rmat := StandardMaterial3D.new()
 		rmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		rmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		rmat.albedo_color = ring_col
 		_team_ring.material_override = rmat
 
+	if _hp_bar_pivot != null and is_heavy:
+		_hp_bar_pivot.position.y = 2.42
+
 	if _hp_bar_fill != null:
-		var hmat := StandardMaterial3D.new()
-		hmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		hmat.albedo_color = hp_col
-		_hp_bar_fill.material_override = hmat
+		_hp_bar_mat = StandardMaterial3D.new()
+		_hp_bar_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_hp_bar_mat.albedo_color = hp_col
+		_hp_bar_fill.material_override = _hp_bar_mat
 
 
 func _setup_model_animations() -> void:
@@ -113,6 +138,18 @@ func _physics_process(delta: float) -> void:
 		if _respawn_timer <= 0.0:
 			_respawn_at_home()
 		return
+
+	if _hit_flash_timer > 0.0:
+		_hit_flash_timer = maxf(0.0, _hit_flash_timer - delta)
+		if _model_pivot != null:
+			_model_pivot.scale = _base_pivot_scale * (1.10 if _hit_flash_timer > 0.0 else 1.0)
+		if _hp_bar_mat != null:
+			_hp_bar_mat.albedo_color = Color(1.0, 0.95, 0.8, 1.0) if _hit_flash_timer > 0.0 else _base_hp_col
+
+	if _damage_boost_timer > 0.0:
+		_damage_boost_timer = maxf(0.0, _damage_boost_timer - delta)
+	if _speed_boost_timer > 0.0:
+		_speed_boost_timer = maxf(0.0, _speed_boost_timer - delta)
 
 	if _zone_seek_pause_timer > 0.0:
 		_zone_seek_pause_timer = maxf(0.0, _zone_seek_pause_timer - delta)
@@ -161,6 +198,20 @@ func _update_walk_animation() -> void:
 
 
 func _pick_objective_target() -> Vector3:
+	if _hp < _max_hp * 0.50:
+		var best_med: Node3D = null
+		var best_med_dist: float = 9.0
+		for p in get_tree().get_nodes_in_group("arena_pickups"):
+			if p is ArenaPickup:
+				var pk := p as ArenaPickup
+				if pk.pickup_type == ArenaPickup.PickupType.MEDKIT and pk.is_available():
+					var d: float = global_position.distance_to(pk.global_position)
+					if d < best_med_dist:
+						best_med_dist = d
+						best_med = pk
+		if best_med != null:
+			return Vector3(best_med.global_position.x, global_position.y, best_med.global_position.z)
+
 	var focus: float = profile.zone_objective_focus if profile != null else 0.0
 	if focus >= 0.6 and _zone_seek_pause_timer <= 0.0 and SaveManager.selected_mode_id == "zone_control":
 		var best_zone: Node3D = null
@@ -207,7 +258,7 @@ func _process_patrol(delta: float) -> void:
 		_patrol_leg_timer = 0.0
 
 	var dir: Vector3 = to_target.normalized()
-	var spd: float = (profile.move_speed if profile != null else 3.4) * 0.80
+	var spd: float = (profile.move_speed if profile != null else 3.4) * 0.80 * (1.28 if _speed_boost_timer > 0.0 else 1.0)
 	velocity.x = move_toward(velocity.x, dir.x * spd, 14.0 * delta)
 	velocity.z = move_toward(velocity.z, dir.z * spd, 14.0 * delta)
 	_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir.x, -dir.z), clampf(8.0 * delta, 0.0, 1.0))
@@ -243,7 +294,7 @@ func _process_engage(delta: float) -> void:
 	var move_dir: Vector3 = (strafe_vec * 0.75 + dir_to_target * radial_factor)
 	if move_dir.length_squared() > 0.001:
 		move_dir = move_dir.normalized()
-	var spd: float = profile.move_speed if profile != null else 3.4
+	var spd: float = (profile.move_speed if profile != null else 3.4) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
 	velocity.x = move_toward(velocity.x, move_dir.x * spd, 16.0 * delta)
 	velocity.z = move_toward(velocity.z, move_dir.z * spd, 16.0 * delta)
 
@@ -307,13 +358,14 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
 	var bolt_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)
 
+	var dmg: float = projectile_damage * (1.30 if _damage_boost_timer > 0.0 else 1.0)
 	if not pre_hit.is_empty():
 		var hit_pos: Vector3 = pre_hit.get("position", spawn_pos)
 		var collider: Object = pre_hit.get("collider", null)
 		if collider != null and collider.has_method("take_damage"):
 			var target_team: Variant = collider.get("team_id")
 			if target_team == null or int(target_team) != team_id:
-				collider.call("take_damage", projectile_damage, team_id)
+				collider.call("take_damage", dmg, team_id)
 		var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 		if flash is ImpactFlash:
 			(flash as ImpactFlash).trigger(hit_pos, bolt_col)
@@ -328,7 +380,7 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 				spawn_pos,
 				shoot_dir,
 				projectile_speed,
-				projectile_damage,
+				dmg,
 				team_id,
 				self,
 				bolt_col
@@ -337,10 +389,30 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 	AudioManager.play_sfx_path(sfx, randf_range(0.94, 1.06), -3.0)
 
 
+func apply_pickup(pickup_type: int, value: float) -> bool:
+	if _state == BotState.RESPAWN:
+		return false
+	match pickup_type:
+		0: # MEDKIT
+			if _hp >= _max_hp - 0.5:
+				return false
+			_hp = minf(_max_hp, _hp + value)
+			_update_hp_bar()
+			return true
+		1: # OVERCHARGE
+			_damage_boost_timer = maxf(_damage_boost_timer, value)
+			return true
+		2: # SPEED_BOOST
+			_speed_boost_timer = maxf(_speed_boost_timer, value)
+			return true
+	return false
+
+
 func take_damage(amount: float, attacker_team: int) -> void:
 	if _state == BotState.RESPAWN or attacker_team == team_id:
 		return
 
+	_hit_flash_timer = 0.09
 	_hp = maxf(_hp - amount, 0.0)
 	_update_hp_bar()
 	if _hp <= 0.0:
@@ -352,6 +424,13 @@ func take_damage(amount: float, attacker_team: int) -> void:
 func _enter_respawn(attacker_team: int) -> void:
 	_state = BotState.RESPAWN
 	_respawn_timer = 3.0
+	_hit_flash_timer = 0.0
+	_damage_boost_timer = 0.0
+	_speed_boost_timer = 0.0
+	if _model_pivot != null:
+		_model_pivot.scale = _base_pivot_scale
+	if _hp_bar_mat != null:
+		_hp_bar_mat.albedo_color = _base_hp_col
 	velocity = Vector3.ZERO
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", randf_range(0.94, 1.04))
 

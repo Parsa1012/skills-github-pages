@@ -111,6 +111,23 @@ func set_selected_mode(mode_id: String) -> void:
 		EventBus.selected_mode_changed.emit(mode_id)
 
 
+func set_starting_blaster(blaster_id: String) -> void:
+	if blaster_id in ["pulse_blaster", "rapid_repeater", "plasma_scatter"]:
+		SaveManager.starting_blaster_id = blaster_id
+		SaveManager.save_settings()
+		EventBus.starting_blaster_changed.emit(blaster_id)
+
+
+func get_starting_blaster_index() -> int:
+	match SaveManager.starting_blaster_id:
+		"rapid_repeater":
+			return 1
+		"plasma_scatter":
+			return 2
+		_:
+			return 0
+
+
 func get_active_mode_config() -> ArenaModeConfig:
 	var path: String = MODE_TEAM_RUSH_PATH if SaveManager.selected_mode_id == "team_score_rush" else MODE_ZONE_CONTROL_PATH
 	if ResourceLoader.exists(path):

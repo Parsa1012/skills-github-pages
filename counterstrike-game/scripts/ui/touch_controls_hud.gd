@@ -11,8 +11,14 @@ extends CanvasLayer
 @onready var _btn_recharge: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnRecharge
 
 @onready var _score_label: Label = $TopSafeMargin/TopHudBar/ScoreBadge/ScoreLabel
+@onready var _zone_mini_a: PanelContainer = $TopSafeMargin/TopHudBar/ZoneMiniA
+@onready var _zone_mini_a_label: Label = $TopSafeMargin/TopHudBar/ZoneMiniA/Label
+@onready var _zone_mini_b: PanelContainer = $TopSafeMargin/TopHudBar/ZoneMiniB
+@onready var _zone_mini_b_label: Label = $TopSafeMargin/TopHudBar/ZoneMiniB/Label
 @onready var _timer_label: Label = $TopSafeMargin/TopHudBar/TimerBadge/TimerLabel
 @onready var _stats_label: Label = $TopSafeMargin/TopHudBar/StatsBadge/StatsLabel
+@onready var _buff_badge: PanelContainer = $TopSafeMargin/TopHudBar/BuffBadge
+@onready var _buff_label: Label = $TopSafeMargin/TopHudBar/BuffBadge/BuffLabel
 @onready var _zone_label: Label = $TopSafeMargin/TopHudBar/ZoneBadge/ZoneLabel
 @onready var _perf_label: Label = $TopSafeMargin/TopHudBar/PerfBadge/PerfLabel
 @onready var _aim_mode_btn: Button = $TopSafeMargin/TopHudBar/BtnAimMode
@@ -21,6 +27,7 @@ extends CanvasLayer
 @onready var _toast_label: Label = $CenterToastPanel/ToastLabel
 @onready var _pause_overlay: Control = $PauseOverlay
 @onready var _pause_aim_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseAimMode
+@onready var _pause_sfx_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseSfx
 @onready var _match_end_overlay: Control = $MatchEndOverlay
 @onready var _end_title_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndTitleLabel
 @onready var _end_detail_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndDetailLabel
@@ -51,6 +58,8 @@ func _ready() -> void:
 	_setup_excluded_controls()
 	_apply_safe_area_margins()
 	_apply_aim_fire_mode()
+	_refresh_pause_sfx_button()
+	_init_zone_mini_badges()
 	_update_zone_badge("میدان آزاد")
 	_update_score_badge(0, 0)
 	_update_timer_badge(120)
@@ -60,8 +69,11 @@ func _ready() -> void:
 	EventBus.aim_fire_mode_changed.connect(_on_aim_fire_mode_changed)
 	EventBus.player_zone_changed.connect(_on_player_zone_changed)
 	EventBus.player_stats_updated.connect(_on_player_stats_updated)
+	EventBus.player_buff_updated.connect(_on_player_buff_updated)
 	EventBus.player_damaged_feedback.connect(_on_player_damaged_feedback)
 	EventBus.player_respawn_countdown.connect(_on_player_respawn_countdown)
+	EventBus.zone_capture_progress.connect(_on_zone_capture_progress)
+	EventBus.zone_captured.connect(_on_zone_captured)
 	EventBus.score_updated.connect(_on_score_updated)
 	EventBus.match_timer_updated.connect(_update_timer_badge)
 	EventBus.hud_toast_requested.connect(_show_toast)
@@ -81,10 +93,16 @@ func _exit_tree() -> void:
 		EventBus.player_zone_changed.disconnect(_on_player_zone_changed)
 	if EventBus.player_stats_updated.is_connected(_on_player_stats_updated):
 		EventBus.player_stats_updated.disconnect(_on_player_stats_updated)
+	if EventBus.player_buff_updated.is_connected(_on_player_buff_updated):
+		EventBus.player_buff_updated.disconnect(_on_player_buff_updated)
 	if EventBus.player_damaged_feedback.is_connected(_on_player_damaged_feedback):
 		EventBus.player_damaged_feedback.disconnect(_on_player_damaged_feedback)
 	if EventBus.player_respawn_countdown.is_connected(_on_player_respawn_countdown):
 		EventBus.player_respawn_countdown.disconnect(_on_player_respawn_countdown)
+	if EventBus.zone_capture_progress.is_connected(_on_zone_capture_progress):
+		EventBus.zone_capture_progress.disconnect(_on_zone_capture_progress)
+	if EventBus.zone_captured.is_connected(_on_zone_captured):
+		EventBus.zone_captured.disconnect(_on_zone_captured)
 	if EventBus.score_updated.is_connected(_on_score_updated):
 		EventBus.score_updated.disconnect(_on_score_updated)
 	if EventBus.match_timer_updated.is_connected(_update_timer_badge):
@@ -240,14 +258,89 @@ func _on_player_zone_changed(_zone_id: String, zone_title_fa: String, inside: bo
 
 
 func _on_player_stats_updated(hp: int, max_hp: int, energy: int, max_energy: int, blaster_name_fa: String, recharging: bool) -> void:
-	if _stats_label == null:
+	if _stats_label != null:
+		var energy_str: String = "در حال شارژ..." if recharging else "%d/%d" % [energy, max_energy]
+		_stats_label.text = "جان: %d/%d | %s: %s" % [hp, max_hp, blaster_name_fa, energy_str]
+		if hp <= 30:
+			_stats_label.add_theme_color_override("font_color", Color(0.984314, 0.45098, 0.086275, 1.0))
+		else:
+			_stats_label.add_theme_color_override("font_color", Color(0.901961, 0.960784, 1.0, 1.0))
+	if _btn_switch_blaster != null:
+		if "رگبار" in blaster_name_fa:
+			_btn_switch_blaster.title_text = "رگبار"
+			_btn_switch_blaster.accent_color = Color(0.984314, 0.572549, 0.235294, 1.0)
+		elif "پلاسما" in blaster_name_fa:
+			_btn_switch_blaster.title_text = "پلاسما"
+			_btn_switch_blaster.accent_color = Color(0.658824, 0.333333, 0.968627, 1.0)
+		else:
+			_btn_switch_blaster.title_text = "پالس"
+			_btn_switch_blaster.accent_color = Color(0.219608, 0.741176, 0.972549, 1.0)
+		_btn_switch_blaster.queue_redraw()
+
+
+func _init_zone_mini_badges() -> void:
+	var active_mode: ArenaModeConfig = GameManager.get_active_mode_config()
+	var show_zones: bool = active_mode == null or active_mode.enable_capture_zones
+	if _zone_mini_a != null:
+		_zone_mini_a.visible = show_zones
+		_set_zone_mini_color(_zone_mini_a, _zone_mini_a_label, Color(0.580392, 0.639216, 0.721569, 1.0))
+	if _zone_mini_b != null:
+		_zone_mini_b.visible = show_zones
+		_set_zone_mini_color(_zone_mini_b, _zone_mini_b_label, Color(0.580392, 0.639216, 0.721569, 1.0))
+
+
+func _set_zone_mini_color(panel: PanelContainer, label: Label, col: Color) -> void:
+	if panel != null:
+		panel.self_modulate = Color(col.r * 0.45 + 0.55, col.g * 0.45 + 0.55, col.b * 0.45 + 0.55, 1.0)
+	if label != null:
+		label.add_theme_color_override("font_color", col)
+
+
+func _on_zone_capture_progress(zone_id: String, team_id: int, progress: float) -> void:
+	var target_panel: PanelContainer = _zone_mini_a if zone_id == "zone_a" else _zone_mini_b
+	var target_label: Label = _zone_mini_a_label if zone_id == "zone_a" else _zone_mini_b_label
+	var neutral_col := Color(0.580392, 0.639216, 0.721569, 1.0)
+	var team_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)
+	_set_zone_mini_color(target_panel, target_label, neutral_col.lerp(team_col, clampf(progress, 0.0, 1.0)))
+
+
+func _on_zone_captured(zone_id: String, team_id: int) -> void:
+	var target_panel: PanelContainer = _zone_mini_a if zone_id == "zone_a" else _zone_mini_b
+	var target_label: Label = _zone_mini_a_label if zone_id == "zone_a" else _zone_mini_b_label
+	var team_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)
+	_set_zone_mini_color(target_panel, target_label, team_col)
+
+
+func _on_player_buff_updated(damage_secs: float, speed_secs: float) -> void:
+	if _buff_badge == null or _buff_label == null:
 		return
-	var energy_str: String = "در حال شارژ..." if recharging else "%d/%d" % [energy, max_energy]
-	_stats_label.text = "جان: %d/%d | %s: %s" % [hp, max_hp, blaster_name_fa, energy_str]
-	if hp <= 30:
-		_stats_label.add_theme_color_override("font_color", Color(0.984314, 0.45098, 0.086275, 1.0))
+	var parts: Array[String] = []
+	if damage_secs > 0.1:
+		parts.append("تقویت %dث" % maxi(1, int(ceil(damage_secs))))
+	if speed_secs > 0.1:
+		parts.append("شتاب %dث" % maxi(1, int(ceil(speed_secs))))
+	if parts.is_empty():
+		_buff_badge.visible = false
 	else:
-		_stats_label.add_theme_color_override("font_color", Color(0.901961, 0.960784, 1.0, 1.0))
+		_buff_badge.visible = true
+		_buff_label.text = " | ".join(parts)
+		if damage_secs > 0.1:
+			_buff_label.add_theme_color_override("font_color", Color(0.984314, 0.74902, 0.141176, 1.0))
+		else:
+			_buff_label.add_theme_color_override("font_color", Color(0.752941, 0.517647, 0.988235, 1.0))
+
+
+func _refresh_pause_sfx_button() -> void:
+	if _pause_sfx_btn != null:
+		_pause_sfx_btn.text = "صدای نبرد: روشن" if SaveManager.sfx_enabled else "صدای نبرد: خاموش"
+
+
+func _on_btn_pause_sfx_pressed() -> void:
+	var next_sfx: bool = not SaveManager.sfx_enabled
+	AudioManager.set_sfx_enabled(next_sfx)
+	if next_sfx:
+		AudioManager.play_ui_pop()
+	_refresh_pause_sfx_button()
 
 
 func _on_player_damaged_feedback(_hp_ratio: float) -> void:

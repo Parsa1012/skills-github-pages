@@ -7,6 +7,7 @@ var target_fps: int = 30
 var quality_preset: String = "medium"
 var aim_fire_mode: String = "twin_stick" # "twin_stick" | "fire_button"
 var selected_mode_id: String = "zone_control" # "zone_control" | "team_score_rush"
+var starting_blaster_id: String = "pulse_blaster" # "pulse_blaster" | "rapid_repeater" | "plasma_scatter"
 var master_volume: float = 0.85
 var music_volume: float = 0.70
 var sfx_volume: float = 0.85
@@ -43,6 +44,9 @@ func load_settings() -> void:
 	var loaded_mode: String = str(config.get_value("match", "selected_mode_id", "zone_control"))
 	selected_mode_id = loaded_mode if loaded_mode in ["zone_control", "team_score_rush"] else "zone_control"
 
+	var loaded_blaster: String = str(config.get_value("loadout", "starting_blaster_id", "pulse_blaster"))
+	starting_blaster_id = loaded_blaster if loaded_blaster in ["pulse_blaster", "rapid_repeater", "plasma_scatter"] else "pulse_blaster"
+
 	master_volume = clampf(float(config.get_value("audio", "master_volume", 0.85)), 0.0, 1.0)
 	music_volume = clampf(float(config.get_value("audio", "music_volume", 0.70)), 0.0, 1.0)
 	sfx_volume = clampf(float(config.get_value("audio", "sfx_volume", 0.85)), 0.0, 1.0)
@@ -61,6 +65,7 @@ func save_settings() -> void:
 	config.set_value("performance", "quality_preset", quality_preset)
 	config.set_value("controls", "aim_fire_mode", aim_fire_mode)
 	config.set_value("match", "selected_mode_id", selected_mode_id)
+	config.set_value("loadout", "starting_blaster_id", starting_blaster_id)
 	config.set_value("audio", "master_volume", master_volume)
 	config.set_value("audio", "music_volume", music_volume)
 	config.set_value("audio", "sfx_volume", sfx_volume)
@@ -78,6 +83,7 @@ func apply_defaults() -> void:
 	quality_preset = "medium"
 	aim_fire_mode = "twin_stick"
 	selected_mode_id = "zone_control"
+	starting_blaster_id = "pulse_blaster"
 	master_volume = 0.85
 	music_volume = 0.70
 	sfx_volume = 0.85

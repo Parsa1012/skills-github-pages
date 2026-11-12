@@ -15,7 +15,7 @@ func _ready() -> void:
 
 
 func _start_qa() -> void:
-	print("[QA] Starting automated runtime QA (Phase 4)...")
+	print("[QA] Starting automated runtime QA (Phase 5)...")
 	if get_parent() != get_tree().root:
 		reparent(get_tree().root)
 	get_tree().current_scene = null
@@ -63,6 +63,22 @@ func _process(_delta: float) -> void:
 			var zone_cfg: ArenaModeConfig = GameManager.get_active_mode_config()
 			_assert(zone_cfg != null and zone_cfg.mode_id == "zone_control", "Expected zone_control mode config")
 
+			GameManager.set_starting_blaster("plasma_scatter")
+			_assert(GameManager.get_starting_blaster_index() == 2, "Expected plasma_scatter index 2")
+			GameManager.set_starting_blaster("pulse_blaster")
+			_assert(GameManager.get_starting_blaster_index() == 0, "Expected pulse_blaster index 0")
+
+			_assert(AudioManager.get("_menu_music") != null, "Menu arcade BGM did not load")
+			for sfx_p in [
+				"res://assets/audio/bgm_menu_arcade.wav",
+				"res://assets/audio/sfx_plasma_scatter.wav",
+				"res://assets/audio/sfx_pickup_item.wav",
+				"res://assets/audio/sfx_recharge_done.wav",
+				"res://assets/audio/sfx_zone_capture.wav",
+				"res://assets/audio/sfx_player_hit.wav"
+			]:
+				_assert(ResourceLoader.exists(sfx_p), "Missing Phase 5 audio resource: %s" % sfx_p)
+
 			GameManager.go_to_arena_sector_01()
 			_step = 1
 			_wait_frames = 5
@@ -77,12 +93,17 @@ func _process(_delta: float) -> void:
 
 			_assert(player.is_alive(), "Player should start alive")
 			_assert(player.blasters.size() == 3, "Expected 3 blasters, got %d" % player.blasters.size())
+			_assert(player.get_node_or_null("VisualRoot/WeaponMount/MuzzleMarker/MuzzleFlashMesh") != null, "MuzzleFlashMesh missing")
 			_assert(player._anim_player != null, "Kenney soldier AnimationPlayer not found")
 			if player._anim_player != null:
 				for anim_name in ["idle", "walk", "sprint"]:
 					_assert(player._anim_player.has_animation(anim_name), "Missing animation %s" % anim_name)
 					var a: Animation = player._anim_player.get_animation(anim_name)
 					_assert(a != null and a.loop_mode == Animation.LOOP_LINEAR, "Animation %s not set to LOOP_LINEAR" % anim_name)
+				_assert(player._anim_player.has_animation("die"), "Missing die animation")
+
+			var pickups: Array[Node] = tree.get_nodes_in_group("arena_pickups")
+			_assert(pickups.size() == 4, "Expected 4 ArenaPickups, got %d" % pickups.size())
 
 			var bots: Array[Node] = tree.get_nodes_in_group("arena_bots")
 			_assert(bots.size() == 4, "Expected 4 ArenaBots (1 Blue + 3 Orange), got %d" % bots.size())
@@ -145,10 +166,20 @@ func _process(_delta: float) -> void:
 				_assert(orange_bot._state == ArenaBot.BotState.RESPAWN, "Orange bot should enter RESPAWN state")
 
 			if player != null:
+				player._hp = player.max_hp
+				_assert(not player.apply_pickup(0, 35.0), "Full-HP player should not consume MEDKIT")
 				player.take_damage(40.0, 1)
 				_assert(is_equal_approx(player._hp, 60.0), "Expected player HP=60 after 40 dmg, got %.1f" % player._hp)
+				_assert(player.apply_pickup(0, 35.0) and is_equal_approx(player._hp, 95.0), "MEDKIT should restore +35 HP to 95")
+				_assert(player.apply_pickup(1, 8.0) and player._damage_boost_timer > 7.5, "OVERCHARGE pickup failed")
+				_assert(player.apply_pickup(2, 7.0) and player._speed_boost_timer > 6.5, "SPEED_BOOST pickup failed")
+				var hud_chk: Node = arena.get_node_or_null("TouchControlsHUD")
+				if hud_chk != null:
+					var buff_badge: Control = hud_chk.get_node_or_null("TopSafeMargin/TopHudBar/BuffBadge") as Control
+					_assert(buff_badge != null and buff_badge.visible, "HUD BuffBadge should be visible during pickup buff")
+					_assert(hud_chk.get_node_or_null("TopSafeMargin/TopHudBar/ZoneMiniA") != null, "ZoneMiniA badge missing")
 				var prev_orange: int = int(arena.get("_orange_score"))
-				player.take_damage(80.0, 1)
+				player.take_damage(120.0, 1)
 				_assert(not player.is_alive(), "Player should die after lethal damage")
 				_assert(int(arena.get("_orange_score")) == prev_orange + 1, "Expected orange_score +1 after player defeat")
 

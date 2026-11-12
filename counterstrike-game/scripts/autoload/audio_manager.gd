@@ -4,6 +4,11 @@ extends Node
 const UI_TAP_PATH: String = "res://assets/audio/sfx_ui_tap.wav"
 const UI_SWITCH_PATH: String = "res://assets/audio/sfx_ui_switch.wav"
 const UI_CONFIRM_PATH: String = "res://assets/audio/sfx_ui_confirm.wav"
+const MENU_BGM_PATH: String = "res://assets/audio/bgm_menu_arcade.wav"
+const PICKUP_SFX_PATH: String = "res://assets/audio/sfx_pickup_item.wav"
+const RECHARGE_SFX_PATH: String = "res://assets/audio/sfx_recharge_done.wav"
+const ZONE_CAPTURE_SFX_PATH: String = "res://assets/audio/sfx_zone_capture.wav"
+const PLAYER_HIT_SFX_PATH: String = "res://assets/audio/sfx_player_hit.wav"
 
 const MAX_UI_PLAYERS: int = 4
 const MAX_SFX_PLAYERS: int = 10
@@ -55,6 +60,10 @@ func _load_bundled_audio() -> void:
 		_ui_switch_sfx = ResourceLoader.load(UI_SWITCH_PATH)
 	if ResourceLoader.exists(UI_CONFIRM_PATH):
 		_ui_confirm_sfx = ResourceLoader.load(UI_CONFIRM_PATH)
+	if ResourceLoader.exists(MENU_BGM_PATH):
+		var bgm: Resource = ResourceLoader.load(MENU_BGM_PATH)
+		if bgm is AudioStream:
+			_menu_music = bgm as AudioStream
 
 
 func register_menu_music(stream: AudioStream) -> void:
@@ -109,6 +118,28 @@ func set_sfx_enabled(enabled: bool) -> void:
 	SaveManager.sfx_enabled = enabled
 	SaveManager.save_settings()
 	apply_volumes()
+
+
+func set_master_volume(volume: float) -> void:
+	SaveManager.master_volume = clampf(volume, 0.1, 1.0)
+	SaveManager.save_settings()
+	apply_volumes()
+
+
+func play_pickup_sfx() -> void:
+	play_sfx_path(PICKUP_SFX_PATH, randf_range(0.97, 1.04), -1.0)
+
+
+func play_recharge_done_sfx() -> void:
+	play_sfx_path(RECHARGE_SFX_PATH, 1.0, -2.0)
+
+
+func play_zone_capture_sfx(pitch_scale: float = 1.0) -> void:
+	play_sfx_path(ZONE_CAPTURE_SFX_PATH, pitch_scale, -1.5)
+
+
+func play_player_hit_sfx() -> void:
+	play_sfx_path(PLAYER_HIT_SFX_PATH, randf_range(0.92, 1.05), -1.0)
 
 
 func play_ui_click(pitch_scale: float = 1.0) -> void:

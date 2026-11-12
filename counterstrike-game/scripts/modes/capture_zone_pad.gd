@@ -88,7 +88,7 @@ func _physics_process(delta: float) -> void:
 				zone_ownership_changed.emit(self, 0)
 				EventBus.zone_captured.emit(zone_id, 0)
 				EventBus.hud_toast_requested.emit("%s به تصرف تیم آبی درآمد!" % zone_title_fa, blue_color)
-				AudioManager.play_ui_pop(1.12)
+				AudioManager.play_zone_capture_sfx(1.06)
 		elif orange_alive > 0 and _capture_value > -1.0:
 			_capture_value = maxf(-1.0, _capture_value - step)
 			if owner_team == 0 and _capture_value <= 0.0:
@@ -99,7 +99,7 @@ func _physics_process(delta: float) -> void:
 				zone_ownership_changed.emit(self, 1)
 				EventBus.zone_captured.emit(zone_id, 1)
 				EventBus.hud_toast_requested.emit("%s به تصرف تیم نارنجی درآمد!" % zone_title_fa, orange_color)
-				AudioManager.play_ui_menu(0.78)
+				AudioManager.play_zone_capture_sfx(0.84)
 		elif blue_alive == 0 and orange_alive == 0 and owner_team == -1 and absf(_capture_value) > 0.001:
 			_capture_value = move_toward(_capture_value, 0.0, step * 0.35)
 
