@@ -64,7 +64,7 @@ func _refresh_ui() -> void:
 
 	var active_mode: ArenaModeConfig = GameManager.get_active_mode_config()
 	if _match_mode_btn != null and active_mode != null:
-		_match_mode_btn.text = "حالت نبرد: %s (هدف: %d)" % [active_mode.display_name_fa, active_mode.target_score]
+		_match_mode_btn.text = "حالت نبرد: %s (هدف: %d)" % [active_mode.display_name, active_mode.target_score]
 
 	var cam_cfg: CameraConfig = CameraConfig.from_project_settings()
 	_camera_info_label.text = (

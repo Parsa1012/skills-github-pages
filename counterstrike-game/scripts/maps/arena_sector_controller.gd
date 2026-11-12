@@ -51,7 +51,7 @@ func _ready() -> void:
 	_report_timer_if_changed()
 	if _mode_config != null:
 		EventBus.hud_toast_requested.emit(
-			"%s — هدف: %d امتیاز" % [_mode_config.display_name_fa, _target_score],
+			"%s — هدف: %d امتیاز" % [_mode_config.display_name, _target_score],
 			Color(0.219608, 0.741176, 0.972549, 1.0)
 		)
 
@@ -122,11 +122,17 @@ func _award_zone_hold_points() -> void:
 		_check_win_conditions()
 
 
-func _on_zone_captured(_zone_id: String, zone_title_fa: String, capturing_team: int) -> void:
+func _on_zone_captured(zone_id: String, capturing_team: int) -> void:
 	if _match_over:
 		return
 	if _mode_config != null and not _mode_config.enable_capture_zones:
 		return
+
+	var zone_title_fa: String = zone_id
+	for zone in get_tree().get_nodes_in_group("capture_zones"):
+		if zone is CaptureZonePad and (zone as CaptureZonePad).zone_id == zone_id:
+			zone_title_fa = (zone as CaptureZonePad).zone_title_fa
+			break
 
 	var bonus: int = _mode_config.zone_capture_bonus if _mode_config != null else 2
 	if capturing_team == 0:
@@ -156,7 +162,7 @@ func _on_bot_defeated(bot: ArenaBot, attacker_team: int) -> void:
 		if bot != null and bot.team_id == 1:
 			_player_eliminations += 1
 			EventBus.hud_toast_requested.emit(
-				"%s نابود شد! (+1)" % (bot.bot_config.display_name_fa if bot.bot_config != null else "پهپاد دشمن"),
+				"%s نابود شد! (+1)" % (bot.profile.display_name if bot.profile != null else "پهپاد دشمن"),
 				Color(0.219608, 0.741176, 0.972549, 1.0)
 			)
 	else:

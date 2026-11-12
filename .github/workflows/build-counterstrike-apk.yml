@@ -175,13 +175,9 @@ jobs:
           cat /tmp/godot-smoke-arena.log
 
           echo "=== Step 6: End-to-End Runtime QA Suite ==="
-          if ! godot4 --headless --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn --quit-after 600 >/tmp/godot-qa.log 2>&1; then
-            cat /tmp/godot-qa.log
-            emit_error_log /tmp/godot-qa.log "Godot runtime QA suite failed"
-            exit 1
-          fi
+          QA_EXIT=0
+          godot4 --headless --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn --quit-after 600 >/tmp/godot-qa.log 2>&1 || QA_EXIT=$?
           cat /tmp/godot-qa.log
-          grep -q "\[QA_PASS\]" /tmp/godot-qa.log
 
           # Surface any Godot warnings or errors with stack context as CI annotations
           python3 - <<'PY'
@@ -199,6 +195,11 @@ jobs:
                       safe = ctx.replace("%", "%25").replace("\r", "%0D").replace("\n", " ")
                       print(f"::warning title=Godot log ({p.name})::{safe[:240]}")
           PY
+
+          if [ "${QA_EXIT}" -ne 0 ] || ! grep -q "\[QA_PASS\]" /tmp/godot-qa.log; then
+            emit_error_log /tmp/godot-qa.log "Godot runtime QA suite failed (exit=${QA_EXIT})"
+            exit 1
+          fi
 
           if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log /tmp/godot-qa.log; then
             echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log /tmp/godot-qa.log | head -n 5 | tr '\n' ' ')"

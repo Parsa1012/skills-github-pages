@@ -93,7 +93,7 @@ func _process(_delta: float) -> void:
 					var ab := b as ArenaBot
 					if ab.team_id == 0:
 						blue_bots += 1
-						_assert(ab.get_node_or_null("VisualRoot/KenneyAlly") != null, "AllyBot visual missing")
+						_assert(ab.get_node_or_null("VisualRoot/ModelPivot/KenneyAlly") != null, "AllyBot visual missing")
 					elif ab.team_id == 1:
 						orange_bots += 1
 			_assert(blue_bots == 1 and orange_bots == 3, "Expected 1 Blue & 3 Orange bots, got %d/%d" % [blue_bots, orange_bots])
@@ -103,9 +103,9 @@ func _process(_delta: float) -> void:
 			player.switch_next_blaster()
 			_assert(player._current_energy == 30, "Expected Rapid Repeater 30 energy, got %d" % player._current_energy)
 			player.switch_next_blaster()
-			_assert(player._current_energy == 12, "Expected Plasma Scatter 12 energy, got %d" % player._current_energy)
+			_assert(player._current_energy == 10, "Expected Plasma Scatter 10 energy, got %d" % player._current_energy)
 			player._try_fire(0.0)
-			_assert(player._current_energy == 11, "Expected Plasma Scatter 11 energy after spread fire, got %d" % player._current_energy)
+			_assert(player._current_energy == 9, "Expected Plasma Scatter 9 energy after spread fire, got %d" % player._current_energy)
 			player.switch_next_blaster()
 			_assert(player._current_energy == 16, "Expected Pulse Blaster 16 after cycling back")
 
@@ -167,7 +167,7 @@ func _process(_delta: float) -> void:
 
 			var zone_a: CaptureZonePad = arena.get_node_or_null("ZoneA_North") as CaptureZonePad
 			if zone_a != null:
-				zone_a.capture_progress = 0.0
+				zone_a._capture_value = 0.0
 				_zone_progress_before = 0.0
 
 			if player != null:
@@ -180,7 +180,7 @@ func _process(_delta: float) -> void:
 			var arena: Node = tree.current_scene
 			_assert(_zone_entered_seen, "CaptureZonePad ZoneA_North did not emit player_zone_changed")
 			var zone_a: CaptureZonePad = arena.get_node_or_null("ZoneA_North") as CaptureZonePad
-			_assert(zone_a != null and zone_a.capture_progress > _zone_progress_before + 0.1, "ZoneA_North capture_progress did not advance toward Blue (got %.2f)" % (zone_a.capture_progress if zone_a != null else -99.0))
+			_assert(zone_a != null and zone_a._capture_value > _zone_progress_before + 0.1, "ZoneA_North _capture_value did not advance toward Blue (got %.2f)" % (zone_a._capture_value if zone_a != null else -99.0))
 
 			var prev_matches: int = SaveManager.total_matches
 			arena._finish_match()

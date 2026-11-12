@@ -390,13 +390,13 @@ patrol_offset_b = Vector3(0, 0, 4.5)
 
 [node name="Bot_North" parent="ArenaBots" instance=ExtResource("6_bot")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.8, 0.02, -7.8)
-bot_config = ExtResource("16_scout")
+profile = ExtResource("16_scout")
 patrol_offset_a = Vector3(-5.8, 0, 0.6)
 patrol_offset_b = Vector3(2.8, 0, 0)
 
 [node name="Bot_South" parent="ArenaBots" instance=ExtResource("6_bot")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.8, 0.02, 7.8)
-bot_config = ExtResource("17_heavy")
+profile = ExtResource("17_heavy")
 patrol_offset_a = Vector3(-5.8, 0, -0.6)
 patrol_offset_b = Vector3(2.8, 0, 0)
 
