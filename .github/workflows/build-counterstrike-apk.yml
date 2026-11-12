@@ -1,0 +1,187 @@
+name: Build Counterstrike Arena Android Debug APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/bb66f5eb-skills-github-pages
+    paths:
+      - "counterstrike-game/**"
+      - ".github/workflows/build-counterstrike-apk.yml"
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.3-stable"
+  GODOT_TEMPLATE_DIR: "4.3.stable"
+  PROJECT_DIR: "counterstrike-game"
+  APK_FILENAME: "counterstrike-arena-debug-arm64.apk"
+
+jobs:
+  build-android-debug-apk:
+    name: Build Debug APK (Godot 4.3 / arm64-v8a)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install required Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          ls -la "${ANDROID_HOME}/build-tools/34.0.0/apksigner"
+
+      - name: Cache Godot 4.3-stable binary and export templates
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            /tmp/godot-cache
+          key: godot-${{ env.GODOT_VERSION }}-linux-android-v1
+
+      - name: Download and install Godot 4.3-stable and Export Templates
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/godot-cache
+          GODOT_ZIP="/tmp/godot-cache/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          TEMPLATES_TPZ="/tmp/godot-cache/Godot_v${GODOT_VERSION}_export_templates.tpz"
+
+          if [ ! -f "${GODOT_ZIP}" ]; then
+            curl -fsSL -o "${GODOT_ZIP}" \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          fi
+          if [ ! -f "${TEMPLATES_TPZ}" ]; then
+            curl -fsSL -o "${TEMPLATES_TPZ}" \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          fi
+
+          mkdir -p /tmp/godot-bin
+          unzip -oq "${GODOT_ZIP}" -d /tmp/godot-bin
+          sudo install -m 0755 "/tmp/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64" /usr/local/bin/godot4
+
+          TEMPLATES_DEST="${HOME}/.local/share/godot/export_templates/${GODOT_TEMPLATE_DIR}"
+          rm -rf /tmp/godot-templates "${TEMPLATES_DEST}"
+          mkdir -p /tmp/godot-templates "$(dirname "${TEMPLATES_DEST}")"
+          unzip -oq "${TEMPLATES_TPZ}" -d /tmp/godot-templates
+          mv /tmp/godot-templates/templates "${TEMPLATES_DEST}"
+
+          godot4 --version
+          ls -lh "${TEMPLATES_DEST}/android_debug.apk"
+
+      - name: Generate ephemeral CI Android debug keystore
+        run: |
+          set -euo pipefail
+          mkdir -p "${HOME}/.android"
+          rm -f "${HOME}/.android/debug.keystore"
+          keytool -genkeypair -v \
+            -keystore "${HOME}/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Import Godot project resources and verify headless scenes
+        run: |
+          set -euo pipefail
+          echo "=== Step 1: Headless resource import ==="
+          godot4 --headless --path "${PROJECT_DIR}" --import
+
+          echo "=== Step 2: Initialize EditorSettings ==="
+          godot4 --headless --editor --path "${PROJECT_DIR}" --quit
+
+          echo "=== Step 3: Smoke test boot -> main_menu ==="
+          godot4 --headless --path "${PROJECT_DIR}" --quit-after 30
+
+          echo "=== Step 4: Smoke test camera_angle_test.tscn ==="
+          godot4 --headless --path "${PROJECT_DIR}" res://scenes/test/camera_angle_test.tscn --quit-after 20
+
+      - name: Configure Godot Android export editor settings
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          cfg_dir = Path.home() / ".config" / "godot"
+          cfg_dir.mkdir(parents=True, exist_ok=True)
+          settings_file = cfg_dir / "editor_settings-4.3.tres"
+
+          updates = {
+              "export/android/android_sdk_path": os.environ["ANDROID_HOME"],
+              "export/android/java_sdk_path": os.environ["JAVA_HOME"],
+              "export/android/debug_keystore": str(Path.home() / ".android" / "debug.keystore"),
+              "export/android/debug_keystore_user": "androiddebugkey",
+              "export/android/debug_keystore_pass": "android",
+          }
+
+          if settings_file.exists():
+              text = settings_file.read_text(encoding="utf-8")
+          else:
+              text = '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n'
+
+          if "[resource]" not in text:
+              text += "\n[resource]\n"
+
+          for key, val in updates.items():
+              escaped = val.replace("\\", "\\\\").replace('"', '\\"')
+              line = f'{key} = "{escaped}"'
+              pattern = re.compile(rf'^{re.escape(key)}\s*=.*$', re.M)
+              if pattern.search(text):
+                  text = pattern.sub(line, text)
+              else:
+                  text = text.rstrip() + "\n" + line + "\n"
+
+          settings_file.write_text(text, encoding="utf-8")
+          print(f"Configured {settings_file}")
+          PY
+
+      - name: Export Android Debug APK (arm64-v8a)
+        run: |
+          set -euo pipefail
+          OUT_DIR="${GITHUB_WORKSPACE}/${PROJECT_DIR}/builds"
+          OUT_APK="${OUT_DIR}/${APK_FILENAME}"
+          mkdir -p "${OUT_DIR}"
+          godot4 --headless --verbose --path "${PROJECT_DIR}" --export-debug "Android" "${OUT_APK}"
+
+          echo "=== APK File Info ==="
+          ls -lh "${OUT_APK}"
+
+      - name: Verify APK architecture (arm64-v8a only) and signature
+        run: |
+          set -euo pipefail
+          OUT_APK="${GITHUB_WORKSPACE}/${PROJECT_DIR}/builds/${APK_FILENAME}"
+          test -s "${OUT_APK}"
+
+          echo "=== Native Libraries in APK ==="
+          unzip -l "${OUT_APK}" | grep 'lib/' || true
+          unzip -l "${OUT_APK}" | grep -q 'lib/arm64-v8a/libgodot_android.so'
+          if unzip -l "${OUT_APK}" | grep -qE 'lib/(armeabi-v7a|x86|x86_64)/'; then
+            echo "ERROR: Unexpected non-arm64-v8a native libraries found in APK!"
+            exit 1
+          fi
+
+          echo "=== APK Signature Verification ==="
+          "${ANDROID_HOME}/build-tools/34.0.0/apksigner" verify --verbose "${OUT_APK}"
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: counterstrike-arena-debug-arm64-apk
+          path: ${{ env.PROJECT_DIR }}/builds/${{ env.APK_FILENAME }}
+          retention-days: 30
+          if-no-files-found: error
