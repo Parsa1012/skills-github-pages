@@ -175,7 +175,7 @@ jobs:
           cat /tmp/godot-smoke-arena.log
 
           echo "=== Step 6: End-to-End Runtime QA Suite ==="
-          if ! godot4 --headless --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn >/tmp/godot-qa.log 2>&1; then
+          if ! godot4 --headless --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn --quit-after 600 >/tmp/godot-qa.log 2>&1; then
             cat /tmp/godot-qa.log
             emit_error_log /tmp/godot-qa.log "Godot runtime QA suite failed"
             exit 1

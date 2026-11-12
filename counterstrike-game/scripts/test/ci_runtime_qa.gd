@@ -15,11 +15,12 @@ func _start_qa() -> void:
 	print("[QA] Starting automated runtime QA...")
 	if get_parent() != get_tree().root:
 		reparent(get_tree().root)
+	get_tree().current_scene = null
 	EventBus.player_zone_changed.connect(_on_zone_changed)
 	var err: Error = get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 	_assert(err == OK, "MainMenu load failed: %d" % err)
 	_step = 0
-	_wait_frames = 3
+	_wait_frames = 4
 
 
 func _on_zone_changed(_zone_id: String, _title: String, inside: bool) -> void:
