@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>COUNTER — Tactical Browser Ops</title>
+<meta name="description" content="A fast, top-down tactical shooter you can play in the browser. Counter-terrorist ops, waves of enemies, one arena." />
+<link rel="stylesheet" href="css/style.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230b0f0d'/><circle cx='50' cy='50' r='26' fill='none' stroke='%23d9ff3f' stroke-width='8'/><path d='M50 14v16M50 70v16M14 50h16M70 50h16' stroke='%23d9ff3f' stroke-width='8'/></svg>" />
+</head>
+<body>
+
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div class="hud-topleft">
+      <div class="team ct"><span class="dot"></span> COUNTER-TERRORISTS</div>
+      <div class="round-info"><span id="roundNum">ROUND 1</span><span class="sep">/</span><span id="enemiesLeft">4 LEFT</span></div>
+    </div>
+
+    <div class="hud-topright">
+      <div class="stat"><span id="kills">0</span><small>KILLS</small></div>
+      <div class="stat"><span id="score">0</span><small>SCORE</small></div>
+      <div class="stat"><span id="best">0</span><small>BEST</small></div>
+    </div>
+
+    <div id="killfeed"></div>
+
+    <div class="hud-bottomleft">
+      <div class="bar-row">
+        <span class="bar-icon">+</span>
+        <div class="bar"><div id="healthBar" class="fill health"></div></div>
+        <span id="healthNum" class="bar-num">100</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-icon">⛊</span>
+        <div class="bar"><div id="armorBar" class="fill armor"></div></div>
+        <span id="armorNum" class="bar-num">100</span>
+      </div>
+    </div>
+
+    <div class="hud-bottomright">
+      <div id="weaponName" class="weapon-name">AK-12 RIFLE</div>
+      <div class="ammo"><span id="mag">30</span><span class="slash">/</span><span id="reserve">120</span></div>
+      <div id="reloadHint" class="reload-hint hidden">RELOADING…<div class="reload-track"><div id="reloadFill"></div></div></div>
+    </div>
+
+    <canvas id="minimap" width="180" height="130"></canvas>
+
+    <div id="damageVignette"></div>
+    <div id="hitMarker"></div>
+  </div>
+
+  <!-- ============ TOUCH CONTROLS ============ -->
+  <div id="touchUI" class="hidden">
+    <div id="stickBase"><div id="stickKnob"></div></div>
+    <button id="fireBtn" aria-label="Fire">FIRE</button>
+    <button id="reloadBtn" aria-label="Reload">RELOAD</button>
+    <button id="switchBtn" aria-label="Switch weapon">SWAP</button>
+  </div>
+
+  <!-- ============ MENU ============ -->
+  <div id="menu" class="screen">
+    <div class="scanlines"></div>
+    <div class="menu-inner">
+      <div class="eyebrow">PARSAA1012 · BROWSER OPS</div>
+      <h1 class="logo">COUNTER</h1>
+      <div class="tagline">TACTICAL<span>·</span>TOP-DOWN<span>·</span>SURVIVAL</div>
+
+      <div class="menu-panel">
+        <p class="brief">
+          You are the last CT in the compound. Clear every wave of hostiles,
+          keep your mag loaded and stay behind cover.
+        </p>
+
+        <button id="playBtn" class="btn primary">DEPLOY</button>
+        <div class="btn-row">
+          <button id="howBtn" class="btn">HOW TO PLAY</button>
+          <button id="soundBtn" class="btn" aria-pressed="true">SOUND: ON</button>
+        </div>
+
+        <div class="meta">
+          <span>BEST SCORE <b id="menuBest">0</b></span>
+          <span>ROUND REACHED <b id="menuRound">0</b></span>
+        </div>
+      </div>
+
+      <div class="footer-note">WASD move · MOUSE aim · CLICK fire · R reload · 1/2 swap · ESC pause</div>
+    </div>
+  </div>
+
+  <!-- ============ HOW TO PLAY ============ -->
+  <div id="howScreen" class="screen hidden">
+    <div class="scanlines"></div>
+    <div class="menu-inner narrow">
+      <h2 class="sub-logo">HOW TO PLAY</h2>
+      <div class="keys-grid">
+        <div class="key-card"><kbd>W A S D</kbd><span>Move</span></div>
+        <div class="key-card"><kbd>MOUSE</kbd><span>Aim</span></div>
+        <div class="key-card"><kbd>LEFT CLICK</kbd><span>Fire</span></div>
+        <div class="key-card"><kbd>R</kbd><span>Reload</span></div>
+        <div class="key-card"><kbd>1 / 2 / Q</kbd><span>Swap weapon</span></div>
+        <div class="key-card"><kbd>SHIFT</kbd><span>Walk (quieter)</span></div>
+        <div class="key-card"><kbd>ESC / P</kbd><span>Pause</span></div>
+        <div class="key-card"><kbd>MOBILE</kbd><span>Left stick + FIRE</span></div>
+      </div>
+      <p class="brief">
+        Crates and walls stop bullets — use them. Hostiles shoot back, so peek,
+        fire, and break line of sight. Green crates drop health, yellow crates drop ammo.
+      </p>
+      <button id="backBtn" class="btn primary">BACK</button>
+    </div>
+  </div>
+
+  <!-- ============ PAUSE ============ -->
+  <div id="pauseScreen" class="screen hidden">
+    <div class="scanlines"></div>
+    <div class="menu-inner narrow">
+      <h2 class="sub-logo">PAUSED</h2>
+      <div class="menu-panel center">
+        <button id="resumeBtn" class="btn primary">RESUME</button>
+        <button id="restartBtn" class="btn">RESTART MISSION</button>
+        <button id="quitBtn" class="btn">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ GAME OVER ============ -->
+  <div id="overScreen" class="screen hidden">
+    <div class="scanlines"></div>
+    <div class="menu-inner narrow">
+      <h2 class="sub-logo danger">YOU WERE ELIMINATED</h2>
+      <div class="result-grid">
+        <div class="result"><span id="finalScore">0</span><small>SCORE</small></div>
+        <div class="result"><span id="finalKills">0</span><small>KILLS</small></div>
+        <div class="result"><span id="finalRound">0</span><small>ROUND</small></div>
+      </div>
+      <div id="recordNote" class="record-note hidden">NEW PERSONAL RECORD</div>
+      <div class="menu-panel center">
+        <button id="retryBtn" class="btn primary">REDEPLOY</button>
+        <button id="menuBtn" class="btn">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ROUND BANNER ============ -->
+  <div id="banner" class="banner hidden">
+    <div class="banner-kicker">ROUND</div>
+    <div id="bannerRound" class="banner-num">1</div>
+    <div id="bannerMsg" class="banner-msg">CLEAR THE COMPOUND</div>
+  </div>
+</div>
+
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
