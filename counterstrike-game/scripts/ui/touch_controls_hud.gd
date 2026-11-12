@@ -87,6 +87,8 @@ func _ready() -> void:
 
 
 func _exit_tree() -> void:
+	if get_viewport() != null and get_viewport().size_changed.is_connected(_apply_safe_area_margins):
+		get_viewport().size_changed.disconnect(_apply_safe_area_margins)
 	if EventBus.aim_fire_mode_changed.is_connected(_on_aim_fire_mode_changed):
 		EventBus.aim_fire_mode_changed.disconnect(_on_aim_fire_mode_changed)
 	if EventBus.player_zone_changed.is_connected(_on_player_zone_changed):

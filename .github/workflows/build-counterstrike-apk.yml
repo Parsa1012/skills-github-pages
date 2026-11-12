@@ -151,7 +151,7 @@ jobs:
           cat /tmp/godot-editor.log
 
           echo "=== Step 3: Smoke test boot -> main_menu ==="
-          if ! godot4 --headless --path "${PROJECT_DIR}" --quit-after 30 >/tmp/godot-smoke-boot.log 2>&1; then
+          if ! godot4 --headless --verbose --path "${PROJECT_DIR}" --quit-after 30 >/tmp/godot-smoke-boot.log 2>&1; then
             cat /tmp/godot-smoke-boot.log
             emit_error_log /tmp/godot-smoke-boot.log "Godot boot smoke test failed"
             exit 1

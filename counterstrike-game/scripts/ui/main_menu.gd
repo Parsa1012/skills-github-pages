@@ -52,6 +52,11 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_apply_safe_area_margins)
 
 
+func _exit_tree() -> void:
+	if get_viewport() != null and get_viewport().size_changed.is_connected(_apply_safe_area_margins):
+		get_viewport().size_changed.disconnect(_apply_safe_area_margins)
+
+
 func _apply_safe_area_margins() -> void:
 	if _safe_margin == null:
 		return

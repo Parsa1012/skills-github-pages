@@ -34,6 +34,26 @@ func _ready() -> void:
 	apply_volumes()
 
 
+func _exit_tree() -> void:
+	_menu_music_requested = false
+	if _music_player != null:
+		_music_player.stop()
+		_music_player.stream = null
+	for p in _ui_players:
+		if is_instance_valid(p):
+			p.stop()
+			p.stream = null
+	for p in _sfx_players:
+		if is_instance_valid(p):
+			p.stop()
+			p.stream = null
+	_menu_music = null
+	_ui_tap_sfx = null
+	_ui_switch_sfx = null
+	_ui_confirm_sfx = null
+	_sfx_cache.clear()
+
+
 func _build_player_pools() -> void:
 	_music_player = AudioStreamPlayer.new()
 	_music_player.name = "MusicPlayer"
