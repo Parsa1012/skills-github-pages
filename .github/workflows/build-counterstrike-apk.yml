@@ -167,7 +167,7 @@ jobs:
           cat /tmp/godot-smoke-test.log
 
           echo "=== Step 5: Smoke test arena_sector_01.tscn ==="
-          if ! godot4 --headless --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
+          if ! godot4 --headless --verbose --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
             cat /tmp/godot-smoke-arena.log
             emit_error_log /tmp/godot-smoke-arena.log "Godot arena_sector_01 smoke test failed"
             exit 1
@@ -175,7 +175,7 @@ jobs:
           cat /tmp/godot-smoke-arena.log
 
           echo "=== Step 6: End-to-End Runtime QA Suite ==="
-          if ! godot4 --headless --fixed-fps 30 --path "${PROJECT_DIR}" -s res://scripts/test/ci_runtime_qa.gd >/tmp/godot-qa.log 2>&1; then
+          if ! godot4 --headless --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn >/tmp/godot-qa.log 2>&1; then
             cat /tmp/godot-qa.log
             emit_error_log /tmp/godot-qa.log "Godot runtime QA suite failed"
             exit 1
@@ -183,16 +183,20 @@ jobs:
           cat /tmp/godot-qa.log
           grep -q "\[QA_PASS\]" /tmp/godot-qa.log
 
-          # Surface any Godot warnings or errors as CI annotations for visibility
+          # Surface any Godot warnings or errors with stack context as CI annotations
           python3 - <<'PY'
-          import pathlib, re
+          import pathlib
           for log_name in ["/tmp/godot-import.log", "/tmp/godot-editor.log", "/tmp/godot-smoke-boot.log", "/tmp/godot-smoke-test.log", "/tmp/godot-smoke-arena.log", "/tmp/godot-qa.log"]:
               p = pathlib.Path(log_name)
               if not p.exists():
                   continue
-              for line in p.read_text(encoding="utf-8", errors="replace").splitlines():
+              lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+              for i, line in enumerate(lines):
                   if any(k in line for k in ("ERROR:", "WARNING:", "SCRIPT ERROR", "Parse Error", "QA_FAIL")):
-                      safe = line.replace("%", "%25").replace("\r", "%0D").replace("\n", " ")
+                      ctx = line
+                      if i + 1 < len(lines) and ("at:" in lines[i + 1] or "res://" in lines[i + 1]):
+                          ctx += " | " + lines[i + 1].strip()
+                      safe = ctx.replace("%", "%25").replace("\r", "%0D").replace("\n", " ")
                       print(f"::warning title=Godot log ({p.name})::{safe[:240]}")
           PY
 
