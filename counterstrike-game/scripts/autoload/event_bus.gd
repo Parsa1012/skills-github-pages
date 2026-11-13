@@ -65,6 +65,9 @@ signal player_damaged_direction(angle_rad: float)
 signal crate_exploded(world_pos: Vector3)
 
 @warning_ignore("unused_signal")
+signal combat_callout_requested(world_pos: Vector3, text_fa: String, color: Color, scale_boost: float)
+
+@warning_ignore("unused_signal")
 signal player_respawn_countdown(seconds_left: float, active: bool)
 
 @warning_ignore("unused_signal")

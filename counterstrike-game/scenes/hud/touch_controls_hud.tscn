@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/touch_controls_hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/virtual_joystick.gd" id="2_stick"]
@@ -7,6 +7,7 @@
 [ext_resource type="FontFile" path="res://assets/fonts/Vazirmatn-Bold.ttf" id="5_vazir_bold"]
 [ext_resource type="Script" path="res://scripts/ui/tactical_radar.gd" id="6_radar"]
 [ext_resource type="Script" path="res://scripts/ui/hit_direction_indicator.gd" id="7_hitdir"]
+[ext_resource type="Script" path="res://scripts/ui/damage_numbers_overlay.gd" id="8_dmgnums"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
 content_margin_left = 10.0
@@ -124,6 +125,16 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("7_hitdir")
 
+[node name="DamageNumbersOverlay" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("8_dmgnums")
+
 [node name="HitmarkerLabel" type="Label" parent="."]
 visible = false
 anchors_preset = 8
@@ -218,6 +229,25 @@ theme_override_font_sizes/font_size = 14
 text = "02:00"
 vertical_alignment = 1
 
+[node name="Spacer" type="Control" parent="TopSafeMargin/TopHudBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="BuffBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="BuffLabel" type="Label" parent="TopSafeMargin/TopHudBar/BuffBadge"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 13
+text = "تقویت: 8ث"
+vertical_alignment = 1
+
 [node name="StatsBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
 layout_mode = 2
 mouse_filter = 2
@@ -241,7 +271,7 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 
 [node name="HpBar" type="ProgressBar" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow"]
-custom_minimum_size = Vector2(90, 6)
+custom_minimum_size = Vector2(96, 6)
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
@@ -251,7 +281,7 @@ value = 100.0
 show_percentage = false
 
 [node name="EnergyBar" type="ProgressBar" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow"]
-custom_minimum_size = Vector2(90, 6)
+custom_minimum_size = Vector2(96, 6)
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
@@ -260,57 +290,6 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_energy_fill")
 max_value = 16.0
 value = 16.0
 show_percentage = false
-
-[node name="BuffBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
-visible = false
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
-
-[node name="BuffLabel" type="Label" parent="TopSafeMargin/TopHudBar/BuffBadge"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
-theme_override_fonts/font = ExtResource("5_vazir_bold")
-theme_override_font_sizes/font_size = 13
-text = "تقویت: 8ث"
-vertical_alignment = 1
-
-[node name="ZoneBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
-
-[node name="ZoneLabel" type="Label" parent="TopSafeMargin/TopHudBar/ZoneBadge"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_font_sizes/font_size = 13
-text = "منطقه: میدان آزاد"
-vertical_alignment = 1
-
-[node name="Spacer" type="Control" parent="TopSafeMargin/TopHudBar"]
-layout_mode = 2
-size_flags_horizontal = 3
-mouse_filter = 2
-
-[node name="PerfBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
-
-[node name="PerfLabel" type="Label" parent="TopSafeMargin/TopHudBar/PerfBadge"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.796078, 0.835294, 0.882353, 1)
-theme_override_font_sizes/font_size = 13
-text = "30 FPS"
-vertical_alignment = 1
-
-[node name="BtnAimMode" type="Button" parent="TopSafeMargin/TopHudBar"]
-custom_minimum_size = Vector2(142, 42)
-layout_mode = 2
-focus_mode = 0
-theme_override_font_sizes/font_size = 13
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-text = "حالت: دو جوی‌استیک"
 
 [node name="KillFeedPanel" type="PanelContainer" parent="."]
 visible = false
@@ -638,7 +617,6 @@ theme_override_font_sizes/font_size = 15
 text = "بازگشت به منوی اصلی"
 
 [connection signal="pressed" from="TopSafeMargin/TopHudBar/BtnPause" to="." method="_on_btn_pause_pressed"]
-[connection signal="pressed" from="TopSafeMargin/TopHudBar/BtnAimMode" to="." method="_on_btn_aim_mode_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnResume" to="." method="_on_btn_resume_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseAimMode" to="." method="_on_btn_aim_mode_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseMusic" to="." method="_on_btn_pause_music_pressed"]

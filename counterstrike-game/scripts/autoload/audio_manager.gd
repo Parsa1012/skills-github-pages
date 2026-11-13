@@ -100,12 +100,6 @@ func _load_bundled_audio() -> void:
 			_arena_music = abgm as AudioStream
 
 
-func register_menu_music(stream: AudioStream) -> void:
-	_menu_music = stream
-	if _music_mode == "menu":
-		play_menu_music()
-
-
 func apply_volumes() -> void:
 	var music_scale: float = (0.38 if _music_ducked else 1.0) * (0.42 if _music_mode == "arena" else 1.0)
 	var music_lin: float = SaveManager.master_volume * SaveManager.music_volume * music_scale if SaveManager.music_enabled else 0.0
@@ -156,11 +150,6 @@ func play_arena_music() -> void:
 	_music_ducked = false
 	apply_volumes()
 	_ensure_music_playing()
-
-
-func stop_menu_music() -> void:
-	if _music_mode == "menu":
-		stop_all_music()
 
 
 func stop_all_music() -> void:

@@ -1,5 +1,5 @@
 extends Node
-## تست خودکار End-to-End برای بررسی کامل فاز ۷ در Godot 4.3 (بمب پالس، جعبه‌های انفجاری، رادار، جهت آسیب، هوش مصنوعی و رفع اشکالات فازهای قبل).
+## تست خودکار End-to-End برای بررسی کامل فاز ۸ در Godot 4.3 (اعداد آسیب، رانش فیزیکی، هوش مصنوعی تاکتیکی، حذف بخش‌های زاید و هر دو نقشه).
 
 var _failures: Array[String] = []
 var _step: int = -1
@@ -18,7 +18,7 @@ func _ready() -> void:
 
 
 func _start_qa() -> void:
-	print("[QA] Starting automated runtime QA (Phase 7)...")
+	print("[QA] Starting automated runtime QA (Phase 8)...")
 	if get_parent() != get_tree().root:
 		reparent(get_tree().root)
 	get_tree().current_scene = null
@@ -68,6 +68,15 @@ func _process(_delta: float) -> void:
 			var menu: Node = tree.current_scene
 			_assert(menu != null and menu.name == "MainMenu", "Expected MainMenu, got %s" % str(menu))
 			_assert(tree.root.theme != null, "Persian theme not applied on root viewport")
+			_assert(menu.get_node_or_null("SafeMargin/MainLayout/ContentRow/ActionColumn/BtnCameraTest") == null, "Legacy BtnCameraTest should be removed")
+
+			for removed_res in [
+				"res://scenes/test/camera_angle_test.tscn",
+				"res://scripts/test/patrol_proxy.gd",
+				"res://data/camera/default_bombsquad_camera.tres",
+				"res://assets/kenney/mini_arena/floor.glb"
+			]:
+				_assert(not ResourceLoader.exists(removed_res), "Legacy unused file should be removed: %s" % removed_res)
 
 			GameManager.set_aim_fire_mode("fire_button")
 			_assert(SaveManager.aim_fire_mode == "fire_button", "Failed to toggle fire_button mode")
@@ -125,9 +134,10 @@ func _process(_delta: float) -> void:
 				"res://assets/materials/arena_floor_sector01.tres",
 				"res://assets/materials/arena_floor_sector02.tres",
 				"res://scenes/combat/pulse_bomb.tscn",
-				"res://scenes/items/explosive_crate.tscn"
+				"res://scenes/items/explosive_crate.tscn",
+				"res://scripts/ui/damage_numbers_overlay.gd"
 			]:
-				_assert(ResourceLoader.exists(res_p), "Missing Phase 7 resource: %s" % res_p)
+				_assert(ResourceLoader.exists(res_p), "Missing Phase 8 resource: %s" % res_p)
 
 			GameManager.go_to_selected_arena()
 			_step = 1
@@ -160,7 +170,12 @@ func _process(_delta: float) -> void:
 			_assert(is_equal_approx(player._hp, 100.0), "Dashing player should ignore projectile/hit damage")
 			_assert(not player.trigger_dash(), "Dash should respect cooldown immediately after use")
 			player._dash_timer = 0.0
+			player._move_vel = Vector3.ZERO
+			player._knockback_vel = Vector3.ZERO
 			player.velocity = Vector3.ZERO
+			player.apply_knockback(Vector3(6.0, 0.0, 0.0))
+			_assert((player.get("_knockback_vel") as Vector3).length() > 5.0, "Player knockback impulse failed")
+			player._knockback_vel = Vector3.ZERO
 
 			var pickups: Array[Node] = tree.get_nodes_in_group("arena_pickups")
 			_assert(pickups.size() == 4, "Expected 4 ArenaPickups, got %d" % pickups.size())
@@ -171,11 +186,13 @@ func _process(_delta: float) -> void:
 			var bots: Array[Node] = tree.get_nodes_in_group("arena_bots")
 			_assert(bots.size() == 4, "Expected 4 ArenaBots (1 Blue + 3 Orange), got %d" % bots.size())
 
-			# Verify bot zone_blitz objective awareness fix + difficulty scaling
+			# Verify bot zone_blitz objective awareness fix + knockback
 			GameManager.set_selected_mode("zone_blitz")
 			for b in bots:
 				if b is ArenaBot and (b as ArenaBot).team_id == 1:
 					var ab := b as ArenaBot
+					ab.apply_knockback(Vector3(7.0, 0.0, 0.0))
+					_assert((ab.get("_knockback_vel") as Vector3).length() > 5.0, "ArenaBot knockback impulse failed")
 					if ab.profile != null and ab.profile.zone_objective_focus >= 0.6:
 						ab.global_position = Vector3(0.0, 0.02, -5.0)
 						var tgt: Vector3 = ab._pick_objective_target()
@@ -183,7 +200,7 @@ func _process(_delta: float) -> void:
 						break
 			GameManager.set_selected_mode("zone_control")
 
-			# Test PulseBomb throw + AoE damage
+			# Test ExplosiveCrate blast + PulseBomb group tracking + evasion
 			var orange_target: ArenaBot = null
 			for b in bots:
 				if b is ArenaBot and (b as ArenaBot).team_id == 1 and (b as ArenaBot).is_alive():
@@ -198,6 +215,7 @@ func _process(_delta: float) -> void:
 				_assert(orange_target._hp < hp_before_crate, "ExplosiveCrate blast did not damage nearby Orange bot")
 
 			_assert(player.trigger_bomb(), "Player initial PulseBomb should succeed")
+			_assert(tree.get_nodes_in_group("pulse_bombs").size() >= 1, "Active PulseBomb should register in pulse_bombs group")
 			_assert(not player.trigger_bomb(), "PulseBomb should respect cooldown immediately after throw")
 
 			# Cycle all 4 blasters
@@ -221,10 +239,18 @@ func _process(_delta: float) -> void:
 			var hud: Node = arena.get_node_or_null("TouchControlsHUD")
 			_assert(hud != null, "TouchControlsHUD missing")
 			if hud != null:
+				_assert(hud.get_node_or_null("TopSafeMargin/TopHudBar/ZoneBadge") == null, "Clutter ZoneBadge should be removed from TopHudBar")
+				_assert(hud.get_node_or_null("TopSafeMargin/TopHudBar/PerfBadge") == null, "Clutter PerfBadge should be removed from TopHudBar")
+				_assert(hud.get_node_or_null("TopSafeMargin/TopHudBar/BtnAimMode") == null, "Clutter BtnAimMode should be removed from TopHudBar")
 				_assert(hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnBomb") != null, "BtnBomb missing")
 				_assert(hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnDash") != null, "BtnDash missing")
 				_assert(hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/CenterGap/TacticalRadar") != null, "TacticalRadar missing")
 				_assert(hud.get_node_or_null("HitDirectionIndicator") != null, "HitDirectionIndicator missing")
+				var dmg_ov: DamageNumbersOverlay = hud.get_node_or_null("DamageNumbersOverlay") as DamageNumbersOverlay
+				_assert(dmg_ov != null, "DamageNumbersOverlay missing")
+				if dmg_ov != null:
+					EventBus.combat_callout_requested.emit(player.global_position + Vector3(0.0, 1.2, 0.0), "-46", Color.GOLD, 1.2)
+					_assert((dmg_ov.get("_popups") as Array).size() >= 1, "DamageNumbersOverlay did not record combat callout")
 				_assert(hud.get_node_or_null("TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow/HpBar") != null, "HpBar missing")
 				_assert(hud.get_node_or_null("TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow/EnergyBar") != null, "EnergyBar missing")
 				_assert(hud.get_node_or_null("HitmarkerLabel") != null, "HitmarkerLabel missing")
@@ -235,6 +261,7 @@ func _process(_delta: float) -> void:
 				_assert(bool(AudioManager.get("_music_ducked")), "Arena music should duck while paused")
 				var pause_ov: Control = hud.get_node_or_null("PauseOverlay") as Control
 				_assert(pause_ov != null and pause_ov.visible, "PauseOverlay should be visible when paused")
+				_assert(hud.get_node_or_null("PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseAimMode") != null, "BtnPauseAimMode missing")
 				_assert(hud.get_node_or_null("PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseMusic") != null, "BtnPauseMusic missing")
 				GameManager.set_match_paused(false)
 				_assert(not tree.paused, "SceneTree should resume cleanly")
@@ -366,7 +393,7 @@ func _process(_delta: float) -> void:
 			_step = 99
 		_:
 			if _failures.is_empty():
-				print("[QA_PASS] All Phase 7 automated runtime checks passed across Sector 01 & Sector 02!")
+				print("[QA_PASS] All Phase 8 automated runtime checks passed cleanly across Sector 01 & Sector 02!")
 				tree.quit(0)
 			else:
 				print("[QA_FAIL] Total failures: %d" % _failures.size())

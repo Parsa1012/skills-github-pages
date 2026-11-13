@@ -4,13 +4,11 @@ extends Node
 enum AppState {
 	BOOT,
 	MAIN_MENU,
-	CAMERA_TEST,
 	ARENA_PLAY,
 	PAUSED
 }
 
 const MAIN_MENU_SCENE: String = "res://scenes/ui/main_menu.tscn"
-const CAMERA_TEST_SCENE: String = "res://scenes/test/camera_angle_test.tscn"
 const ARENA_SECTOR_01_SCENE: String = "res://scenes/maps/arena_sector_01.tscn"
 const ARENA_SECTOR_02_SCENE: String = "res://scenes/maps/arena_sector_02.tscn"
 const MODE_ZONE_CONTROL_PATH: String = "res://data/modes/zone_control.tres"
@@ -216,24 +214,6 @@ func go_to_main_menu() -> void:
 	current_state = AppState.MAIN_MENU
 	AudioManager.stop_all_music()
 	change_scene(MAIN_MENU_SCENE)
-
-
-func go_to_camera_test() -> void:
-	current_state = AppState.CAMERA_TEST
-	AudioManager.stop_all_music()
-	change_scene(CAMERA_TEST_SCENE)
-
-
-func go_to_arena_sector_01() -> void:
-	SaveManager.selected_map_id = "sector_01"
-	current_state = AppState.ARENA_PLAY
-	change_scene(ARENA_SECTOR_01_SCENE)
-
-
-func go_to_arena_sector_02() -> void:
-	SaveManager.selected_map_id = "sector_02"
-	current_state = AppState.ARENA_PLAY
-	change_scene(ARENA_SECTOR_02_SCENE)
 
 
 func go_to_selected_arena() -> void:

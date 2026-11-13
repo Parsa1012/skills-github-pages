@@ -330,11 +330,6 @@ func _on_btn_blaster_railgun_pressed() -> void:
 	_refresh_ui()
 
 
-func _on_btn_camera_test_pressed() -> void:
-	AudioManager.play_ui_pop()
-	GameManager.go_to_camera_test()
-
-
 func _on_btn_fps_30_pressed() -> void:
 	AudioManager.play_ui_click()
 	GameManager.set_target_fps(30)

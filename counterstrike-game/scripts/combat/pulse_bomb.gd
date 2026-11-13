@@ -1,6 +1,6 @@
 class_name PulseBomb
 extends Node3D
-## بمب پالس تاکتیکی استخری (Pooled) با پرتاب سهموی، برخورد به موانع و انفجار منطقه‌ای (AoE).
+## بمب پالس تاکتیکی استخری (Pooled) با پرتاب سهموی، رانش انفجاری، اعداد آسیب و آگاهی تاکتیکی بات‌ها.
 
 const POOL_ID: StringName = &"pulse_bomb"
 
@@ -23,6 +23,11 @@ var _halo_mat: StandardMaterial3D = null
 
 func _ready() -> void:
 	_ensure_materials()
+
+
+func _exit_tree() -> void:
+	if is_in_group("pulse_bombs"):
+		remove_from_group("pulse_bombs")
 
 
 func _ensure_materials() -> void:
@@ -61,6 +66,8 @@ func launch(
 	_pulse_time = 0.0
 	_active = true
 	scale = Vector3.ONE
+	if not is_in_group("pulse_bombs"):
+		add_to_group("pulse_bombs")
 
 	_exclude_rids.clear()
 	if shooter != null and is_instance_valid(shooter):
@@ -124,6 +131,8 @@ func detonate() -> void:
 	if not _active:
 		return
 	_active = false
+	if is_in_group("pulse_bombs"):
+		remove_from_group("pulse_bombs")
 	var blast_center: Vector3 = global_position
 	var any_enemy_hit: bool = false
 	var any_kill: bool = false
@@ -142,22 +151,38 @@ func detonate() -> void:
 		var tid: Variant = unit.get("team_id")
 		if tid != null and int(tid) == _team_id:
 			continue
-		var dist: float = Vector2(unit.global_position.x - blast_center.x, unit.global_position.z - blast_center.z).length()
+		var delta_xz := Vector3(unit.global_position.x - blast_center.x, 0.0, unit.global_position.z - blast_center.z)
+		var dist: float = delta_xz.length()
 		if dist > _blast_radius:
 			continue
-		var falloff: float = lerpf(1.0, 0.48, clampf(dist / _blast_radius, 0.0, 1.0))
+		var ratio: float = clampf(dist / _blast_radius, 0.0, 1.0)
+		var falloff: float = lerpf(1.0, 0.48, ratio)
 		var dmg: float = _max_damage * falloff
-		if unit is ArenaBot or unit is ExplosiveCrate:
-			unit.call("take_damage", dmg, _team_id, _shooter_is_player)
+
+		if unit is ArenaBot:
+			var bot := unit as ArenaBot
+			bot.take_damage(dmg, _team_id, _shooter_is_player)
+			var push_dir: Vector3 = delta_xz.normalized() if dist > 0.05 else Vector3.FORWARD
+			bot.apply_knockback(push_dir * lerpf(9.6, 4.2, ratio))
+		elif unit is ExplosiveCrate:
+			(unit as ExplosiveCrate).take_damage(dmg, _team_id, _shooter_is_player)
 		elif unit is PlayerController:
-			unit.call("take_damage", dmg, _team_id, blast_center)
+			var p := unit as PlayerController
+			p.take_damage(dmg, _team_id, blast_center)
+			var push_dir_p: Vector3 = delta_xz.normalized() if dist > 0.05 else Vector3.FORWARD
+			p.apply_knockback(push_dir_p * lerpf(8.0, 3.2, ratio))
 		elif unit.has_method("take_damage"):
 			unit.call("take_damage", dmg, _team_id)
 
 		if unit is ArenaBot or unit is PlayerController:
 			any_enemy_hit = true
-			if unit.has_method("is_alive") and not bool(unit.call("is_alive")):
+			var killed_now: bool = unit.has_method("is_alive") and not bool(unit.call("is_alive"))
+			if killed_now:
 				any_kill = true
+			if _shooter_is_player and unit is ArenaBot:
+				EventBus.combat_callout_requested.emit(unit.global_position + Vector3(0.0, 1.3, 0.0), "-%d" % int(round(dmg)), Color(0.984314, 0.74902, 0.141176, 1.0), 1.30)
+				if killed_now:
+					EventBus.combat_callout_requested.emit(unit.global_position + Vector3(0.0, 1.85, 0.0), "+حذف!", Color(0.219608, 0.741176, 0.972549, 1.0), 1.38)
 
 	AudioManager.play_bomb_explode_sfx()
 	EventBus.camera_trauma_requested.emit(0.36)

@@ -1,6 +1,6 @@
 class_name EnergyProjectile
 extends Node3D
-## گلوله انرژی استخری (Pooled) با رهگیری پیوسته RayCast، عبور از جهش، نفوذ ریل‌گان و بازخورد اصابت.
+## گلوله انرژی استخری (Pooled) با رهگیری پیوسته RayCast، رانش فیزیکی برخورد، عبور از جهش و اعداد آسیب.
 
 const POOL_ID: StringName = &"energy_projectile"
 const IMPACT_POOL_ID: StringName = &"impact_flash"
@@ -19,6 +19,7 @@ var _max_lifetime: float = 1.35
 var _active: bool = false
 var _pierce_left: int = 0
 var _shooter_is_player: bool = false
+var _knockback_force: float = 0.0
 var _outer_mat: StandardMaterial3D = null
 
 
@@ -44,7 +45,8 @@ func launch(
 	bolt_color: Color,
 	bolt_scale: Vector3 = Vector3.ONE,
 	pierce_count: int = 0,
-	shooter_is_player: bool = false
+	shooter_is_player: bool = false,
+	knockback_force: float = 0.0
 ) -> void:
 	_ensure_material()
 	global_position = origin
@@ -61,6 +63,7 @@ func launch(
 	_active = true
 	_pierce_left = maxi(0, pierce_count)
 	_shooter_is_player = shooter_is_player
+	_knockback_force = maxf(0.0, knockback_force)
 	scale = bolt_scale
 
 	_exclude_rids.clear()
@@ -106,10 +109,18 @@ func _physics_process(delta: float) -> void:
 			var target_team: Variant = collider.get("team_id")
 			if target_team == null or int(target_team) != _team_id:
 				hit_damageable = true
-				if collider is ArenaBot or collider is ExplosiveCrate:
-					collider.call("take_damage", _damage, _team_id, _shooter_is_player)
+				if collider is ArenaBot:
+					var bot := collider as ArenaBot
+					bot.take_damage(_damage, _team_id, _shooter_is_player)
+					if _knockback_force > 0.05:
+						bot.apply_knockback(_direction * _knockback_force)
+				elif collider is ExplosiveCrate:
+					(collider as ExplosiveCrate).take_damage(_damage, _team_id, _shooter_is_player)
 				elif collider is PlayerController:
-					collider.call("take_damage", _damage, _team_id, _origin_pos)
+					var p := collider as PlayerController
+					p.take_damage(_damage, _team_id, _origin_pos)
+					if _knockback_force > 0.05:
+						p.apply_knockback(_direction * (_knockback_force * 0.45))
 				else:
 					collider.call("take_damage", _damage, _team_id)
 
@@ -117,6 +128,10 @@ func _physics_process(delta: float) -> void:
 					var killed: bool = collider.has_method("is_alive") and not bool(collider.call("is_alive"))
 					AudioManager.play_hitmarker_sfx(killed)
 					EventBus.enemy_hit_confirmed.emit(_damage, killed)
+					var dmg_col: Color = Color(0.984314, 0.74902, 0.141176, 1.0) if (_damage >= 40.0 or _pierce_left > 0) else (Color(0.984314, 0.45098, 0.086275, 1.0) if collider is ExplosiveCrate else Color(0.972549, 0.988235, 1.0, 1.0))
+					EventBus.combat_callout_requested.emit(hit_pos + Vector3(0.0, 0.85, 0.0), "-%d" % int(round(_damage)), dmg_col, 1.25 if _damage >= 40.0 else 1.0)
+					if killed and collider is ArenaBot:
+						EventBus.combat_callout_requested.emit(hit_pos + Vector3(0.0, 1.45, 0.0), "+حذف!", Color(0.219608, 0.741176, 0.972549, 1.0), 1.32)
 
 		_spawn_impact(hit_pos)
 		if hit_damageable and _pierce_left > 0 and collider is CollisionObject3D:

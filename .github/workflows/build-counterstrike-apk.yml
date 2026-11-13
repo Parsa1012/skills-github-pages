@@ -158,15 +158,7 @@ jobs:
           fi
           cat /tmp/godot-smoke-boot.log
 
-          echo "=== Step 4: Smoke test camera_angle_test.tscn ==="
-          if ! godot4 --headless --path "${PROJECT_DIR}" res://scenes/test/camera_angle_test.tscn --quit-after 20 >/tmp/godot-smoke-test.log 2>&1; then
-            cat /tmp/godot-smoke-test.log
-            emit_error_log /tmp/godot-smoke-test.log "Godot camera_angle_test smoke test failed"
-            exit 1
-          fi
-          cat /tmp/godot-smoke-test.log
-
-          echo "=== Step 5: Smoke test arena_sector_01.tscn ==="
+          echo "=== Step 4: Smoke test arena_sector_01.tscn ==="
           if ! godot4 --headless --verbose --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
             cat /tmp/godot-smoke-arena.log
             emit_error_log /tmp/godot-smoke-arena.log "Godot arena_sector_01 smoke test failed"
@@ -174,7 +166,7 @@ jobs:
           fi
           cat /tmp/godot-smoke-arena.log
 
-          echo "=== Step 5b: Smoke test arena_sector_02.tscn ==="
+          echo "=== Step 5: Smoke test arena_sector_02.tscn ==="
           if ! godot4 --headless --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_02.tscn --quit-after 20 >/tmp/godot-smoke-arena2.log 2>&1; then
             cat /tmp/godot-smoke-arena2.log
             emit_error_log /tmp/godot-smoke-arena2.log "Godot arena_sector_02 smoke test failed"
@@ -191,7 +183,7 @@ jobs:
           python3 - <<'PY'
           import pathlib
           errs, warns = [], []
-          for log_name in ["/tmp/godot-import.log", "/tmp/godot-editor.log", "/tmp/godot-smoke-boot.log", "/tmp/godot-smoke-test.log", "/tmp/godot-smoke-arena.log", "/tmp/godot-smoke-arena2.log", "/tmp/godot-qa.log"]:
+          for log_name in ["/tmp/godot-import.log", "/tmp/godot-editor.log", "/tmp/godot-smoke-boot.log", "/tmp/godot-smoke-arena.log", "/tmp/godot-smoke-arena2.log", "/tmp/godot-qa.log"]:
               p = pathlib.Path(log_name)
               if not p.exists():
                   continue
@@ -219,8 +211,8 @@ jobs:
             exit 1
           fi
 
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log; then
-            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-test.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log | head -n 5 | tr '\n' ' ')"
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log; then
+            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log | head -n 5 | tr '\n' ' ')"
             exit 1
           fi
 

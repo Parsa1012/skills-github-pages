@@ -1,8 +1,9 @@
 extends CanvasLayer
-## رابط کاربری چندلمسی میدان نبرد (جان/انرژی، رادار تاکتیکی، دکمه بمب و جهش، جهت‌نمای آسیب و خوراک کشته‌ها).
+## رابط کاربری چندلمسی میدان نبرد (جان/انرژی، اعداد آسیب شناور، رادار تاکتیکی، دکمه بمب و جهش، جهت‌نمای آسیب).
 
 @onready var _damage_flash: ColorRect = $DamageFlashRect
 @onready var _hit_dir_indicator: HitDirectionIndicator = $HitDirectionIndicator
+@onready var _damage_numbers: DamageNumbersOverlay = $DamageNumbersOverlay
 @onready var _hitmarker_label: Label = $HitmarkerLabel
 @onready var _top_safe_margin: MarginContainer = $TopSafeMargin
 @onready var _bottom_safe_margin: MarginContainer = $BottomSafeMargin
@@ -25,9 +26,6 @@ extends CanvasLayer
 @onready var _energy_bar: ProgressBar = $TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow/EnergyBar
 @onready var _buff_badge: PanelContainer = $TopSafeMargin/TopHudBar/BuffBadge
 @onready var _buff_label: Label = $TopSafeMargin/TopHudBar/BuffBadge/BuffLabel
-@onready var _zone_label: Label = $TopSafeMargin/TopHudBar/ZoneBadge/ZoneLabel
-@onready var _perf_label: Label = $TopSafeMargin/TopHudBar/PerfBadge/PerfLabel
-@onready var _aim_mode_btn: Button = $TopSafeMargin/TopHudBar/BtnAimMode
 
 @onready var _kill_feed_panel: PanelContainer = $KillFeedPanel
 @onready var _kill_feed_box: VBoxContainer = $KillFeedPanel/KillFeedBox
@@ -41,14 +39,14 @@ extends CanvasLayer
 @onready var _end_title_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndTitleLabel
 @onready var _end_detail_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndDetailLabel
 
-var _active_zone_title: String = "میدان آزاد"
-var _fps_sample_timer: float = 0.0
 var _toast_timer: float = 0.0
 var _hitmarker_timer: float = 0.0
 var _kill_feed_expire_timer: float = 0.0
 var _respawn_active: bool = false
 var _match_ended: bool = false
 var _damage_alpha: float = 0.0
+var _low_hp_warning: bool = false
+var _low_hp_pulse_time: float = 0.0
 
 
 func _ready() -> void:
@@ -76,19 +74,17 @@ func _ready() -> void:
 	_apply_aim_fire_mode()
 	_refresh_pause_audio_buttons()
 	_init_zone_mini_badges()
-	_update_zone_badge("میدان آزاد")
 	_update_score_badge(0, 0)
 	_update_timer_badge(120)
-	_update_perf_badge()
 
 	get_viewport().size_changed.connect(_apply_safe_area_margins)
 	EventBus.aim_fire_mode_changed.connect(_on_aim_fire_mode_changed)
-	EventBus.player_zone_changed.connect(_on_player_zone_changed)
 	EventBus.player_stats_updated.connect(_on_player_stats_updated)
 	EventBus.player_buff_updated.connect(_on_player_buff_updated)
 	EventBus.player_dash_updated.connect(_on_player_dash_updated)
 	EventBus.player_bomb_updated.connect(_on_player_bomb_updated)
 	EventBus.enemy_hit_confirmed.connect(_on_enemy_hit_confirmed)
+	EventBus.combat_callout_requested.connect(_on_combat_callout_requested)
 	EventBus.kill_feed_event.connect(_on_kill_feed_event)
 	EventBus.player_damaged_feedback.connect(_on_player_damaged_feedback)
 	EventBus.player_damaged_direction.connect(_on_player_damaged_direction)
@@ -116,8 +112,6 @@ func _exit_tree() -> void:
 		get_viewport().size_changed.disconnect(_apply_safe_area_margins)
 	if EventBus.aim_fire_mode_changed.is_connected(_on_aim_fire_mode_changed):
 		EventBus.aim_fire_mode_changed.disconnect(_on_aim_fire_mode_changed)
-	if EventBus.player_zone_changed.is_connected(_on_player_zone_changed):
-		EventBus.player_zone_changed.disconnect(_on_player_zone_changed)
 	if EventBus.player_stats_updated.is_connected(_on_player_stats_updated):
 		EventBus.player_stats_updated.disconnect(_on_player_stats_updated)
 	if EventBus.player_buff_updated.is_connected(_on_player_buff_updated):
@@ -128,6 +122,8 @@ func _exit_tree() -> void:
 		EventBus.player_bomb_updated.disconnect(_on_player_bomb_updated)
 	if EventBus.enemy_hit_confirmed.is_connected(_on_enemy_hit_confirmed):
 		EventBus.enemy_hit_confirmed.disconnect(_on_enemy_hit_confirmed)
+	if EventBus.combat_callout_requested.is_connected(_on_combat_callout_requested):
+		EventBus.combat_callout_requested.disconnect(_on_combat_callout_requested)
 	if EventBus.kill_feed_event.is_connected(_on_kill_feed_event):
 		EventBus.kill_feed_event.disconnect(_on_kill_feed_event)
 	if EventBus.player_damaged_feedback.is_connected(_on_player_damaged_feedback):
@@ -165,14 +161,14 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
-	_fps_sample_timer += delta
-	if _fps_sample_timer >= 0.45:
-		_fps_sample_timer = 0.0
-		_update_perf_badge()
-
-	if _damage_alpha > 0.0 and _damage_flash != null:
-		_damage_alpha = maxf(0.0, _damage_alpha - delta * 1.1)
-		_damage_flash.color = Color(0.937255, 0.266667, 0.266667, _damage_alpha)
+	if _damage_alpha > 0.0:
+		_damage_alpha = maxf(0.0, _damage_alpha - delta * 1.15)
+	var min_warn_alpha: float = 0.0
+	if _low_hp_warning and not _match_ended and not _respawn_active:
+		_low_hp_pulse_time += delta * 5.0
+		min_warn_alpha = 0.04 + 0.06 * (0.5 + 0.5 * sin(_low_hp_pulse_time))
+	if _damage_flash != null:
+		_damage_flash.color = Color(0.937255, 0.266667, 0.266667, maxf(_damage_alpha, min_warn_alpha))
 
 	if _hitmarker_timer > 0.0 and _hitmarker_label != null:
 		_hitmarker_timer -= delta
@@ -235,8 +231,6 @@ func _apply_aim_fire_mode() -> void:
 		if not is_fire_button_mode:
 			_dedicated_fire_pad.release_pad()
 	var mode_str: String = "حالت: دکمه شلیک" if is_fire_button_mode else "حالت: دو جوی‌استیک"
-	if _aim_mode_btn != null:
-		_aim_mode_btn.text = mode_str
 	if _pause_aim_btn != null:
 		_pause_aim_btn.text = mode_str
 
@@ -270,6 +264,7 @@ func _on_match_paused_changed(is_paused: bool) -> void:
 func _on_match_ended(winning_team: int, blue_score: int, orange_score: int, player_eliminations: int) -> void:
 	_match_ended = true
 	_respawn_active = false
+	_low_hp_warning = false
 	_reset_touch_controls()
 	if _pause_overlay != null:
 		_pause_overlay.visible = false
@@ -321,16 +316,12 @@ func _on_aim_fire_mode_changed(_mode_name: String) -> void:
 	_apply_aim_fire_mode()
 
 
-func _on_player_zone_changed(_zone_id: String, zone_title_fa: String, inside: bool) -> void:
-	_active_zone_title = zone_title_fa if inside else "میدان آزاد"
-	_update_zone_badge(_active_zone_title)
-
-
 func _on_player_stats_updated(hp: int, max_hp: int, energy: int, max_energy: int, blaster_name_fa: String, recharging: bool) -> void:
+	_low_hp_warning = (hp > 0 and hp <= 30)
 	if _stats_label != null:
 		var energy_str: String = "در حال شارژ..." if recharging else "%d/%d" % [energy, max_energy]
 		_stats_label.text = "جان: %d/%d | %s: %s" % [hp, max_hp, blaster_name_fa, energy_str]
-		if hp <= 30:
+		if _low_hp_warning:
 			_stats_label.add_theme_color_override("font_color", Color(0.984314, 0.45098, 0.086275, 1.0))
 		else:
 			_stats_label.add_theme_color_override("font_color", Color(0.901961, 0.960784, 1.0, 1.0))
@@ -381,11 +372,16 @@ func _on_enemy_hit_confirmed(_damage: float, is_kill: bool) -> void:
 	if _hitmarker_label == null:
 		return
 	_hitmarker_label.visible = true
-	_hitmarker_timer = 0.18 if is_kill else 0.11
+	_hitmarker_timer = 0.20 if is_kill else 0.11
 	_hitmarker_label.add_theme_color_override(
 		"font_color",
 		Color(0.937255, 0.266667, 0.266667, 1.0) if is_kill else Color(0.984314, 0.74902, 0.141176, 1.0)
 	)
+
+
+func _on_combat_callout_requested(world_pos: Vector3, text_fa: String, color: Color, scale_boost: float) -> void:
+	if _damage_numbers != null:
+		_damage_numbers.spawn_callout(world_pos, text_fa, color, scale_boost)
 
 
 func _on_kill_feed_event(killer_fa: String, victim_fa: String, killer_team: int) -> void:
@@ -531,18 +527,6 @@ func _update_timer_badge(seconds_remaining: int) -> void:
 		_timer_label.add_theme_color_override("font_color", Color(0.984314, 0.45098, 0.086275, 1.0))
 	else:
 		_timer_label.add_theme_color_override("font_color", Color(0.972549, 0.980392, 0.988235, 1.0))
-
-
-func _update_zone_badge(zone_title: String) -> void:
-	if _zone_label != null:
-		_zone_label.text = "منطقه: %s" % zone_title
-
-
-func _update_perf_badge() -> void:
-	if _perf_label == null:
-		return
-	var current_fps: int = int(round(Engine.get_frames_per_second()))
-	_perf_label.text = "%d FPS" % current_fps
 
 
 func get_move_vector() -> Vector2:

@@ -56,6 +56,8 @@ var _damage_boost_timer: float = 0.0
 var _speed_boost_timer: float = 0.0
 var _base_pivot_scale: Vector3 = Vector3.ONE
 var _last_attacker_is_player: bool = false
+var _knockback_vel: Vector3 = Vector3.ZERO
+var _move_vel: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -79,6 +81,15 @@ func is_alive() -> bool:
 
 func was_last_hit_by_player() -> bool:
 	return _last_attacker_is_player
+
+
+func apply_knockback(impulse: Vector3) -> void:
+	if _state == BotState.RESPAWN:
+		return
+	var flat := Vector3(impulse.x, 0.0, impulse.z)
+	_knockback_vel += flat
+	if _knockback_vel.length() > 13.5:
+		_knockback_vel = _knockback_vel.normalized() * 13.5
 
 
 func _setup_team_visuals() -> void:
@@ -175,6 +186,15 @@ func _physics_process(delta: float) -> void:
 			_process_patrol(delta)
 		BotState.ENGAGE:
 			_process_engage(delta)
+
+	var evade: Vector3 = _compute_danger_evasion()
+	if evade.length_squared() > 0.01:
+		_move_vel.x = move_toward(_move_vel.x, evade.x * 4.8, 22.0 * delta)
+		_move_vel.y = move_toward(_move_vel.y, evade.z * 4.8, 22.0 * delta)
+
+	_knockback_vel = _knockback_vel.move_toward(Vector3.ZERO, 16.0 * delta)
+	velocity.x = _move_vel.x + _knockback_vel.x
+	velocity.z = _move_vel.y + _knockback_vel.z
 
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
@@ -289,6 +309,40 @@ func _steer_around_obstacles(desired_dir: Vector3) -> Vector3:
 	return flat.rotated(Vector3.UP, deg_to_rad(56.0 * _strafe_sign)).normalized()
 
 
+func _compute_danger_evasion() -> Vector3:
+	var evade := Vector3.ZERO
+	for b in get_tree().get_nodes_in_group("pulse_bombs"):
+		if b is Node3D and is_instance_valid(b):
+			var dvec := Vector3(global_position.x - (b as Node3D).global_position.x, 0.0, global_position.z - (b as Node3D).global_position.z)
+			var dist: float = dvec.length()
+			if dist < 4.2:
+				evade += (dvec.normalized() if dist > 0.05 else Vector3.RIGHT) * (1.0 - dist / 4.2)
+	for c in get_tree().get_nodes_in_group("explosive_crates"):
+		if c is ExplosiveCrate and (c as ExplosiveCrate).is_intact() and float((c as ExplosiveCrate).get("_hp")) <= 22.0:
+			var dvec := Vector3(global_position.x - (c as Node3D).global_position.x, 0.0, global_position.z - (c as Node3D).global_position.z)
+			var dist: float = dvec.length()
+			if dist < 3.5:
+				evade += (dvec.normalized() if dist > 0.05 else Vector3.LEFT) * (0.85 - dist / 4.2)
+	if evade.length_squared() > 0.001:
+		return _steer_around_obstacles(evade.normalized())
+	return Vector3.ZERO
+
+
+func _compute_ally_separation() -> Vector3:
+	var sep := Vector3.ZERO
+	for b in get_tree().get_nodes_in_group("arena_bots"):
+		if b == self or not (b is ArenaBot) or not is_instance_valid(b):
+			continue
+		var other := b as ArenaBot
+		if other.team_id != team_id or not other.is_alive():
+			continue
+		var diff := Vector3(global_position.x - other.global_position.x, 0.0, global_position.z - other.global_position.z)
+		var dist: float = diff.length()
+		if dist > 0.01 and dist < 2.2:
+			sep += diff.normalized() * ((2.2 - dist) / 2.2)
+	return sep
+
+
 func _process_patrol(delta: float) -> void:
 	var target: Vector3 = _pick_objective_target()
 	var to_target := Vector3(target.x - global_position.x, 0.0, target.z - global_position.z)
@@ -304,8 +358,8 @@ func _process_patrol(delta: float) -> void:
 		_patrol_check_pos = global_position
 
 	if to_target.length() < 0.75:
-		velocity.x = move_toward(velocity.x, 0.0, 14.0 * delta)
-		velocity.z = move_toward(velocity.z, 0.0, 14.0 * delta)
+		_move_vel.x = move_toward(_move_vel.x, 0.0, 14.0 * delta)
+		_move_vel.y = move_toward(_move_vel.y, 0.0, 14.0 * delta)
 		if _patrol_leg_timer >= 1.2:
 			_patrol_index = 1 - _patrol_index
 			_patrol_leg_timer = 0.0
@@ -316,10 +370,11 @@ func _process_patrol(delta: float) -> void:
 		_patrol_leg_timer = 0.0
 
 	var diff_scales: Dictionary = _get_difficulty_scales()
-	var dir: Vector3 = _steer_around_obstacles(to_target.normalized())
+	var raw_dir: Vector3 = to_target.normalized() + _compute_ally_separation() * 0.65
+	var dir: Vector3 = _steer_around_obstacles(raw_dir.normalized() if raw_dir.length_squared() > 0.001 else to_target.normalized())
 	var spd: float = (profile.move_speed if profile != null else 3.4) * 0.80 * float(diff_scales["speed"]) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
-	velocity.x = move_toward(velocity.x, dir.x * spd, 14.0 * delta)
-	velocity.z = move_toward(velocity.z, dir.z * spd, 14.0 * delta)
+	_move_vel.x = move_toward(_move_vel.x, dir.x * spd, 14.0 * delta)
+	_move_vel.y = move_toward(_move_vel.y, dir.z * spd, 14.0 * delta)
 	_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir.x, -dir.z), clampf(8.0 * delta, 0.0, 1.0))
 
 
@@ -327,6 +382,10 @@ func _process_engage(delta: float) -> void:
 	if _target_ref == null or not is_instance_valid(_target_ref):
 		return
 	if _target_ref.has_method("is_alive") and not bool(_target_ref.call("is_alive")):
+		_has_los = false
+		_target_ref = null
+		return
+	if _target_ref.has_method("is_intact") and not bool(_target_ref.call("is_intact")):
 		_has_los = false
 		_target_ref = null
 		return
@@ -351,12 +410,12 @@ func _process_engage(delta: float) -> void:
 		radial_factor = -0.75
 
 	var diff_scales: Dictionary = _get_difficulty_scales()
-	var move_dir: Vector3 = (strafe_vec * 0.75 + dir_to_target * radial_factor)
+	var move_dir: Vector3 = strafe_vec * 0.75 + dir_to_target * radial_factor + _compute_ally_separation() * 0.6
 	if move_dir.length_squared() > 0.001:
 		move_dir = _steer_around_obstacles(move_dir.normalized())
 	var spd: float = (profile.move_speed if profile != null else 3.4) * float(diff_scales["speed"]) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
-	velocity.x = move_toward(velocity.x, move_dir.x * spd, 16.0 * delta)
-	velocity.z = move_toward(velocity.z, move_dir.z * spd, 16.0 * delta)
+	_move_vel.x = move_toward(_move_vel.x, move_dir.x * spd, 16.0 * delta)
+	_move_vel.y = move_toward(_move_vel.y, move_dir.z * spd, 16.0 * delta)
 
 	_fire_timer -= delta
 	if _fire_timer <= 0.0:
@@ -371,23 +430,39 @@ func _find_best_visible_target() -> Node3D:
 	var origin: Vector3 = global_position + Vector3(0.0, 0.92, 0.0)
 	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
 
-	var candidates: Array[Node] = []
-	candidates.append_array(get_tree().get_nodes_in_group("player"))
-	candidates.append_array(get_tree().get_nodes_in_group("arena_bots"))
+	var enemies: Array[Node3D] = []
+	for p in get_tree().get_nodes_in_group("player"):
+		if p is Node3D and is_instance_valid(p) and (not p.has_method("is_alive") or bool(p.call("is_alive"))):
+			if int(p.get("team_id")) != team_id:
+				enemies.append(p as Node3D)
+	for b in get_tree().get_nodes_in_group("arena_bots"):
+		if b != self and b is Node3D and is_instance_valid(b) and (not b.has_method("is_alive") or bool(b.call("is_alive"))):
+			if int(b.get("team_id")) != team_id:
+				enemies.append(b as Node3D)
 
 	var best_node: Node3D = null
 	var best_dist: float = sight_range
 
-	for cand in candidates:
-		if cand == self or not (cand is Node3D) or not is_instance_valid(cand):
-			continue
-		var cand_node := cand as Node3D
-		var cand_team: Variant = cand_node.get("team_id")
-		if cand_team == null or int(cand_team) == team_id:
-			continue
-		if cand_node.has_method("is_alive") and not bool(cand_node.call("is_alive")):
-			continue
+	# Opportunistically snipe an ExplosiveCrate if an enemy is standing in blast radius
+	for c in get_tree().get_nodes_in_group("explosive_crates"):
+		if c is ExplosiveCrate and (c as ExplosiveCrate).is_intact():
+			var crate := c as ExplosiveCrate
+			var d_crate: float = global_position.distance_to(crate.global_position)
+			if d_crate > sight_range:
+				continue
+			var enemy_near: bool = false
+			for en in enemies:
+				if en.global_position.distance_to(crate.global_position) <= 3.3:
+					enemy_near = true
+					break
+			if enemy_near:
+				var cq := PhysicsRayQueryParameters3D.create(origin, crate.global_position + Vector3(0.0, 0.6, 0.0), 1 | 2, [get_rid()])
+				cq.collide_with_areas = false
+				var chit: Dictionary = space_state.intersect_ray(cq)
+				if not chit.is_empty() and chit.get("collider", null) == crate:
+					return crate
 
+	for cand_node in enemies:
 		var target_pos: Vector3 = cand_node.global_position + Vector3(0.0, 0.92, 0.0)
 		var dist: float = origin.distance_to(target_pos)
 		if dist > best_dist:
@@ -431,8 +506,11 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 				var hit_dmg: float = dmg * (2.0 if is_heavy else 1.0)
 				if collider is PlayerController:
 					collider.call("take_damage", hit_dmg, team_id, torso_origin)
+					(collider as PlayerController).apply_knockback(aim_dir * 3.0)
 				elif collider is ExplosiveCrate or collider is ArenaBot:
 					collider.call("take_damage", hit_dmg, team_id, false)
+					if collider is ArenaBot:
+						(collider as ArenaBot).apply_knockback(aim_dir * 3.0)
 				else:
 					collider.call("take_damage", hit_dmg, team_id)
 		var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
@@ -509,6 +587,8 @@ func _enter_respawn(attacker_team: int) -> void:
 	if _hp_bar_mat != null:
 		_hp_bar_mat.albedo_color = _base_hp_col
 	velocity = Vector3.ZERO
+	_knockback_vel = Vector3.ZERO
+	_move_vel = Vector2.ZERO
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", randf_range(0.94, 1.04))
 
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
@@ -564,6 +644,8 @@ func _respawn_at_home() -> void:
 	_patrol_stuck_timer = 0.0
 	_zone_seek_pause_timer = 0.0
 	velocity = Vector3.ZERO
+	_move_vel = Vector2.ZERO
+	_knockback_vel = Vector3.ZERO
 	_hp = _max_hp
 	_has_los = false
 	_target_ref = null

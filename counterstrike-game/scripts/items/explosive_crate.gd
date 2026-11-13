@@ -1,6 +1,6 @@
 class_name ExplosiveCrate
 extends StaticBody3D
-## جعبه انرژی قابل انفجار در میدان نبرد با آسیب منطقه‌ای، واکنش زنجیره‌ای و بازسازی خودکار.
+## جعبه انرژی قابل انفجار در میدان نبرد با آسیب منطقه‌ای، رانش انفجار و واکنش زنجیره‌ای.
 
 @export var max_hp: float = 45.0
 @export var blast_radius: float = 3.85
@@ -104,11 +104,13 @@ func _detonate(attacker_team: int, from_player: bool) -> void:
 		var target := node as Node3D
 		if target.has_method("is_alive") and not bool(target.call("is_alive")):
 			continue
-		var dist: float = Vector2(target.global_position.x - origin.x, target.global_position.z - origin.z).length()
+		var delta_xz := Vector3(target.global_position.x - origin.x, 0.0, target.global_position.z - origin.z)
+		var dist: float = delta_xz.length()
 		if dist > blast_radius:
 			continue
 
-		var falloff: float = lerpf(1.0, 0.45, clampf(dist / blast_radius, 0.0, 1.0))
+		var ratio: float = clampf(dist / blast_radius, 0.0, 1.0)
+		var falloff: float = lerpf(1.0, 0.45, ratio)
 		if target is ExplosiveCrate:
 			(target as ExplosiveCrate).take_damage(blast_damage, attacker_team, from_player)
 			continue
@@ -119,14 +121,25 @@ func _detonate(attacker_team: int, from_player: bool) -> void:
 		var credit_team: int = (1 - int(tid)) if (same_team and tid != null) else attacker_team
 
 		if target is ArenaBot:
-			(target as ArenaBot).take_damage(dmg, credit_team, from_player and not same_team)
+			var bot := target as ArenaBot
+			bot.take_damage(dmg, credit_team, from_player and not same_team)
+			var push_dir: Vector3 = delta_xz.normalized() if dist > 0.05 else Vector3.FORWARD
+			bot.apply_knockback(push_dir * lerpf(10.5, 4.5, ratio))
 		elif target is PlayerController:
-			(target as PlayerController).take_damage(dmg, credit_team, origin)
+			var p := target as PlayerController
+			p.take_damage(dmg, credit_team, origin)
+			var push_dir_p: Vector3 = delta_xz.normalized() if dist > 0.05 else Vector3.FORWARD
+			p.apply_knockback(push_dir_p * lerpf(8.5, 3.6, ratio))
 
 		if not same_team:
 			any_enemy_hit = true
-			if target.has_method("is_alive") and not bool(target.call("is_alive")):
+			var killed_now: bool = target.has_method("is_alive") and not bool(target.call("is_alive"))
+			if killed_now:
 				any_kill = true
+			if from_player and target is ArenaBot:
+				EventBus.combat_callout_requested.emit(target.global_position + Vector3(0.0, 1.3, 0.0), "-%d" % int(round(dmg)), Color(0.984314, 0.45098, 0.086275, 1.0), 1.30)
+				if killed_now:
+					EventBus.combat_callout_requested.emit(target.global_position + Vector3(0.0, 1.85, 0.0), "+حذف!", Color(0.219608, 0.741176, 0.972549, 1.0), 1.38)
 
 	if from_player and any_enemy_hit:
 		AudioManager.play_hitmarker_sfx(any_kill)

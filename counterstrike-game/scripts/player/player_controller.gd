@@ -70,6 +70,8 @@ var _buff_emit_timer: float = 0.0
 var _aura_pulse_time: float = 0.0
 var _step_timer: float = 0.0
 var _respawn_last_sec: int = -1
+var _move_vel: Vector3 = Vector3.ZERO
+var _knockback_vel: Vector3 = Vector3.ZERO
 
 
 func _ready() -> void:
@@ -113,6 +115,15 @@ func is_alive() -> bool:
 
 func is_dashing() -> bool:
 	return _alive and _dash_timer > 0.05
+
+
+func apply_knockback(impulse: Vector3) -> void:
+	if not _alive or _dash_timer > 0.05:
+		return
+	var flat := Vector3(impulse.x, 0.0, impulse.z)
+	_knockback_vel += flat
+	if _knockback_vel.length() > 9.0:
+		_knockback_vel = _knockback_vel.normalized() * 9.0
 
 
 func get_facing_yaw() -> float:
@@ -418,9 +429,11 @@ func _physics_process(delta: float) -> void:
 	var move_world: Vector3 = _stick_to_world_dir(move_2d, cam_yaw_rad)
 	var aim_world: Vector3 = _stick_to_world_dir(aim_2d, cam_yaw_rad)
 
+	_knockback_vel = _knockback_vel.move_toward(Vector3.ZERO, 18.0 * delta)
 	if _dash_timer > 0.0:
-		velocity.x = _dash_dir.x * DASH_SPEED
-		velocity.z = _dash_dir.z * DASH_SPEED
+		_move_vel = _dash_dir * DASH_SPEED
+		velocity.x = _move_vel.x
+		velocity.z = _move_vel.z
 	else:
 		var speed_mult: float = 1.30 if _speed_boost_timer > 0.0 else 1.0
 		var move_mag: float = clampf(move_2d.length(), 0.0, 1.0)
@@ -429,11 +442,10 @@ func _physics_process(delta: float) -> void:
 			target_speed = lerpf(walk_speed, run_speed, clampf((move_mag - 0.15) / 0.85, 0.0, 1.0)) * speed_mult
 
 		var desired_vel_xz: Vector3 = move_world * target_speed
-		var current_vel_xz := Vector3(velocity.x, 0.0, velocity.z)
 		var rate: float = acceleration if desired_vel_xz.length_squared() > 0.01 else deceleration
-		current_vel_xz = current_vel_xz.move_toward(desired_vel_xz, rate * delta)
-		velocity.x = current_vel_xz.x
-		velocity.z = current_vel_xz.z
+		_move_vel = _move_vel.move_toward(desired_vel_xz, rate * delta)
+		velocity.x = _move_vel.x + _knockback_vel.x * 0.55
+		velocity.z = _move_vel.z + _knockback_vel.z * 0.55
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	elif velocity.y < 0.0:
@@ -480,6 +492,16 @@ func _try_fire(horiz_speed: float) -> void:
 			_muzzle_flash_mat.albedo_color = Color(b.projectile_color.r, b.projectile_color.g, b.projectile_color.b, 0.92)
 	if b.pellets_per_shot > 1:
 		EventBus.camera_trauma_requested.emit(0.11)
+	elif b.pierce_count > 0:
+		EventBus.camera_trauma_requested.emit(0.14)
+
+	var knock_force: float = 1.8
+	if b.pierce_count > 0:
+		knock_force = 6.8
+	elif b.pellets_per_shot > 1:
+		knock_force = 3.8
+	elif b.pulse_cooldown <= 0.14:
+		knock_force = 0.9
 
 	var forward_dir := Vector3(-sin(_facing_yaw), 0.0, -cos(_facing_yaw)).normalized()
 	var chest_origin := global_position + Vector3(0.0, 0.74, 0.0)
@@ -503,13 +525,20 @@ func _try_fire(horiz_speed: float) -> void:
 			var target_team: Variant = collider.get("team_id")
 			if target_team == null or int(target_team) != team_id:
 				var total_dmg: float = b.energy_damage * dmg_mult * float(b.pellets_per_shot)
-				if collider is ArenaBot or collider is ExplosiveCrate:
-					collider.call("take_damage", total_dmg, team_id, true)
+				if collider is ArenaBot:
+					var bot := collider as ArenaBot
+					bot.take_damage(total_dmg, team_id, true)
+					bot.apply_knockback(forward_dir * knock_force)
+				elif collider is ExplosiveCrate:
+					(collider as ExplosiveCrate).take_damage(total_dmg, team_id, true)
 				else:
 					collider.call("take_damage", total_dmg, team_id)
 				var killed: bool = collider.has_method("is_alive") and not bool(collider.call("is_alive"))
 				AudioManager.play_hitmarker_sfx(killed)
 				EventBus.enemy_hit_confirmed.emit(total_dmg, killed)
+				EventBus.combat_callout_requested.emit(hit_pos + Vector3(0.0, 0.85, 0.0), "-%d" % int(round(total_dmg)), Color(0.984314, 0.74902, 0.141176, 1.0) if total_dmg >= 40.0 else Color(0.972549, 0.988235, 1.0, 1.0), 1.25 if total_dmg >= 40.0 else 1.0)
+				if killed and collider is ArenaBot:
+					EventBus.combat_callout_requested.emit(hit_pos + Vector3(0.0, 1.45, 0.0), "+حذف!", Color(0.219608, 0.741176, 0.972549, 1.0), 1.32)
 		var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 		if flash is ImpactFlash:
 			(flash as ImpactFlash).trigger(hit_pos, b.projectile_color)
@@ -536,7 +565,8 @@ func _try_fire(horiz_speed: float) -> void:
 					b.projectile_color,
 					b.bolt_scale,
 					b.pierce_count,
-					true
+					true,
+					knock_force
 				)
 
 	AudioManager.play_sfx_path(b.shoot_sfx_path, randf_range(0.95, 1.05))
@@ -626,6 +656,8 @@ func _enter_respawn(attacker_team: int) -> void:
 	if _buff_aura != null:
 		_buff_aura.visible = false
 	velocity = Vector3.ZERO
+	_move_vel = Vector3.ZERO
+	_knockback_vel = Vector3.ZERO
 	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", 0.85)
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
 	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
@@ -671,6 +703,8 @@ func _find_safe_respawn_pos() -> Vector3:
 func _respawn() -> void:
 	global_position = _find_safe_respawn_pos()
 	velocity = Vector3.ZERO
+	_move_vel = Vector3.ZERO
+	_knockback_vel = Vector3.ZERO
 	_hp = max_hp
 	_alive = true
 	_recharging = false

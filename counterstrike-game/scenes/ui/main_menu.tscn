@@ -137,7 +137,7 @@ text = "کانتر استرایک آرنا"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
 theme_override_font_sizes/font_size = 13
-text = "نبرد آرکید 2.5D • بمب پالس، رادار زنده، جعبه‌های انفجاری، جابه‌جایی هوشمند بات و رتبه"
+text = "نبرد آرکید ۳بعدی آفلاین • کنترل چندلمسی، نبرد تیمی و تاکتیک انفجاری"
 
 [node name="BadgePill" type="PanelContainer" parent="SafeMargin/MainLayout/HeaderBar"]
 layout_mode = 2
@@ -149,7 +149,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.984314, 0.572549, 0.235294, 1)
 theme_override_fonts/font = ExtResource("2_vazir_bold")
 theme_override_font_sizes/font_size = 13
-text = "نسخه ۰.۷ • Galaxy A32"
+text = "نسخه ۰.۸ • Galaxy A32"
 vertical_alignment = 1
 
 [node name="ContentRow" type="HBoxContainer" parent="SafeMargin/MainLayout"]
@@ -162,10 +162,10 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.92
 alignment = 1
-theme_override_constants/separation = 10
+theme_override_constants/separation = 12
 
 [node name="BtnEnterArena" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
-custom_minimum_size = Vector2(0, 68)
+custom_minimum_size = Vector2(0, 74)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_vazir_bold")
 theme_override_font_sizes/font_size = 21
@@ -173,14 +173,14 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
 text = "شروع نبرد آرکید"
 
 [node name="BtnSelectMap" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
-custom_minimum_size = Vector2(0, 50)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_vazir_bold")
 theme_override_font_sizes/font_size = 15
 text = "نقشه: بخش ۰۱ (پایگاه فولادی)"
 
 [node name="BtnMatchMode" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
-custom_minimum_size = Vector2(0, 50)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_vazir_bold")
 theme_override_font_sizes/font_size = 15
@@ -191,7 +191,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="BtnTabLoadout" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn/TabSwitcherRow"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
@@ -200,7 +200,7 @@ theme_override_font_sizes/font_size = 14
 text = "سلاح‌ها"
 
 [node name="BtnTabArena" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn/TabSwitcherRow"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
@@ -208,18 +208,12 @@ theme_override_font_sizes/font_size = 14
 text = "نقشه و تیم‌ها"
 
 [node name="BtnTabSettings" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn/TabSwitcherRow"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 theme_override_font_sizes/font_size = 14
 text = "تنظیمات و رتبه"
-
-[node name="BtnCameraTest" type="Button" parent="SafeMargin/MainLayout/ContentRow/ActionColumn"]
-custom_minimum_size = Vector2(0, 44)
-layout_mode = 2
-theme_override_font_sizes/font_size = 14
-text = "آزمایش زاویه دوربین BombSquad"
 
 [node name="DetailColumn" type="Control" parent="SafeMargin/MainLayout/ContentRow"]
 layout_mode = 2
@@ -633,7 +627,6 @@ text = "حالت آفلاین آماده است"
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/TabSwitcherRow/BtnTabLoadout" to="." method="_on_btn_tab_loadout_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/TabSwitcherRow/BtnTabArena" to="." method="_on_btn_tab_arena_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/TabSwitcherRow/BtnTabSettings" to="." method="_on_btn_tab_settings_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/ActionColumn/BtnCameraTest" to="." method="_on_btn_camera_test_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterRow/BtnBlasterPulse" to="." method="_on_btn_blaster_pulse_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterRow/BtnBlasterRepeater" to="." method="_on_btn_blaster_repeater_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterRow/BtnBlasterScatter" to="." method="_on_btn_blaster_scatter_pressed"]
