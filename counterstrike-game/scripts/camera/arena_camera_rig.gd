@@ -3,7 +3,7 @@ class_name ArenaCameraRig
 extends Node3D
 ## Fixed-yaw BombSquad-style Angled Top-Down / Bird's-Eye 2.5D camera rig.
 ## Reads pitch, distance, FOV, and smoothing from ProjectSettings ("arena_camera/*")
-## unless overridden via `config_override` or runtime test controls.
+## unless overridden via `config_override`.
 
 @export var target_path: NodePath
 @export var config_override: CameraConfig:
@@ -107,14 +107,6 @@ func apply_camera_settings() -> void:
 	_active_fov = clampf(cfg.fov_degrees, 32.0, 60.0)
 	_follow_smoothness = clampf(cfg.follow_smoothness, 1.0, 20.0)
 	_look_ahead_distance = clampf(cfg.look_ahead_distance, 0.0, 4.0)
-	_apply_rig_transforms()
-
-
-func set_test_parameters(pitch_deg: float, distance_m: float, fov_deg: float = -1.0) -> void:
-	_active_pitch = clampf(pitch_deg, 45.0, 75.0)
-	_active_distance = clampf(distance_m, 12.0, 32.0)
-	if fov_deg > 0.0:
-		_active_fov = clampf(fov_deg, 32.0, 60.0)
 	_apply_rig_transforms()
 
 

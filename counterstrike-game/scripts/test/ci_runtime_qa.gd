@@ -68,10 +68,31 @@ func _process(_delta: float) -> void:
 			var menu: Node = tree.current_scene
 			_assert(menu != null and menu.name == "MainMenu", "Expected MainMenu, got %s" % str(menu))
 			_assert(tree.root.theme != null, "Persian theme not applied on root viewport")
-			_assert(menu.get_node_or_null("SafeMargin/MainLayout/ContentRow/ActionColumn/BtnCameraTest") == null, "Legacy BtnCameraTest should be removed")
+			_assert(menu.find_child("BtnCameraTest", true, false) == null, "Legacy BtnCameraTest should be completely removed")
+
+			var stage_3d: LobbyStage3D = menu.get_node_or_null("LobbyViewportContainer/LobbyViewport/LobbyStage3D") as LobbyStage3D
+			_assert(stage_3d != null, "Live 3D LobbyStage3D missing in MainMenu")
+			if stage_3d != null:
+				_assert(stage_3d.get_node_or_null("HeroTurntable/HeroPivot/KenneySoldier") != null, "3D Lobby Hero Soldier missing")
+				_assert(stage_3d.get("_weapon_instance") != null, "3D Lobby equipped blaster mesh did not spawn")
+				menu.call("_on_btn_next_weapon_pressed")
+				_assert(SaveManager.starting_blaster_id == "rapid_repeater", "MainMenu weapon cycle next failed")
+				menu.call("_on_btn_prev_weapon_pressed")
+				_assert(SaveManager.starting_blaster_id == "pulse_blaster", "MainMenu weapon cycle prev failed")
+				menu.call("_on_btn_map_sector02_pressed")
+				_assert(SaveManager.selected_map_id == "sector_02" and str(stage_3d.get("_current_map_id")) == "sector_02", "LobbyStage3D map theme did not sync to sector_02")
+				menu.call("_on_btn_map_sector01_pressed")
+				_assert(SaveManager.selected_map_id == "sector_01" and str(stage_3d.get("_current_map_id")) == "sector_01", "LobbyStage3D map theme did not sync to sector_01")
+				menu.call("_show_tab", 1, false)
+				_assert(bool((menu.get("_arena_panel") as Control).visible), "ArenaPanel tab switch failed")
+				menu.call("_show_tab", 2, false)
+				_assert(bool((menu.get("_settings_panel") as Control).visible), "SettingsPanel tab switch failed")
+				menu.call("_show_tab", 0, false)
+				_assert(bool((menu.get("_loadout_panel") as Control).visible), "LoadoutPanel tab switch failed")
 
 			for removed_res in [
 				"res://scenes/test/camera_angle_test.tscn",
+				"res://scripts/test/camera_angle_test.gd",
 				"res://scripts/test/patrol_proxy.gd",
 				"res://data/camera/default_bombsquad_camera.tres",
 				"res://assets/kenney/mini_arena/floor.glb"
@@ -135,9 +156,11 @@ func _process(_delta: float) -> void:
 				"res://assets/materials/arena_floor_sector02.tres",
 				"res://scenes/combat/pulse_bomb.tscn",
 				"res://scenes/items/explosive_crate.tscn",
-				"res://scripts/ui/damage_numbers_overlay.gd"
+				"res://scripts/ui/damage_numbers_overlay.gd",
+				"res://scenes/ui/lobby_stage_3d.tscn",
+				"res://scripts/ui/lobby_stage_3d.gd"
 			]:
-				_assert(ResourceLoader.exists(res_p), "Missing Phase 8 resource: %s" % res_p)
+				_assert(ResourceLoader.exists(res_p), "Missing Phase 9 resource: %s" % res_p)
 
 			GameManager.go_to_selected_arena()
 			_step = 1
@@ -145,6 +168,8 @@ func _process(_delta: float) -> void:
 		1:
 			var arena: Node = tree.current_scene
 			_assert(arena != null and arena.name == "ArenaSector01", "Expected ArenaSector01")
+			var cam_rig: Node = arena.get_node_or_null("ArenaCameraRig")
+			_assert(cam_rig != null and not cam_rig.has_method("set_test_parameters"), "Camera test API should be completely removed from ArenaCameraRig")
 			var player: PlayerController = arena.get_node_or_null("PlayerCharacter") as PlayerController
 			_assert(player != null, "PlayerCharacter missing")
 			if player == null:
@@ -393,7 +418,7 @@ func _process(_delta: float) -> void:
 			_step = 99
 		_:
 			if _failures.is_empty():
-				print("[QA_PASS] All Phase 8 automated runtime checks passed cleanly across Sector 01 & Sector 02!")
+				print("[QA_PASS] All Phase 9 automated runtime checks passed cleanly across Live 3D Menu, Sector 01 & Sector 02!")
 				tree.quit(0)
 			else:
 				print("[QA_FAIL] Total failures: %d" % _failures.size())
