@@ -104,16 +104,6 @@ func apply_camera_settings() -> void:
 	# Yaw remains fixed (no 360-degree free rotation in mobile 2.5D mode).
 	_active_yaw = clampf(cfg.yaw_degrees, -45.0, 45.0)
 	_active_distance = clampf(cfg.distance, 12.0, 32.0)
-	if not Engine.is_editor_hint() and config_override == null:
-		var sm: Node = get_node_or_null("/root/SaveManager")
-		if sm != null:
-			var preset: String = str(sm.get("camera_preset"))
-			if preset == "tactical":
-				_active_pitch = 63.0
-				_active_distance = 22.5
-			elif preset == "close":
-				_active_pitch = 52.0
-				_active_distance = 16.5
 	_active_fov = clampf(cfg.fov_degrees, 32.0, 60.0)
 	_follow_smoothness = clampf(cfg.follow_smoothness, 1.0, 20.0)
 	_look_ahead_distance = clampf(cfg.look_ahead_distance, 0.0, 4.0)

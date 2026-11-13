@@ -3,6 +3,7 @@ extends Node3D
 
 const PROJECTILE_SCENE_PATH: String = "res://scenes/combat/energy_projectile.tscn"
 const IMPACT_FLASH_SCENE_PATH: String = "res://scenes/combat/impact_flash.tscn"
+const PULSE_BOMB_SCENE_PATH: String = "res://scenes/combat/pulse_bomb.tscn"
 
 @onready var _sun_light: DirectionalLight3D = $DirectionalLight3D
 @onready var _camera_rig: ArenaCameraRig = $ArenaCameraRig
@@ -52,6 +53,9 @@ func _ready() -> void:
 				if not _mode_config.enable_capture_zones:
 					pad.visible = false
 					pad.monitoring = false
+					var pole_col: CollisionShape3D = pad.get_node_or_null("ZoneFlagBody/CollisionShape3D") as CollisionShape3D
+					if pole_col != null:
+						pole_col.set_deferred("disabled", true)
 
 	EventBus.score_updated.emit(_blue_score, _orange_score)
 	_report_timer_if_changed()
@@ -106,6 +110,10 @@ func _prewarm_combat_pools() -> void:
 		var flash_scene: Resource = ResourceLoader.load(IMPACT_FLASH_SCENE_PATH)
 		if flash_scene is PackedScene:
 			PoolManager.register_pool(ImpactFlash.POOL_ID, flash_scene as PackedScene, 24)
+	if ResourceLoader.exists(PULSE_BOMB_SCENE_PATH):
+		var bomb_scene: Resource = ResourceLoader.load(PULSE_BOMB_SCENE_PATH)
+		if bomb_scene is PackedScene:
+			PoolManager.register_pool(PulseBomb.POOL_ID, bomb_scene as PackedScene, 6)
 
 
 func _award_zone_hold_points() -> void:

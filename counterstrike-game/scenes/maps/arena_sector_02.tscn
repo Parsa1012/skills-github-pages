@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3]
+[gd_scene load_steps=46 format=3]
 
 [ext_resource type="Script" path="res://scripts/maps/arena_sector_controller.gd" id="1_ctrl"]
 [ext_resource type="PackedScene" path="res://scenes/camera/arena_camera_rig.tscn" id="2_cam"]
@@ -23,6 +23,7 @@
 [ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/wall.glb" id="21_mwall"]
 [ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/wall-corner.glb" id="22_mwcorner"]
 [ext_resource type="Material" path="res://assets/materials/arena_floor_sector02.tres" id="23_floor_mat"]
+[ext_resource type="PackedScene" path="res://scenes/items/explosive_crate.tscn" id="24_crate"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_s2"]
 sky_top_color = Color(0.145098, 0.133333, 0.215686, 1)
@@ -127,8 +128,8 @@ collision_mask = 0
 shape = SubResource("BoxShape3D_floor")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="ArenaEnvironment/FloorBody"]
+material_override = ExtResource("23_floor_mat")
 mesh = SubResource("BoxMesh_floor")
-surface_material_override/0 = ExtResource("23_floor_mat")
 
 [node name="WallNorth" type="StaticBody3D" parent="ArenaEnvironment"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -11.5)
@@ -395,6 +396,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -3.8)
 pickup_type = 2
 respawn_seconds = 16.0
 pickup_value = 7.0
+
+[node name="ExplosiveCrates" type="Node3D" parent="."]
+
+[node name="Crate_WestChoke" parent="ExplosiveCrates" instance=ExtResource("24_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.8, 0, 0)
+
+[node name="Crate_EastChoke" parent="ExplosiveCrates" instance=ExtResource("24_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.8, 0, 0)
 
 [node name="ZoneA_North" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -7.6)

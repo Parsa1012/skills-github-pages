@@ -31,6 +31,11 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_apply_safe_area_margins)
 
 
+func _exit_tree() -> void:
+	if get_viewport() != null and get_viewport().size_changed.is_connected(_apply_safe_area_margins):
+		get_viewport().size_changed.disconnect(_apply_safe_area_margins)
+
+
 func _process(delta: float) -> void:
 	_telemetry_timer += delta
 	if _telemetry_timer >= 0.25:

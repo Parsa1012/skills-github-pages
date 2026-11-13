@@ -1,12 +1,13 @@
 class_name EnergyProjectile
 extends Node3D
-## گلوله انرژی استخری (Pooled) با رهگیری پیوسته RayCast، نفوذ انتخابی ریل‌گان و بازخورد اصابت.
+## گلوله انرژی استخری (Pooled) با رهگیری پیوسته RayCast، عبور از جهش، نفوذ ریل‌گان و بازخورد اصابت.
 
 const POOL_ID: StringName = &"energy_projectile"
 const IMPACT_POOL_ID: StringName = &"impact_flash"
 
 @onready var _bolt_mesh: MeshInstance3D = $BoltMesh
 
+var _origin_pos: Vector3 = Vector3.ZERO
 var _direction: Vector3 = Vector3.FORWARD
 var _speed: float = 26.0
 var _damage: float = 25.0
@@ -47,6 +48,7 @@ func launch(
 ) -> void:
 	_ensure_material()
 	global_position = origin
+	_origin_pos = origin
 	var flat_dir := Vector3(direction.x, direction.y * 0.25, direction.z)
 	if flat_dir.length_squared() < 0.0001:
 		flat_dir = Vector3.FORWARD
@@ -92,15 +94,25 @@ func _physics_process(delta: float) -> void:
 	if not hit.is_empty():
 		var hit_pos: Vector3 = hit.get("position", end_pos)
 		var collider: Object = hit.get("collider", null)
+
+		# Pass cleanly through a dashing player with i-frames
+		if collider is PlayerController and (collider as PlayerController).is_dashing():
+			_exclude_rids.append((collider as CollisionObject3D).get_rid())
+			global_position = hit_pos + _direction * 0.18
+			return
+
 		var hit_damageable: bool = false
 		if collider != null and collider.has_method("take_damage"):
 			var target_team: Variant = collider.get("team_id")
 			if target_team == null or int(target_team) != _team_id:
 				hit_damageable = true
-				if _shooter_is_player and collider is ArenaBot:
-					collider.call("take_damage", _damage, _team_id, true)
+				if collider is ArenaBot or collider is ExplosiveCrate:
+					collider.call("take_damage", _damage, _team_id, _shooter_is_player)
+				elif collider is PlayerController:
+					collider.call("take_damage", _damage, _team_id, _origin_pos)
 				else:
 					collider.call("take_damage", _damage, _team_id)
+
 				if _shooter_is_player:
 					var killed: bool = collider.has_method("is_alive") and not bool(collider.call("is_alive"))
 					AudioManager.play_hitmarker_sfx(killed)

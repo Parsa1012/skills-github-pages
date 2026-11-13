@@ -137,7 +137,7 @@ text = "کانتر استرایک آرنا"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
 theme_override_font_sizes/font_size = 13
-text = "نبرد آرکید 2.5D • ۲ نقشه، ۳ حالت، ۴ سلاح انرژی، جهش تاکتیکی و سیستم رتبه آفلاین"
+text = "نبرد آرکید 2.5D • بمب پالس، رادار زنده، جعبه‌های انفجاری، جابه‌جایی هوشمند بات و رتبه"
 
 [node name="BadgePill" type="PanelContainer" parent="SafeMargin/MainLayout/HeaderBar"]
 layout_mode = 2
@@ -149,7 +149,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.984314, 0.572549, 0.235294, 1)
 theme_override_fonts/font = ExtResource("2_vazir_bold")
 theme_override_font_sizes/font_size = 13
-text = "نسخه ۰.۶ • Galaxy A32"
+text = "نسخه ۰.۷ • Galaxy A32"
 vertical_alignment = 1
 
 [node name="ContentRow" type="HBoxContainer" parent="SafeMargin/MainLayout"]
@@ -389,8 +389,8 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.84, 0.9, 0.96, 1)
 theme_override_font_sizes/font_size = 13
-text = "توانایی جهش تاکتیکی (Shift / دکمه لمسی جهش): جاخالی سریع ۲.۴ ثانیه‌ای با عبور از زیر آتش دشمن.
-آیتم‌های میدان: بسته سپر (+۳۵ جان) • تقویت پلاسما (+۳۵٪ ضربه و شارژ فوری) • شتاب‌دهنده (+۳۰٪ سرعت)"
+text = "جهش تاکتیکی (Shift / دکمه جهش): جاخالی سریع با عبور از گلوله • بمب پالس (G / E / دکمه بمب): انفجار منطقه‌ای (AoE).
+جعبه‌های انرژی انفجاری در گلوگاه‌ها + رادار زنده و جهت‌نمای آسیب روی صفحه نبرد."
 autowrap_mode = 2
 
 [node name="ArenaPanel" type="PanelContainer" parent="SafeMargin/MainLayout/ContentRow/DetailColumn"]
@@ -451,10 +451,10 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.84, 0.9, 0.96, 1)
 theme_override_font_sizes/font_size = 13
-text = "ترکیب نیروها در میدان (۲ در برابر ۳):
-• هم‌تیمی آبی: پوشش جناح، حمله به مناطق دشمن و جمع‌آوری بسته جان هنگام آسیب.
-• پهپاد دیده‌بان (طلایی): سرعت بالا و شلیک پیاپی برای تصرف سریع مناطق.
-• نگهبان سنگین (قرمز): زره بالا و شلیک دوگانه همزمان برای دفاع از نقاط کلیدی."
+text = "نیروها و تعاملات میدان (۲ در برابر ۳ + هوش مصنوعی مانع‌گریز):
+• هم‌تیمی آبی: پوشش جناح و همراهی با شما، حمله به مناطق دشمن و برداشت بسته جان.
+• دیده‌بان طلایی (سریع) و نگهبان سنگین (دوگانه): واکنش متناسب با درجه سختی انتخابی.
+• جعبه‌های انرژی انفجاری در نقشه: با شلیک یا بمب منفجر می‌شوند و به دشمنان نزدیک آسیب می‌زنند."
 autowrap_mode = 2
 
 [node name="SettingsPanel" type="PanelContainer" parent="SafeMargin/MainLayout/ContentRow/DetailColumn"]
@@ -559,12 +559,12 @@ size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
 text = "دوربین: کلاسیک ۵۷.۵°"
 
-[node name="BtnVolume" type="Button" parent="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/CameraAudioRow"]
+[node name="BtnDifficulty" type="Button" parent="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/CameraAudioRow"]
 custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
-text = "بلندی صدا: ۸۵٪"
+text = "سختی حریف: متعادل"
 
 [node name="AudioRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
@@ -576,7 +576,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 button_pressed = true
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 13
 text = "موسیقی: روشن"
 
 [node name="BtnSfx" type="Button" parent="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow"]
@@ -585,8 +585,15 @@ layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 button_pressed = true
-theme_override_font_sizes/font_size = 14
-text = "افکت صوتی: روشن"
+theme_override_font_sizes/font_size = 13
+text = "افکت: روشن"
+
+[node name="BtnVolume" type="Button" parent="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+text = "بلندی: ۸۵٪"
 
 [node name="RankCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
 layout_mode = 2
@@ -639,6 +646,7 @@ text = "حالت آفلاین آماده است"
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnAimMode" to="." method="_on_btn_aim_mode_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnSensitivity" to="." method="_on_btn_sensitivity_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/CameraAudioRow/BtnCamPreset" to="." method="_on_btn_cam_preset_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/CameraAudioRow/BtnVolume" to="." method="_on_btn_volume_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/CameraAudioRow/BtnDifficulty" to="." method="_on_btn_difficulty_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnMusic" to="." method="_on_btn_music_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnSfx" to="." method="_on_btn_sfx_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnVolume" to="." method="_on_btn_volume_pressed"]

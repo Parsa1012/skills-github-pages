@@ -19,6 +19,7 @@ var selected_map_id: String = "sector_01" # "sector_01" | "sector_02"
 var starting_blaster_id: String = "pulse_blaster" # "pulse_blaster" | "rapid_repeater" | "plasma_scatter" | "arc_railgun"
 var camera_preset: String = "classic" # "classic" | "tactical" | "close"
 var joystick_sensitivity: float = 1.0 # 1.0 | 1.25
+var bot_difficulty: String = "balanced" # "easy" | "balanced" | "hard"
 
 var master_volume: float = 0.85
 var music_volume: float = 0.70
@@ -68,6 +69,9 @@ func load_settings() -> void:
 	var loaded_blaster: String = str(config.get_value("loadout", "starting_blaster_id", "pulse_blaster"))
 	starting_blaster_id = loaded_blaster if loaded_blaster in ["pulse_blaster", "rapid_repeater", "plasma_scatter", "arc_railgun"] else "pulse_blaster"
 
+	var loaded_diff: String = str(config.get_value("ai", "bot_difficulty", "balanced"))
+	bot_difficulty = loaded_diff if loaded_diff in ["easy", "balanced", "hard"] else "balanced"
+
 	master_volume = clampf(float(config.get_value("audio", "master_volume", 0.85)), 0.0, 1.0)
 	music_volume = clampf(float(config.get_value("audio", "music_volume", 0.70)), 0.0, 1.0)
 	sfx_volume = clampf(float(config.get_value("audio", "sfx_volume", 0.85)), 0.0, 1.0)
@@ -92,6 +96,7 @@ func save_settings() -> void:
 	config.set_value("match", "selected_mode_id", selected_mode_id)
 	config.set_value("match", "selected_map_id", selected_map_id)
 	config.set_value("loadout", "starting_blaster_id", starting_blaster_id)
+	config.set_value("ai", "bot_difficulty", bot_difficulty)
 	config.set_value("audio", "master_volume", master_volume)
 	config.set_value("audio", "music_volume", music_volume)
 	config.set_value("audio", "sfx_volume", sfx_volume)
@@ -115,6 +120,7 @@ func apply_defaults() -> void:
 	selected_mode_id = "zone_control"
 	selected_map_id = "sector_01"
 	starting_blaster_id = "pulse_blaster"
+	bot_difficulty = "balanced"
 	master_volume = 0.85
 	music_volume = 0.70
 	sfx_volume = 0.85

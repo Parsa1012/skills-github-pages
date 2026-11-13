@@ -26,10 +26,16 @@ signal selected_map_changed(map_id: String)
 signal starting_blaster_changed(blaster_id: String)
 
 @warning_ignore("unused_signal")
+signal bot_difficulty_changed(difficulty_id: String)
+
+@warning_ignore("unused_signal")
 signal player_buff_updated(damage_secs: float, speed_secs: float)
 
 @warning_ignore("unused_signal")
 signal player_dash_updated(cooldown_left: float, cooldown_total: float, ready: bool)
+
+@warning_ignore("unused_signal")
+signal player_bomb_updated(cooldown_left: float, cooldown_total: float, ready: bool)
 
 @warning_ignore("unused_signal")
 signal enemy_hit_confirmed(damage: float, is_kill: bool)
@@ -53,6 +59,12 @@ signal player_stats_updated(hp: int, max_hp: int, energy: int, max_energy: int, 
 signal player_damaged_feedback(hp_ratio: float)
 
 @warning_ignore("unused_signal")
+signal player_damaged_direction(angle_rad: float)
+
+@warning_ignore("unused_signal")
+signal crate_exploded(world_pos: Vector3)
+
+@warning_ignore("unused_signal")
 signal player_respawn_countdown(seconds_left: float, active: bool)
 
 @warning_ignore("unused_signal")
@@ -63,6 +75,9 @@ signal blaster_recharge_requested()
 
 @warning_ignore("unused_signal")
 signal player_dash_requested()
+
+@warning_ignore("unused_signal")
+signal player_bomb_requested()
 
 @warning_ignore("unused_signal")
 signal match_started(mode_id: String, target_score: int)

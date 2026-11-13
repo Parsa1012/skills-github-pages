@@ -1,13 +1,15 @@
 extends CanvasLayer
-## رابط کاربری چندلمسی میدان نبرد (جان/انرژی گرافیکی، دکمه جهش، نشانگر اصابت، خوراک کشته‌ها، تایمر و نتیجه نهایی).
+## رابط کاربری چندلمسی میدان نبرد (جان/انرژی، رادار تاکتیکی، دکمه بمب و جهش، جهت‌نمای آسیب و خوراک کشته‌ها).
 
 @onready var _damage_flash: ColorRect = $DamageFlashRect
+@onready var _hit_dir_indicator: HitDirectionIndicator = $HitDirectionIndicator
 @onready var _hitmarker_label: Label = $HitmarkerLabel
 @onready var _top_safe_margin: MarginContainer = $TopSafeMargin
 @onready var _bottom_safe_margin: MarginContainer = $BottomSafeMargin
 @onready var _left_move_stick: VirtualJoystick = $BottomSafeMargin/TouchControlsRow/LeftMoveStick
 @onready var _right_aim_stick: VirtualJoystick = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/RightAimStick
 @onready var _dedicated_fire_pad: TouchFirePad = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/FirePadAnchor/DedicatedFirePad
+@onready var _btn_bomb: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnBomb
 @onready var _btn_dash: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnDash
 @onready var _btn_switch_blaster: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnSwitchBlaster
 @onready var _btn_recharge: TouchActionButton = $BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow/BtnRecharge
@@ -85,9 +87,11 @@ func _ready() -> void:
 	EventBus.player_stats_updated.connect(_on_player_stats_updated)
 	EventBus.player_buff_updated.connect(_on_player_buff_updated)
 	EventBus.player_dash_updated.connect(_on_player_dash_updated)
+	EventBus.player_bomb_updated.connect(_on_player_bomb_updated)
 	EventBus.enemy_hit_confirmed.connect(_on_enemy_hit_confirmed)
 	EventBus.kill_feed_event.connect(_on_kill_feed_event)
 	EventBus.player_damaged_feedback.connect(_on_player_damaged_feedback)
+	EventBus.player_damaged_direction.connect(_on_player_damaged_direction)
 	EventBus.player_respawn_countdown.connect(_on_player_respawn_countdown)
 	EventBus.zone_capture_progress.connect(_on_zone_capture_progress)
 	EventBus.zone_captured.connect(_on_zone_captured)
@@ -97,6 +101,8 @@ func _ready() -> void:
 	EventBus.match_paused_changed.connect(_on_match_paused_changed)
 	EventBus.match_ended.connect(_on_match_ended)
 
+	if _btn_bomb != null:
+		_btn_bomb.action_triggered.connect(_on_bomb_triggered)
 	if _btn_dash != null:
 		_btn_dash.action_triggered.connect(_on_dash_triggered)
 	if _btn_switch_blaster != null:
@@ -118,12 +124,16 @@ func _exit_tree() -> void:
 		EventBus.player_buff_updated.disconnect(_on_player_buff_updated)
 	if EventBus.player_dash_updated.is_connected(_on_player_dash_updated):
 		EventBus.player_dash_updated.disconnect(_on_player_dash_updated)
+	if EventBus.player_bomb_updated.is_connected(_on_player_bomb_updated):
+		EventBus.player_bomb_updated.disconnect(_on_player_bomb_updated)
 	if EventBus.enemy_hit_confirmed.is_connected(_on_enemy_hit_confirmed):
 		EventBus.enemy_hit_confirmed.disconnect(_on_enemy_hit_confirmed)
 	if EventBus.kill_feed_event.is_connected(_on_kill_feed_event):
 		EventBus.kill_feed_event.disconnect(_on_kill_feed_event)
 	if EventBus.player_damaged_feedback.is_connected(_on_player_damaged_feedback):
 		EventBus.player_damaged_feedback.disconnect(_on_player_damaged_feedback)
+	if EventBus.player_damaged_direction.is_connected(_on_player_damaged_direction):
+		EventBus.player_damaged_direction.disconnect(_on_player_damaged_direction)
 	if EventBus.player_respawn_countdown.is_connected(_on_player_respawn_countdown):
 		EventBus.player_respawn_countdown.disconnect(_on_player_respawn_countdown)
 	if EventBus.zone_capture_progress.is_connected(_on_zone_capture_progress):
@@ -186,6 +196,8 @@ func _setup_excluded_controls() -> void:
 	var excl: Array[Control] = []
 	if _dedicated_fire_pad != null:
 		excl.append(_dedicated_fire_pad)
+	if _btn_bomb != null:
+		excl.append(_btn_bomb)
 	if _btn_dash != null:
 		excl.append(_btn_dash)
 	if _btn_switch_blaster != null:
@@ -355,6 +367,16 @@ func _on_player_dash_updated(cooldown_left: float, cooldown_total: float, ready:
 		_btn_dash.set_cooldown_state(ratio, "%.1fث" % cooldown_left)
 
 
+func _on_player_bomb_updated(cooldown_left: float, cooldown_total: float, ready: bool) -> void:
+	if _btn_bomb == null:
+		return
+	if ready or cooldown_left <= 0.05:
+		_btn_bomb.set_cooldown_state(0.0, "بمب")
+	else:
+		var ratio: float = clampf(cooldown_left / maxf(cooldown_total, 0.1), 0.0, 1.0)
+		_btn_bomb.set_cooldown_state(ratio, "%.1fث" % cooldown_left)
+
+
 func _on_enemy_hit_confirmed(_damage: float, is_kill: bool) -> void:
 	if _hitmarker_label == null:
 		return
@@ -463,6 +485,11 @@ func _on_player_damaged_feedback(_hp_ratio: float) -> void:
 	_damage_alpha = 0.28
 
 
+func _on_player_damaged_direction(angle_rad: float) -> void:
+	if _hit_dir_indicator != null:
+		_hit_dir_indicator.add_hit_direction(angle_rad)
+
+
 func _on_player_respawn_countdown(seconds_left: float, active: bool) -> void:
 	_respawn_active = active
 	if _toast_panel == null or _toast_label == null:
@@ -530,6 +557,10 @@ func is_fire_active() -> bool:
 	if SaveManager.aim_fire_mode == "fire_button":
 		return _dedicated_fire_pad != null and _dedicated_fire_pad.is_pressed
 	return _right_aim_stick != null and _right_aim_stick.is_fire_engaged
+
+
+func _on_bomb_triggered() -> void:
+	EventBus.player_bomb_requested.emit()
 
 
 func _on_dash_triggered() -> void:

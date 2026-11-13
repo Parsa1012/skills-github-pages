@@ -157,6 +157,13 @@ func set_starting_blaster(blaster_id: String) -> void:
 		EventBus.starting_blaster_changed.emit(blaster_id)
 
 
+func set_bot_difficulty(difficulty_id: String) -> void:
+	if difficulty_id in ["easy", "balanced", "hard"]:
+		SaveManager.bot_difficulty = difficulty_id
+		SaveManager.save_settings()
+		EventBus.bot_difficulty_changed.emit(difficulty_id)
+
+
 func get_starting_blaster_index() -> int:
 	match SaveManager.starting_blaster_id:
 		"rapid_repeater":

@@ -218,7 +218,9 @@ func _pick_objective_target() -> Vector3:
 			return Vector3(best_med.global_position.x, global_position.y, best_med.global_position.z)
 
 	var focus: float = profile.zone_objective_focus if profile != null else 0.0
-	if focus >= 0.6 and _zone_seek_pause_timer <= 0.0 and SaveManager.selected_mode_id == "zone_control":
+	var mode_cfg: ArenaModeConfig = GameManager.get_active_mode_config()
+	var zones_enabled: bool = (mode_cfg == null or mode_cfg.enable_capture_zones)
+	if focus >= 0.6 and _zone_seek_pause_timer <= 0.0 and zones_enabled:
 		var best_zone: Node3D = null
 		var best_dist: float = 18.0
 		for z in get_tree().get_nodes_in_group("capture_zones"):
@@ -232,8 +234,59 @@ func _pick_objective_target() -> Vector3:
 		if best_zone != null:
 			return Vector3(best_zone.global_position.x, global_position.y, best_zone.global_position.z)
 
+	if team_id == 0:
+		var players: Array[Node] = get_tree().get_nodes_in_group("player")
+		if not players.is_empty() and players[0] is Node3D:
+			var pnode := players[0] as Node3D
+			if not pnode.has_method("is_alive") or bool(pnode.call("is_alive")):
+				if global_position.distance_to(pnode.global_position) > 5.8:
+					return Vector3(
+						clampf(pnode.global_position.x - 1.5, -13.2, 13.2),
+						global_position.y,
+						clampf(pnode.global_position.z - 2.6, -9.2, 9.2)
+					)
+
 	var offset: Vector3 = patrol_offset_a if _patrol_index == 0 else patrol_offset_b
 	return _home_pos + offset
+
+
+func _get_difficulty_scales() -> Dictionary:
+	if team_id == 0:
+		return {"speed": 1.0, "cooldown": 1.0, "error": 1.0}
+	match SaveManager.bot_difficulty:
+		"easy":
+			return {"speed": 0.88, "cooldown": 1.38, "error": 1.45}
+		"hard":
+			return {"speed": 1.12, "cooldown": 0.78, "error": 0.60}
+		_:
+			return {"speed": 1.0, "cooldown": 1.0, "error": 1.0}
+
+
+func _steer_around_obstacles(desired_dir: Vector3) -> Vector3:
+	var flat := Vector3(desired_dir.x, 0.0, desired_dir.z)
+	if flat.length_squared() < 0.0001:
+		return desired_dir
+	flat = flat.normalized()
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var origin: Vector3 = global_position + Vector3(0.0, 0.55, 0.0)
+	var fwd_q := PhysicsRayQueryParameters3D.create(origin, origin + flat * 1.35, 1, [get_rid()])
+	fwd_q.collide_with_areas = false
+	var fwd_hit: Dictionary = space_state.intersect_ray(fwd_q)
+	if fwd_hit.is_empty():
+		return flat
+
+	var left_dir: Vector3 = flat.rotated(Vector3.UP, deg_to_rad(38.0))
+	var right_dir: Vector3 = flat.rotated(Vector3.UP, deg_to_rad(-38.0))
+	var left_q := PhysicsRayQueryParameters3D.create(origin, origin + left_dir * 1.45, 1, [get_rid()])
+	var right_q := PhysicsRayQueryParameters3D.create(origin, origin + right_dir * 1.45, 1, [get_rid()])
+	var left_blocked: bool = not space_state.intersect_ray(left_q).is_empty()
+	var right_blocked: bool = not space_state.intersect_ray(right_q).is_empty()
+
+	if not left_blocked and right_blocked:
+		return flat.rotated(Vector3.UP, deg_to_rad(56.0)).normalized()
+	if not right_blocked and left_blocked:
+		return flat.rotated(Vector3.UP, deg_to_rad(-56.0)).normalized()
+	return flat.rotated(Vector3.UP, deg_to_rad(56.0 * _strafe_sign)).normalized()
 
 
 func _process_patrol(delta: float) -> void:
@@ -262,8 +315,9 @@ func _process_patrol(delta: float) -> void:
 		_patrol_index = 1 - _patrol_index
 		_patrol_leg_timer = 0.0
 
-	var dir: Vector3 = to_target.normalized()
-	var spd: float = (profile.move_speed if profile != null else 3.4) * 0.80 * (1.28 if _speed_boost_timer > 0.0 else 1.0)
+	var diff_scales: Dictionary = _get_difficulty_scales()
+	var dir: Vector3 = _steer_around_obstacles(to_target.normalized())
+	var spd: float = (profile.move_speed if profile != null else 3.4) * 0.80 * float(diff_scales["speed"]) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
 	velocity.x = move_toward(velocity.x, dir.x * spd, 14.0 * delta)
 	velocity.z = move_toward(velocity.z, dir.z * spd, 14.0 * delta)
 	_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir.x, -dir.z), clampf(8.0 * delta, 0.0, 1.0))
@@ -296,10 +350,11 @@ func _process_engage(delta: float) -> void:
 	elif dist < 5.4:
 		radial_factor = -0.75
 
+	var diff_scales: Dictionary = _get_difficulty_scales()
 	var move_dir: Vector3 = (strafe_vec * 0.75 + dir_to_target * radial_factor)
 	if move_dir.length_squared() > 0.001:
-		move_dir = move_dir.normalized()
-	var spd: float = (profile.move_speed if profile != null else 3.4) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
+		move_dir = _steer_around_obstacles(move_dir.normalized())
+	var spd: float = (profile.move_speed if profile != null else 3.4) * float(diff_scales["speed"]) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
 	velocity.x = move_toward(velocity.x, move_dir.x * spd, 16.0 * delta)
 	velocity.z = move_toward(velocity.z, move_dir.z * spd, 16.0 * delta)
 
@@ -307,7 +362,7 @@ func _process_engage(delta: float) -> void:
 	if _fire_timer <= 0.0:
 		var is_scout: bool = (profile != null and profile.profile_id == &"scout_drone")
 		var is_heavy: bool = (profile != null and profile.profile_id == &"heavy_sentinel")
-		_fire_timer = fire_cooldown * (0.72 if is_scout else (1.28 if is_heavy else 1.0))
+		_fire_timer = fire_cooldown * float(diff_scales["cooldown"]) * (0.72 if is_scout else (1.28 if is_heavy else 1.0))
 		_fire_energy_bolt(dir_to_target)
 
 
@@ -373,13 +428,20 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 		if collider != null and collider.has_method("take_damage"):
 			var target_team: Variant = collider.get("team_id")
 			if target_team == null or int(target_team) != team_id:
-				collider.call("take_damage", dmg, team_id)
+				var hit_dmg: float = dmg * (2.0 if is_heavy else 1.0)
+				if collider is PlayerController:
+					collider.call("take_damage", hit_dmg, team_id, torso_origin)
+				elif collider is ExplosiveCrate or collider is ArenaBot:
+					collider.call("take_damage", hit_dmg, team_id, false)
+				else:
+					collider.call("take_damage", hit_dmg, team_id)
 		var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 		if flash is ImpactFlash:
 			(flash as ImpactFlash).trigger(hit_pos, bolt_col)
 	else:
+		var diff_scales: Dictionary = _get_difficulty_scales()
 		var precision: float = profile.aim_precision if profile != null else 0.72
-		var max_err_rad: float = deg_to_rad((1.0 - precision) * 14.0)
+		var max_err_rad: float = deg_to_rad((1.0 - precision) * 14.0) * float(diff_scales["error"])
 		var offsets_deg: Array[float] = [0.0]
 		if is_heavy:
 			offsets_deg = [-4.5, 4.5]

@@ -14,6 +14,8 @@ const DASH_SFX_PATH: String = "res://assets/audio/sfx_dash_whoosh.wav"
 const HITMARKER_SFX_PATH: String = "res://assets/audio/sfx_hitmarker.wav"
 const VICTORY_SFX_PATH: String = "res://assets/audio/sfx_match_victory.wav"
 const DEFEAT_SFX_PATH: String = "res://assets/audio/sfx_match_defeat.wav"
+const BOMB_THROW_SFX_PATH: String = "res://assets/audio/sfx_bomb_throw.wav"
+const BOMB_EXPLODE_SFX_PATH: String = "res://assets/audio/sfx_bomb_explode.wav"
 
 const MAX_UI_PLAYERS: int = 4
 const MAX_SFX_PLAYERS: int = 12
@@ -218,6 +220,14 @@ func play_hitmarker_sfx(is_kill: bool = false) -> void:
 
 func play_match_end_sfx(won: bool) -> void:
 	play_sfx_path(VICTORY_SFX_PATH if won else DEFEAT_SFX_PATH, 1.0, 0.0)
+
+
+func play_bomb_throw_sfx() -> void:
+	play_sfx_path(BOMB_THROW_SFX_PATH, randf_range(0.95, 1.05), -2.0)
+
+
+func play_bomb_explode_sfx() -> void:
+	play_sfx_path(BOMB_EXPLODE_SFX_PATH, randf_range(0.93, 1.04), 0.5)
 
 
 func play_ui_click(pitch_scale: float = 1.0) -> void:

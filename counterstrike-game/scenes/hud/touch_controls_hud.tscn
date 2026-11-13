@@ -1,10 +1,12 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/touch_controls_hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/virtual_joystick.gd" id="2_stick"]
 [ext_resource type="Script" path="res://scripts/ui/touch_fire_pad.gd" id="3_firepad"]
 [ext_resource type="Script" path="res://scripts/ui/touch_action_button.gd" id="4_actionbtn"]
 [ext_resource type="FontFile" path="res://assets/fonts/Vazirmatn-Bold.ttf" id="5_vazir_bold"]
+[ext_resource type="Script" path="res://scripts/ui/tactical_radar.gd" id="6_radar"]
+[ext_resource type="Script" path="res://scripts/ui/hit_direction_indicator.gd" id="7_hitdir"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
 content_margin_left = 10.0
@@ -111,6 +113,16 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(0.937255, 0.266667, 0.266667, 0)
+
+[node name="HitDirectionIndicator" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_hitdir")
 
 [node name="HitmarkerLabel" type="Label" parent="."]
 visible = false
@@ -352,10 +364,10 @@ mouse_filter = 2
 [node name="TouchControlsRow" type="HBoxContainer" parent="BottomSafeMargin"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 20
 
 [node name="LeftMoveStick" type="Control" parent="BottomSafeMargin/TouchControlsRow"]
-custom_minimum_size = Vector2(360, 260)
+custom_minimum_size = Vector2(340, 260)
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("2_stick")
@@ -365,11 +377,27 @@ max_radius = 74.0
 knob_radius = 28.0
 
 [node name="CenterGap" type="Control" parent="BottomSafeMargin/TouchControlsRow"]
-custom_minimum_size = Vector2(120, 0)
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 0.48
+size_flags_stretch_ratio = 0.52
 mouse_filter = 2
+
+[node name="TacticalRadar" type="Control" parent="BottomSafeMargin/TouchControlsRow/CenterGap"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -78.0
+offset_top = -120.0
+offset_right = 78.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("6_radar")
 
 [node name="RightZoneOverlay" type="Control" parent="BottomSafeMargin/TouchControlsRow"]
 custom_minimum_size = Vector2(360, 260)
@@ -398,30 +426,37 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -316.0
+offset_left = -364.0
 offset_top = 8.0
 offset_right = -10.0
 offset_bottom = 52.0
 grow_horizontal = 0
 mouse_filter = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 7
+
+[node name="BtnBomb" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
+custom_minimum_size = Vector2(76, 44)
+layout_mode = 2
+script = ExtResource("4_actionbtn")
+title_text = "بمب"
+accent_color = Color(0.984314, 0.74902, 0.141176, 1)
 
 [node name="BtnDash" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(88, 44)
+custom_minimum_size = Vector2(76, 44)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "جهش"
 accent_color = Color(0.0627451, 0.72549, 0.505882, 1)
 
 [node name="BtnRecharge" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(94, 44)
+custom_minimum_size = Vector2(82, 44)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "شارژ"
 accent_color = Color(0.984314, 0.572549, 0.235294, 1)
 
 [node name="BtnSwitchBlaster" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(106, 44)
+custom_minimum_size = Vector2(98, 44)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "تغییر سلاح"

@@ -39,9 +39,10 @@ const BLASTER_PATHS: Dictionary = {
 @onready var _aim_mode_btn: Button = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnAimMode
 @onready var _sensitivity_btn: Button = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnSensitivity
 @onready var _cam_preset_btn: Button = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/CameraAudioRow/BtnCamPreset
-@onready var _volume_btn: Button = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/CameraAudioRow/BtnVolume
+@onready var _difficulty_btn: Button = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/CameraAudioRow/BtnDifficulty
 @onready var _music_btn: Button = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnMusic
 @onready var _sfx_btn: Button = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnSfx
+@onready var _volume_btn: Button = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnVolume
 @onready var _rank_label: Label = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/RankCard/RankVBox/RankLabel
 @onready var _rank_xp_bar: ProgressBar = $SafeMargin/MainLayout/ContentRow/DetailColumn/SettingsPanel/SettingsMargin/SettingsVBox/RankCard/RankVBox/RankXpBar
 @onready var _status_label: Label = $SafeMargin/MainLayout/FooterBar/StatusLabel
@@ -117,14 +118,23 @@ func _refresh_ui() -> void:
 				_cam_preset_btn.text = "دوربین: کلاسیک ۵۷.۵°"
 
 	if _volume_btn != null:
-		_volume_btn.text = "بلندی صدا: %d٪" % int(round(SaveManager.master_volume * 100.0))
+		_volume_btn.text = "بلندی: %d٪" % int(round(SaveManager.master_volume * 100.0))
+
+	if _difficulty_btn != null:
+		match SaveManager.bot_difficulty:
+			"easy":
+				_difficulty_btn.text = "سختی حریف: آسان"
+			"hard":
+				_difficulty_btn.text = "سختی حریف: حرفه‌ای"
+			_:
+				_difficulty_btn.text = "سختی حریف: متعادل"
 
 	if _music_btn != null:
 		_music_btn.button_pressed = SaveManager.music_enabled
 		_music_btn.text = "موسیقی: روشن" if SaveManager.music_enabled else "موسیقی: خاموش"
 
 	_sfx_btn.button_pressed = SaveManager.sfx_enabled
-	_sfx_btn.text = "افکت صوتی: روشن" if SaveManager.sfx_enabled else "افکت صوتی: خاموش"
+	_sfx_btn.text = "افکت: روشن" if SaveManager.sfx_enabled else "افکت: خاموش"
 
 	if _select_map_btn != null:
 		_select_map_btn.text = "نقشه: بخش ۰۲ (دژ مرکزی)" if SaveManager.selected_map_id == "sector_02" else "نقشه: بخش ۰۱ (پایگاه فولادی)"
@@ -158,17 +168,25 @@ func _refresh_ui() -> void:
 		"high":
 			quality_fa = "زیاد"
 
+	var diff_fa: String = "متعادل"
+	match SaveManager.bot_difficulty:
+		"easy":
+			diff_fa = "آسان"
+		"hard":
+			diff_fa = "حرفه‌ای"
+
 	var win_pct: int = 0
 	if SaveManager.total_matches > 0:
 		win_pct = int(round((float(SaveManager.total_wins) / float(SaveManager.total_matches)) * 100.0))
 
-	_status_label.text = "رتبه %d (%s) | %d نبرد • %d پیروزی (%d٪) • %d حذف  |  %d FPS • کیفیت: %s" % [
+	_status_label.text = "رتبه %d (%s) | %d نبرد • %d پیروزی (%d٪) • %d حذف  |  حریف: %s • %d FPS • کیفیت: %s" % [
 		int(rank["level"]),
 		str(rank["title_fa"]),
 		SaveManager.total_matches,
 		SaveManager.total_wins,
 		win_pct,
 		SaveManager.total_eliminations,
+		diff_fa,
 		fps_target,
 		quality_fa
 	]
@@ -372,6 +390,20 @@ func _on_btn_cam_preset_pressed() -> void:
 		_:
 			next_cam = "classic"
 	GameManager.set_camera_preset(next_cam)
+	_refresh_ui()
+
+
+func _on_btn_difficulty_pressed() -> void:
+	AudioManager.play_ui_menu()
+	var next_diff: String = "balanced"
+	match SaveManager.bot_difficulty:
+		"easy":
+			next_diff = "balanced"
+		"balanced":
+			next_diff = "hard"
+		_:
+			next_diff = "easy"
+	GameManager.set_bot_difficulty(next_diff)
 	_refresh_ui()
 
 

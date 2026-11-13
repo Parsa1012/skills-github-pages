@@ -7,6 +7,7 @@ signal player_defeated(attacker_team: int)
 const DASH_DURATION: float = 0.18
 const DASH_SPEED: float = 14.8
 const DASH_COOLDOWN: float = 2.4
+const BOMB_COOLDOWN: float = 6.0
 
 @export var team_id: int = 0
 @export var walk_speed: float = 3.9
@@ -63,6 +64,8 @@ var _dash_timer: float = 0.0
 var _dash_cooldown: float = 0.0
 var _dash_dir: Vector3 = Vector3.FORWARD
 var _dash_emit_timer: float = 0.0
+var _bomb_cooldown: float = 0.0
+var _bomb_emit_timer: float = 0.0
 var _buff_emit_timer: float = 0.0
 var _aura_pulse_time: float = 0.0
 var _step_timer: float = 0.0
@@ -86,9 +89,11 @@ func _ready() -> void:
 	EventBus.blaster_switch_requested.connect(switch_next_blaster)
 	EventBus.blaster_recharge_requested.connect(start_recharge)
 	EventBus.player_dash_requested.connect(trigger_dash)
+	EventBus.player_bomb_requested.connect(trigger_bomb)
 	_emit_stats()
 	EventBus.player_buff_updated.emit(0.0, 0.0)
 	EventBus.player_dash_updated.emit(0.0, DASH_COOLDOWN, true)
+	EventBus.player_bomb_updated.emit(0.0, BOMB_COOLDOWN, true)
 
 
 func _exit_tree() -> void:
@@ -98,10 +103,20 @@ func _exit_tree() -> void:
 		EventBus.blaster_recharge_requested.disconnect(start_recharge)
 	if EventBus.player_dash_requested.is_connected(trigger_dash):
 		EventBus.player_dash_requested.disconnect(trigger_dash)
+	if EventBus.player_bomb_requested.is_connected(trigger_bomb):
+		EventBus.player_bomb_requested.disconnect(trigger_bomb)
 
 
 func is_alive() -> bool:
 	return _alive
+
+
+func is_dashing() -> bool:
+	return _alive and _dash_timer > 0.05
+
+
+func get_facing_yaw() -> float:
+	return _facing_yaw
 
 
 func _resolve_references() -> void:
@@ -268,6 +283,26 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			start_recharge()
 		elif key_ev.keycode == KEY_SHIFT:
 			trigger_dash()
+		elif key_ev.keycode == KEY_G or key_ev.keycode == KEY_E:
+			trigger_bomb()
+
+
+func trigger_bomb() -> bool:
+	if not _alive or _bomb_cooldown > 0.0:
+		return false
+	var forward_dir := Vector3(-sin(_facing_yaw), 0.0, -cos(_facing_yaw)).normalized()
+	var spawn_pos: Vector3 = global_position + Vector3(0.0, 1.05, 0.0) + forward_dir * 0.55
+	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+	var bomb: Node = PoolManager.acquire(PulseBomb.POOL_ID, proj_parent)
+	if not (bomb is PulseBomb):
+		return false
+	var dmg_mult: float = 1.35 if _damage_boost_timer > 0.0 else 1.0
+	(bomb as PulseBomb).launch(spawn_pos, forward_dir, team_id, self, true, dmg_mult)
+	_bomb_cooldown = BOMB_COOLDOWN
+	_bomb_emit_timer = 0.0
+	AudioManager.play_bomb_throw_sfx()
+	EventBus.player_bomb_updated.emit(_bomb_cooldown, BOMB_COOLDOWN, false)
+	return true
 
 
 func trigger_dash() -> bool:
@@ -339,6 +374,16 @@ func _physics_process(delta: float) -> void:
 		elif _dash_emit_timer >= 0.16:
 			_dash_emit_timer = 0.0
 			EventBus.player_dash_updated.emit(_dash_cooldown, DASH_COOLDOWN, false)
+
+	if _bomb_cooldown > 0.0:
+		_bomb_cooldown = maxf(0.0, _bomb_cooldown - delta)
+		_bomb_emit_timer += delta
+		if _bomb_cooldown <= 0.0:
+			_bomb_emit_timer = 0.0
+			EventBus.player_bomb_updated.emit(0.0, BOMB_COOLDOWN, true)
+		elif _bomb_emit_timer >= 0.22:
+			_bomb_emit_timer = 0.0
+			EventBus.player_bomb_updated.emit(_bomb_cooldown, BOMB_COOLDOWN, false)
 
 	if _dash_timer > 0.0:
 		_dash_timer = maxf(0.0, _dash_timer - delta)
@@ -458,7 +503,7 @@ func _try_fire(horiz_speed: float) -> void:
 			var target_team: Variant = collider.get("team_id")
 			if target_team == null or int(target_team) != team_id:
 				var total_dmg: float = b.energy_damage * dmg_mult * float(b.pellets_per_shot)
-				if collider is ArenaBot:
+				if collider is ArenaBot or collider is ExplosiveCrate:
 					collider.call("take_damage", total_dmg, team_id, true)
 				else:
 					collider.call("take_damage", total_dmg, team_id)
@@ -548,7 +593,7 @@ func _update_buff_aura(delta: float) -> void:
 		_buff_aura_mat.albedo_color = Color(0.658824, 0.333333, 0.968627, 0.75)
 
 
-func take_damage(amount: float, attacker_team: int) -> void:
+func take_damage(amount: float, attacker_team: int, attacker_pos: Vector3 = Vector3.INF) -> void:
 	if not _alive or attacker_team == team_id or _dash_timer > 0.05:
 		return
 	_time_since_damage = 0.0
@@ -557,6 +602,11 @@ func take_damage(amount: float, attacker_team: int) -> void:
 	AudioManager.play_player_hit_sfx()
 	EventBus.camera_trauma_requested.emit(0.24)
 	EventBus.player_damaged_feedback.emit(_hp / maxf(max_hp, 1.0))
+	if attacker_pos.is_finite():
+		var dx: float = attacker_pos.x - global_position.x
+		var dz: float = attacker_pos.z - global_position.z
+		if (dx * dx + dz * dz) > 0.01:
+			EventBus.player_damaged_direction.emit(atan2(dx, -dz))
 	_emit_stats()
 	if _hp <= 0.0:
 		_enter_respawn(attacker_team)
@@ -626,9 +676,11 @@ func _respawn() -> void:
 	_recharging = false
 	_dash_timer = 0.0
 	_dash_cooldown = 0.0
+	_bomb_cooldown = 0.0
 	_time_since_damage = 10.0
 	_death_hide_timer = 0.0
 	EventBus.player_dash_updated.emit(0.0, DASH_COOLDOWN, true)
+	EventBus.player_bomb_updated.emit(0.0, BOMB_COOLDOWN, true)
 	var b: EnergyBlasterData = _get_active_blaster()
 	if b != null:
 		_current_energy = b.energy_cell_capacity
