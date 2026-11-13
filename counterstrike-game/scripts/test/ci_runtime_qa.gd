@@ -243,16 +243,16 @@ func _process(_delta: float) -> void:
 			if active_bombs.size() >= 1:
 				_assert(active_bombs[0].get_node_or_null("GrenadeModel") != null, "GrenadeModel missing on PulseBomb")
 
-			# Cycle all 4 military weapons (M4: 24, UZI: 36, M870: 8, AWP: 5)
+			# Cycle all 4 military weapons (M4: 24, UZI: 34, M870: 10, AWP: 6)
 			_assert(player._current_energy == 24, "Expected M4 24 ammo, got %d" % player._current_energy)
 			player.switch_next_blaster()
-			_assert(player._current_energy == 36, "Expected UZI 36 ammo, got %d" % player._current_energy)
+			_assert(player._current_energy == 34, "Expected UZI 34 ammo, got %d" % player._current_energy)
 			player.switch_next_blaster()
-			_assert(player._current_energy == 8, "Expected Shotgun M870 8 ammo, got %d" % player._current_energy)
+			_assert(player._current_energy == 10, "Expected Shotgun M870 10 ammo, got %d" % player._current_energy)
 			player.switch_next_blaster()
-			_assert(player._current_energy == 5, "Expected Sniper AWP 5 ammo, got %d" % player._current_energy)
+			_assert(player._current_energy == 6, "Expected Sniper AWP 6 ammo, got %d" % player._current_energy)
 			player._try_fire(0.0)
-			_assert(player._current_energy == 4, "Expected Sniper AWP 4 ammo after shot, got %d" % player._current_energy)
+			_assert(player._current_energy == 5, "Expected Sniper AWP 5 ammo after shot, got %d" % player._current_energy)
 			player.switch_next_blaster()
 			_assert(player._current_energy == 24, "Expected M4 24 after cycling all 4")
 

@@ -190,7 +190,7 @@ jobs:
               lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
               for i, line in enumerate(lines):
                   if any(k in line for k in ("ERROR:", "SCRIPT ERROR", "Parse Error", "QA_FAIL")):
-                      ctx = line
+                      ctx = (lines[i - 1].strip() + " || " if i > 0 and lines[i - 1].strip() else "") + line
                       for j in range(i + 1, min(i + 3, len(lines))):
                           if lines[j].strip():
                               ctx += " | " + lines[j].strip()

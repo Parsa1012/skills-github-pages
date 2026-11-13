@@ -76,6 +76,7 @@ func _exit_tree() -> void:
 	if EventBus.zone_captured.is_connected(_on_zone_captured):
 		EventBus.zone_captured.disconnect(_on_zone_captured)
 	PoolManager.clear_all_pools()
+	VisualFxUtils.clear_caches()
 
 
 func _process(delta: float) -> void:

@@ -3,6 +3,10 @@ extends Object
 ## ابزارهای بهینه‌سازی گرافیک ۶۰ فریم، متریال‌های PBR و تجهیز سربازان نظامی واقعی با کلاه‌خود و جلیقه ضدگلوله.
 
 
+static func clear_caches() -> void:
+	_box_mesh_cache.clear()
+
+
 static func make_unshaded_hdr_material(base_color: Color, alpha: float = 1.0, hdr_boost: float = 1.35) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -108,11 +112,18 @@ static func _apply_skin_pbr_recursive(node: Node, tex: Texture2D) -> void:
 		_apply_skin_pbr_recursive(ch, tex)
 
 
+static var _box_mesh_cache: Dictionary = {}
+
+
 static func _add_box_gear(parent: Node3D, gear_name: String, box_size: Vector3, pos: Vector3, mat: Material, cast_shadows: bool = false) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.name = gear_name
-	var bm := BoxMesh.new()
-	bm.size = box_size
+	var cache_key: String = "%.2f_%.2f_%.2f" % [box_size.x, box_size.y, box_size.z]
+	var bm: BoxMesh = _box_mesh_cache.get(cache_key, null) as BoxMesh
+	if bm == null:
+		bm = BoxMesh.new()
+		bm.size = box_size
+		_box_mesh_cache[cache_key] = bm
 	mi.mesh = bm
 	mi.position = pos
 	mi.material_override = mat

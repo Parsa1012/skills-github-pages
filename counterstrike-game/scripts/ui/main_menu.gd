@@ -204,8 +204,8 @@ func _refresh_ui() -> void:
 		_btn_sniper.button_pressed = (wid == "arc_railgun")
 
 	if weapon != null:
-		var total_dmg: int = int(round(weapon.damage * float(weapon.pellets)))
-		var rof: float = 1.0 / maxf(0.05, weapon.fire_interval)
+		var total_dmg: int = int(round(weapon.energy_damage * float(weapon.pellets_per_shot)))
+		var rof: float = 1.0 / maxf(0.05, weapon.pulse_cooldown)
 		if _home_weapon_title != null:
 			_home_weapon_title.text = weapon.display_name
 		if _home_weapon_stats != null:
