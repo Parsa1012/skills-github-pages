@@ -62,7 +62,7 @@ func _ready() -> void:
 	EventBus.score_updated.emit(_blue_score, _orange_score)
 	_report_timer_if_changed()
 	if _mode_config != null:
-		var map_label: String = "دژ مرکزی" if SaveManager.selected_map_id == "sector_02" else "پایگاه فولادی"
+		var map_label: String = "پایگاه کویری براوو" if SaveManager.selected_map_id == "sector_02" else "پایگاه نظامی آلفا"
 		EventBus.hud_toast_requested.emit(
 			"%s • %s (هدف: %d)" % [map_label, _mode_config.display_name, _target_score],
 			Color(0.219608, 0.741176, 0.972549, 1.0)
@@ -175,7 +175,7 @@ func _on_bot_defeated(bot: ArenaBot, attacker_team: int) -> void:
 	if bot != null and bot.team_id == attacker_team:
 		return
 
-	var bot_name_fa: String = bot.profile.display_name if (bot != null and bot.profile != null) else "پهپاد"
+	var bot_name_fa: String = bot.profile.display_name if (bot != null and bot.profile != null) else "سرباز"
 	if attacker_team == 0:
 		_blue_score += 1
 		if bot != null and bot.team_id == 1:
@@ -270,24 +270,19 @@ func _apply_quality_lighting(preset_name: String) -> void:
 		SaveManager.selected_map_id == "sector_02"
 	)
 	if _rim_light != null:
-		match preset_name:
-			"low":
-				_rim_light.light_energy = 0.45
-			"medium":
-				_rim_light.light_energy = 0.65
-			_:
-				_rim_light.light_energy = 0.82
+		# روی موبایل حذف نور دوم در کیفیت کم و متوسط سرعت رندر را به شکل محسوسی افزایش می‌دهد
+		_rim_light.visible = (preset_name == "high")
+		_rim_light.light_energy = 0.65
 	if _sun_light == null:
 		return
-	_sun_light.directional_shadow_max_distance = 44.0
-	_sun_light.shadow_bias = 0.04
+	_sun_light.directional_shadow_max_distance = 40.0
+	_sun_light.shadow_bias = 0.05
 	_sun_light.shadow_normal_bias = 1.2
-	match preset_name:
-		"low":
-			_sun_light.shadow_enabled = false
-		"medium":
-			_sun_light.shadow_enabled = true
-			_sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-		_:
-			_sun_light.shadow_enabled = true
-			_sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	var allow_shadow: bool = SaveManager.shadows_enabled and (preset_name != "low")
+	_sun_light.shadow_enabled = allow_shadow
+	if allow_shadow:
+		_sun_light.directional_shadow_mode = (
+			DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+			if preset_name == "high"
+			else DirectionalLight3D.SHADOW_ORTHOGONAL
+		)

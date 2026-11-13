@@ -1,29 +1,36 @@
 extends Node
-## ذخیره آفلاین و ایمن تنظیمات، پیشرفت، رتبه و آمار بازیکن با استفاده از Godot ConfigFile.
+## ذخیره آفلاین و ایمن تنظیمات گرافیک، کنترل، صدا و کارنامه نبرد بازیکن.
 
 const SETTINGS_PATH: String = "user://arena_settings.cfg"
 
 const RANK_THRESHOLDS: Array[Dictionary] = [
 	{"level": 1, "xp": 0, "title": "سرباز تازه‌کار"},
-	{"level": 2, "xp": 200, "title": "تکاور میدان"},
-	{"level": 3, "xp": 500, "title": "فرمانده تاکتیکی"},
-	{"level": 4, "xp": 950, "title": "شکارچی انرژی"},
-	{"level": 5, "xp": 1500, "title": "افسانه آرنا"}
+	{"level": 2, "xp": 200, "title": "تکاور خط‌مقدم"},
+	{"level": 3, "xp": 500, "title": "فرمانده عملیات"},
+	{"level": 4, "xp": 950, "title": "شکارچی نخبگان"},
+	{"level": 5, "xp": 1500, "title": "افسانه کانتر آرنا"}
 ]
 
-var target_fps: int = 30
+var target_fps: int = 60
 var quality_preset: String = "medium"
+var render_scale: float = 0.85
+var shadows_enabled: bool = true
+var show_fps: bool = false
+
 var aim_fire_mode: String = "twin_stick" # "twin_stick" | "fire_button"
+var joystick_sensitivity: float = 1.0 # 0.85 | 1.0 | 1.25
+var camera_preset: String = "classic" # "classic" | "tactical" | "close"
+var camera_shake_enabled: bool = true
+var haptics_enabled: bool = true
+
 var selected_mode_id: String = "zone_control" # "zone_control" | "team_score_rush" | "zone_blitz"
 var selected_map_id: String = "sector_01" # "sector_01" | "sector_02"
 var starting_blaster_id: String = "pulse_blaster" # "pulse_blaster" | "rapid_repeater" | "plasma_scatter" | "arc_railgun"
-var camera_preset: String = "classic" # "classic" | "tactical" | "close"
-var joystick_sensitivity: float = 1.0 # 1.0 | 1.25
 var bot_difficulty: String = "balanced" # "easy" | "balanced" | "hard"
 
 var master_volume: float = 0.85
-var music_volume: float = 0.70
-var sfx_volume: float = 0.85
+var music_volume: float = 0.72
+var sfx_volume: float = 0.90
 var ui_volume: float = 0.85
 var music_enabled: bool = true
 var sfx_enabled: bool = true
@@ -46,16 +53,20 @@ func load_settings() -> void:
 		apply_defaults()
 		return
 
-	target_fps = clampi(int(config.get_value("performance", "target_fps", 30)), 30, 60)
-	if target_fps != 30 and target_fps != 60:
-		target_fps = 30
+	var loaded_fps: int = int(config.get_value("performance", "target_fps", 60))
+	target_fps = loaded_fps if loaded_fps in [30, 45, 60] else 60
 
 	var loaded_preset: String = str(config.get_value("performance", "quality_preset", "medium"))
 	quality_preset = loaded_preset if loaded_preset in ["low", "medium", "high"] else "medium"
+	render_scale = clampf(float(config.get_value("performance", "render_scale", 0.85)), 0.65, 1.0)
+	shadows_enabled = bool(config.get_value("performance", "shadows_enabled", true))
+	show_fps = bool(config.get_value("performance", "show_fps", false))
 
 	var loaded_aim_mode: String = str(config.get_value("controls", "aim_fire_mode", "twin_stick"))
 	aim_fire_mode = loaded_aim_mode if loaded_aim_mode in ["twin_stick", "fire_button"] else "twin_stick"
 	joystick_sensitivity = clampf(float(config.get_value("controls", "joystick_sensitivity", 1.0)), 0.85, 1.35)
+	camera_shake_enabled = bool(config.get_value("controls", "camera_shake_enabled", true))
+	haptics_enabled = bool(config.get_value("controls", "haptics_enabled", true))
 
 	var loaded_cam: String = str(config.get_value("camera", "camera_preset", "classic"))
 	camera_preset = loaded_cam if loaded_cam in ["classic", "tactical", "close"] else "classic"
@@ -73,8 +84,8 @@ func load_settings() -> void:
 	bot_difficulty = loaded_diff if loaded_diff in ["easy", "balanced", "hard"] else "balanced"
 
 	master_volume = clampf(float(config.get_value("audio", "master_volume", 0.85)), 0.0, 1.0)
-	music_volume = clampf(float(config.get_value("audio", "music_volume", 0.70)), 0.0, 1.0)
-	sfx_volume = clampf(float(config.get_value("audio", "sfx_volume", 0.85)), 0.0, 1.0)
+	music_volume = clampf(float(config.get_value("audio", "music_volume", 0.72)), 0.0, 1.0)
+	sfx_volume = clampf(float(config.get_value("audio", "sfx_volume", 0.90)), 0.0, 1.0)
 	ui_volume = clampf(float(config.get_value("audio", "ui_volume", 0.85)), 0.0, 1.0)
 	music_enabled = bool(config.get_value("audio", "music_enabled", true))
 	sfx_enabled = bool(config.get_value("audio", "sfx_enabled", true))
@@ -90,8 +101,13 @@ func save_settings() -> void:
 	var config := ConfigFile.new()
 	config.set_value("performance", "target_fps", target_fps)
 	config.set_value("performance", "quality_preset", quality_preset)
+	config.set_value("performance", "render_scale", render_scale)
+	config.set_value("performance", "shadows_enabled", shadows_enabled)
+	config.set_value("performance", "show_fps", show_fps)
 	config.set_value("controls", "aim_fire_mode", aim_fire_mode)
 	config.set_value("controls", "joystick_sensitivity", joystick_sensitivity)
+	config.set_value("controls", "camera_shake_enabled", camera_shake_enabled)
+	config.set_value("controls", "haptics_enabled", haptics_enabled)
 	config.set_value("camera", "camera_preset", camera_preset)
 	config.set_value("match", "selected_mode_id", selected_mode_id)
 	config.set_value("match", "selected_map_id", selected_map_id)
@@ -111,22 +127,32 @@ func save_settings() -> void:
 	config.save(SETTINGS_PATH)
 
 
-func apply_defaults() -> void:
-	target_fps = 30
+func reset_settings_keep_career() -> void:
+	target_fps = 60
 	quality_preset = "medium"
+	render_scale = 0.85
+	shadows_enabled = true
+	show_fps = false
 	aim_fire_mode = "twin_stick"
 	joystick_sensitivity = 1.0
 	camera_preset = "classic"
-	selected_mode_id = "zone_control"
-	selected_map_id = "sector_01"
-	starting_blaster_id = "pulse_blaster"
+	camera_shake_enabled = true
+	haptics_enabled = true
 	bot_difficulty = "balanced"
 	master_volume = 0.85
-	music_volume = 0.70
-	sfx_volume = 0.85
+	music_volume = 0.72
+	sfx_volume = 0.90
 	ui_volume = 0.85
 	music_enabled = true
 	sfx_enabled = true
+	save_settings()
+
+
+func apply_defaults() -> void:
+	reset_settings_keep_career()
+	selected_mode_id = "zone_control"
+	selected_map_id = "sector_01"
+	starting_blaster_id = "pulse_blaster"
 	total_matches = 0
 	total_wins = 0
 	total_eliminations = 0

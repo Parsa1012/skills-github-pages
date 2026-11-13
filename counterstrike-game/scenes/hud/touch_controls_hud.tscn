@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/touch_controls_hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/virtual_joystick.gd" id="2_stick"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://scripts/ui/tactical_radar.gd" id="6_radar"]
 [ext_resource type="Script" path="res://scripts/ui/hit_direction_indicator.gd" id="7_hitdir"]
 [ext_resource type="Script" path="res://scripts/ui/damage_numbers_overlay.gd" id="8_dmgnums"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_weapon_m4.png" id="9_icon_m4"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
 content_margin_left = 10.0
@@ -229,6 +230,20 @@ theme_override_font_sizes/font_size = 14
 text = "02:00"
 vertical_alignment = 1
 
+[node name="FpsBadge" type="PanelContainer" parent="TopSafeMargin/TopHudBar"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="FpsLabel" type="Label" parent="TopSafeMargin/TopHudBar/FpsBadge"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.290196, 0.870588, 0.501961, 1)
+theme_override_fonts/font = ExtResource("5_vazir_bold")
+theme_override_font_sizes/font_size = 13
+text = "60 FPS"
+vertical_alignment = 1
+
 [node name="Spacer" type="Control" parent="TopSafeMargin/TopHudBar"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -253,24 +268,38 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
 
-[node name="StatsVBox" type="VBoxContainer" parent="TopSafeMargin/TopHudBar/StatsBadge"]
+[node name="StatsHBox" type="HBoxContainer" parent="TopSafeMargin/TopHudBar/StatsBadge"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="WeaponIconRect" type="TextureRect" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsHBox"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("9_icon_m4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="StatsVBox" type="VBoxContainer" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsHBox"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 3
 
-[node name="StatsLabel" type="Label" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsVBox"]
+[node name="StatsLabel" type="Label" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/StatsVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.901961, 0.960784, 1, 1)
 theme_override_font_sizes/font_size = 13
-text = "جان: 100/100 | پالس بلاستر: 16/16"
+text = "جان: 100/100 | کاربین M4: 24/24"
 vertical_alignment = 1
 
-[node name="BarsRow" type="HBoxContainer" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsVBox"]
+[node name="BarsRow" type="HBoxContainer" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/StatsVBox"]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 6
 
-[node name="HpBar" type="ProgressBar" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow"]
+[node name="HpBar" type="ProgressBar" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/StatsVBox/BarsRow"]
 custom_minimum_size = Vector2(96, 6)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -280,15 +309,15 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_hp_fill")
 value = 100.0
 show_percentage = false
 
-[node name="EnergyBar" type="ProgressBar" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow"]
+[node name="EnergyBar" type="ProgressBar" parent="TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/StatsVBox/BarsRow"]
 custom_minimum_size = Vector2(96, 6)
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_bar_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_energy_fill")
-max_value = 16.0
-value = 16.0
+max_value = 24.0
+value = 24.0
 show_percentage = false
 
 [node name="KillFeedPanel" type="PanelContainer" parent="."]
@@ -483,9 +512,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -210.0
-offset_top = -220.0
+offset_top = -248.0
 offset_right = 210.0
-offset_bottom = 220.0
+offset_bottom = 248.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_overlay_card")
@@ -521,6 +550,12 @@ custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "حالت: دو جوی‌استیک"
+
+[node name="BtnPauseFps" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "نمایش FPS: خاموش"
 
 [node name="PauseAudioRow" type="HBoxContainer" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
 layout_mode = 2
@@ -619,6 +654,7 @@ text = "بازگشت به منوی اصلی"
 [connection signal="pressed" from="TopSafeMargin/TopHudBar/BtnPause" to="." method="_on_btn_pause_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnResume" to="." method="_on_btn_resume_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseAimMode" to="." method="_on_btn_aim_mode_pressed"]
+[connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseFps" to="." method="_on_btn_pause_fps_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseMusic" to="." method="_on_btn_pause_music_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseSfx" to="." method="_on_btn_pause_sfx_pressed"]
 [connection signal="pressed" from="PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseRestart" to="." method="_on_btn_restart_pressed"]

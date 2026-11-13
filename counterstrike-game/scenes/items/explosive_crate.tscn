@@ -1,13 +1,17 @@
 [gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/items/explosive_crate.gd" id="1_crate"]
-[ext_resource type="PackedScene" path="res://assets/kenney/platformer/brick.glb" id="2_brick"]
+[ext_resource type="PackedScene" path="res://assets/kenney/survival/barrel.glb" id="2_barrel"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_crate"]
-size = Vector3(1.16, 1.16, 1.16)
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_barrel"]
+radius = 0.45
+height = 1.12
 
-[sub_resource type="BoxMesh" id="BoxMesh_band"]
-size = Vector3(1.20, 0.18, 1.20)
+[sub_resource type="CylinderMesh" id="CylinderMesh_band"]
+top_radius = 0.395
+bottom_radius = 0.395
+height = 0.16
+radial_segments = 16
 
 [node name="ExplosiveCrate" type="StaticBody3D"]
 collision_layer = 3
@@ -15,15 +19,15 @@ collision_mask = 0
 script = ExtResource("1_crate")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)
-shape = SubResource("BoxShape3D_crate")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.56, 0)
+shape = SubResource("CylinderShape3D_barrel")
 
 [node name="VisualRoot" type="Node3D" parent="."]
 
-[node name="Model" parent="VisualRoot" instance=ExtResource("2_brick")]
-transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 0, 0, 0)
+[node name="Model" parent="VisualRoot" instance=ExtResource("2_barrel")]
+transform = Transform3D(3.2, 0, 0, 0, 3.2, 0, 0, 0, 3.2, 0, 0, 0)
 
 [node name="WarningBandMesh" type="MeshInstance3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.60, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.56, 0)
 cast_shadow = 0
-mesh = SubResource("BoxMesh_band")
+mesh = SubResource("CylinderMesh_band")

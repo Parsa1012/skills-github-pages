@@ -1,7 +1,7 @@
 [gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/ai/arena_bot.gd" id="1_bot"]
-[ext_resource type="PackedScene" path="res://assets/kenney/platformer/character.glb" id="2_glb"]
+[ext_resource type="PackedScene" path="res://assets/kenney/blocky_characters/character-j.glb" id="2_glb"]
 [ext_resource type="Resource" path="res://data/bots/ally_wingman.tres" id="3_profile"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_bot"]
@@ -41,7 +41,7 @@ script = ExtResource("1_bot")
 team_id = 0
 profile = ExtResource("3_profile")
 fire_cooldown = 0.8
-projectile_speed = 20.0
+projectile_speed = 24.0
 projectile_damage = 14.0
 hover_bob_enabled = false
 
@@ -60,13 +60,13 @@ surface_material_override/0 = SubResource("StandardMaterial3D_ring")
 [node name="ModelPivot" type="Node3D" parent="VisualRoot"]
 
 [node name="KenneyAlly" parent="VisualRoot/ModelPivot" instance=ExtResource("2_glb")]
-transform = Transform3D(-1.55, 0, 0, 0, 1.55, 0, 0, 0, -1.55, 0, 0, 0)
+transform = Transform3D(-0.62, 0, 0, 0, 0.62, 0, 0, 0, -0.62, 0, 0, 0)
 
 [node name="MuzzleLeft" type="Marker3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.38, 0.88, -0.62)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34, 1.06, -0.74)
 
 [node name="MuzzleRight" type="Marker3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.38, 0.88, -0.62)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34, 1.06, -0.74)
 
 [node name="HpBarPivot" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.5373, 0.843391, 0, -0.843391, 0.5373, 0, 2.02, 0)

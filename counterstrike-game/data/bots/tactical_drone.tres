@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_profile")
 profile_id = &"hover_sentinel"
-display_name = "پهپاد نگهبان"
+display_name = "سرباز خط‌مقدم"
 difficulty = 1
 max_shield = 100.0
 move_speed = 3.4

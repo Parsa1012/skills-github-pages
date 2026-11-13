@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_profile")
 profile_id = &"heavy_sentinel"
-display_name = "پهپاد سنگین"
+display_name = "کماندوی زرهی"
 difficulty = 2
 max_shield = 145.0
 move_speed = 2.75

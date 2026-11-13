@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_profile")
 profile_id = &"scout_drone"
-display_name = "پهپاد سریع"
+display_name = "تکاور پیشرو"
 difficulty = 0
 max_shield = 75.0
 move_speed = 4.35

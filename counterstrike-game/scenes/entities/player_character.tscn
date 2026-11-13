@@ -1,7 +1,7 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
-[ext_resource type="PackedScene" path="res://assets/kenney/mini_arena/character-soldier.glb" id="2_soldier"]
+[ext_resource type="PackedScene" path="res://assets/kenney/blocky_characters/character-j.glb" id="2_soldier"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.44
@@ -25,21 +25,14 @@ height = 0.04
 radial_segments = 24
 
 [sub_resource type="BoxMesh" id="BoxMesh_aim_beam"]
-size = Vector3(0.08, 0.02, 5.2)
+size = Vector3(0.07, 0.02, 5.2)
 
 [sub_resource type="BoxMesh" id="BoxMesh_aim_tip"]
 size = Vector3(0.28, 0.03, 0.28)
 
-[sub_resource type="BoxMesh" id="BoxMesh_badge"]
-size = Vector3(0.32, 0.12, 0.12)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_team_visor"]
-shading_mode = 0
-albedo_color = Color(0.42, 1.38, 1.85, 1)
-
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle_flash"]
-radius = 0.13
-height = 0.26
+radius = 0.14
+height = 0.28
 radial_segments = 10
 rings = 6
 
@@ -84,19 +77,13 @@ mesh = SubResource("BoxMesh_aim_tip")
 [node name="VisualRoot" type="Node3D" parent="."]
 
 [node name="KenneySoldier" parent="VisualRoot" instance=ExtResource("2_soldier")]
-transform = Transform3D(-1.85, 0, 0, 0, 1.85, 0, 0, 0, -1.85, 0, 0, 0)
-
-[node name="BlueVisorBeacon" type="MeshInstance3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.12, -0.31)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_badge")
-surface_material_override/0 = SubResource("StandardMaterial3D_team_visor")
+transform = Transform3D(-0.62, 0, 0, 0, 0.62, 0, 0, 0, -0.62, 0, 0, 0)
 
 [node name="WeaponMount" type="Node3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 0.5, -0.24)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34, 0.98, -0.44)
 
 [node name="MuzzleMarker" type="Marker3D" parent="VisualRoot/WeaponMount"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.24, -0.46)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, -0.48)
 
 [node name="MuzzleFlashMesh" type="MeshInstance3D" parent="VisualRoot/WeaponMount/MuzzleMarker"]
 visible = false

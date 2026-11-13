@@ -86,6 +86,8 @@ func _process(delta: float) -> void:
 
 
 func add_trauma(amount: float) -> void:
+	if not SaveManager.camera_shake_enabled:
+		return
 	_trauma = clampf(_trauma + amount, 0.0, 1.0)
 
 

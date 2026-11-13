@@ -1,16 +1,19 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
 
 [ext_resource type="Shader" path="res://assets/materials/arena_floor_grid.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" path="res://assets/materials/battlefield_asphalt.png" id="2_tex"]
 
 [resource]
 render_priority = 0
 shader = ExtResource("1_shader")
-shader_parameter/base_color = Color(0.101961, 0.0901961, 0.121569, 1)
-shader_parameter/alt_tile_color = Color(0.133333, 0.117647, 0.152941, 1)
-shader_parameter/grid_line_color = Color(0.588235, 0.415686, 0.239216, 1)
-shader_parameter/center_line_color = Color(0.984314, 0.572549, 0.235294, 1)
+shader_parameter/asphalt_tex = ExtResource("2_tex")
+shader_parameter/base_color = Color(0.68, 0.62, 0.52, 1)
+shader_parameter/alt_tile_color = Color(0.60, 0.54, 0.44, 1)
+shader_parameter/grid_line_color = Color(0.46, 0.40, 0.32, 1)
+shader_parameter/center_line_color = Color(0.92, 0.68, 0.22, 1)
 shader_parameter/blue_zone_tint = Color(0.160784, 0.54902, 0.901961, 1)
 shader_parameter/orange_zone_tint = Color(0.960784, 0.419608, 0.109804, 1)
-shader_parameter/tile_size = 2.0
+shader_parameter/tile_size = 4.0
 shader_parameter/arena_half_x = 17.0
 shader_parameter/arena_half_z = 12.0
+shader_parameter/show_center_line = 1.0

@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_profile")
 profile_id = &"ally_wingman"
-display_name = "هم‌تیمی تاکتیکی"
+display_name = "هم‌تیمی کماندو"
 difficulty = 1
 max_shield = 115.0
 move_speed = 3.75

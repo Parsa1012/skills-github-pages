@@ -1,5 +1,5 @@
 extends Node
-## هماهنگ‌کننده اصلی جلسه آفلاین، مدیریت نرخ فریم/کیفیت، نقشه، حالت مسابقه و جابه‌جایی بین صحنه‌ها.
+## هماهنگ‌کننده اصلی جلسه آفلاین، مدیریت نرخ فریم ۶۰، کیفیت گرافیک، نقشه و جابه‌جایی بین صحنه‌ها.
 
 enum AppState {
 	BOOT,
@@ -89,20 +89,21 @@ func _apply_viewport_quality_preset(preset: String) -> void:
 	if get_tree() == null or get_tree().root == null:
 		return
 	var root_vp: Viewport = get_tree().root
+	root_vp.scaling_3d_scale = clampf(SaveManager.render_scale, 0.65, 1.0)
 	match preset:
 		"low":
-			root_vp.scaling_3d_scale = 0.75
 			root_vp.msaa_3d = Viewport.MSAA_DISABLED
 		"high":
-			root_vp.scaling_3d_scale = 1.0
 			root_vp.msaa_3d = Viewport.MSAA_2X
 		_:
-			root_vp.scaling_3d_scale = 0.90
 			root_vp.msaa_3d = Viewport.MSAA_DISABLED
 
 
 func set_target_fps(fps: int) -> void:
-	SaveManager.target_fps = 60 if fps >= 60 else 30
+	if fps in [30, 45, 60]:
+		SaveManager.target_fps = fps
+	else:
+		SaveManager.target_fps = 60 if fps >= 50 else 30
 	SaveManager.save_settings()
 	apply_performance_settings()
 
@@ -110,8 +111,50 @@ func set_target_fps(fps: int) -> void:
 func set_quality_preset(preset: String) -> void:
 	if preset in ["low", "medium", "high"]:
 		SaveManager.quality_preset = preset
+		match preset:
+			"low":
+				SaveManager.render_scale = 0.72
+				SaveManager.shadows_enabled = false
+			"medium":
+				SaveManager.render_scale = 0.85
+				SaveManager.shadows_enabled = true
+			"high":
+				SaveManager.render_scale = 1.0
+				SaveManager.shadows_enabled = true
 		SaveManager.save_settings()
 		apply_performance_settings()
+
+
+func set_render_scale(scale_val: float) -> void:
+	SaveManager.render_scale = clampf(scale_val, 0.65, 1.0)
+	SaveManager.save_settings()
+	apply_performance_settings()
+
+
+func set_shadows_enabled(enabled: bool) -> void:
+	SaveManager.shadows_enabled = enabled
+	SaveManager.save_settings()
+	apply_performance_settings()
+
+
+func set_show_fps(enabled: bool) -> void:
+	SaveManager.show_fps = enabled
+	SaveManager.save_settings()
+
+
+func set_camera_shake_enabled(enabled: bool) -> void:
+	SaveManager.camera_shake_enabled = enabled
+	SaveManager.save_settings()
+
+
+func set_haptics_enabled(enabled: bool) -> void:
+	SaveManager.haptics_enabled = enabled
+	SaveManager.save_settings()
+
+
+func trigger_haptic(duration_ms: int = 20) -> void:
+	if SaveManager.haptics_enabled and DisplayServer.get_name().to_lower() != "headless":
+		Input.vibrate_handheld(duration_ms)
 
 
 func set_aim_fire_mode(mode: String) -> void:
@@ -160,6 +203,15 @@ func set_bot_difficulty(difficulty_id: String) -> void:
 		SaveManager.bot_difficulty = difficulty_id
 		SaveManager.save_settings()
 		EventBus.bot_difficulty_changed.emit(difficulty_id)
+
+
+func reset_settings_to_defaults() -> void:
+	SaveManager.reset_settings_keep_career()
+	_apply_camera_preset_settings(SaveManager.camera_preset)
+	AudioManager.apply_volumes()
+	apply_performance_settings()
+	EventBus.aim_fire_mode_changed.emit(SaveManager.aim_fire_mode)
+	EventBus.camera_settings_changed.emit()
 
 
 func get_starting_blaster_index() -> int:

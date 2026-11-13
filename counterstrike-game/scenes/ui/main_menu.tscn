@@ -1,27 +1,20 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
-[ext_resource type="FontFile" path="res://assets/fonts/Vazirmatn-Bold.ttf" id="2_vazir_bold"]
-[ext_resource type="PackedScene" path="res://scenes/ui/lobby_stage_3d.tscn" id="3_stage3d"]
+[ext_resource type="FontFile" path="res://assets/fonts/Vazirmatn-Bold.ttf" id="2_bold"]
+[ext_resource type="Texture2D" path="res://assets/ui/menu_war_backdrop.jpg" id="3_backdrop"]
+[ext_resource type="Texture2D" path="res://assets/ui/game_logo.png" id="4_logo"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_weapon_m4.png" id="5_m4"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_weapon_uzi.png" id="6_uzi"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_weapon_shotgun.png" id="7_shotgun"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_weapon_sniper.png" id="8_sniper"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass_panel"]
-bg_color = Color(0.0509804, 0.0784314, 0.141176, 0.8)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.219608, 0.741176, 0.972549, 0.48)
-corner_radius_top_left = 18
-corner_radius_top_right = 18
-corner_radius_bottom_right = 18
-corner_radius_bottom_left = 18
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass_pill"]
-content_margin_left = 12.0
-content_margin_top = 8.0
-content_margin_right = 12.0
-content_margin_bottom = 8.0
-bg_color = Color(0.0470588, 0.0745098, 0.137255, 0.82)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+content_margin_bottom = 12.0
+bg_color = Color(0.0470588, 0.0666667, 0.105882, 0.84)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -34,79 +27,95 @@ corner_radius_bottom_left = 14
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_subcard"]
 content_margin_left = 12.0
-content_margin_top = 9.0
+content_margin_top = 10.0
 content_margin_right = 12.0
-content_margin_bottom = 9.0
-bg_color = Color(0.0352941, 0.0588235, 0.109804, 0.84)
+content_margin_bottom = 10.0
+bg_color = Color(0.0705882, 0.0980392, 0.152941, 0.86)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.258824, 0.388235, 0.588235, 0.45)
+border_color = Color(0.258824, 0.360784, 0.501961, 0.48)
 corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rank_crest"]
-bg_color = Color(0.984314, 0.572549, 0.235294, 0.92)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_logo_bg"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.0509804, 0.0823529, 0.14902, 0.96)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.996078, 0.835294, 0.431373, 1)
+border_color = Color(0.960784, 0.619608, 0.0431373, 0.9)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rank_crest"]
+bg_color = Color(0.960784, 0.619608, 0.0431373, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.886275, 0.521569, 1)
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary_btn"]
-content_margin_left = 18.0
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cta"]
+content_margin_left = 20.0
 content_margin_top = 10.0
-content_margin_right = 18.0
+content_margin_right = 20.0
 content_margin_bottom = 10.0
-bg_color = Color(0.054902, 0.647059, 0.913725, 0.98)
+bg_color = Color(0.917647, 0.345098, 0.0470588, 0.98)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.54902, 0.898039, 1, 1)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+border_color = Color(0.984314, 0.74902, 0.141176, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_primary_btn_hover"]
-content_margin_left = 18.0
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cta_hover"]
+content_margin_left = 20.0
 content_margin_top = 10.0
-content_margin_right = 18.0
+content_margin_right = 20.0
 content_margin_bottom = 10.0
-bg_color = Color(0.113725, 0.72549, 0.988235, 1)
+bg_color = Color(0.976471, 0.45098, 0.0862745, 1)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.84, 0.96, 1, 1)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+border_color = Color(1, 0.89, 0.45, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_weapon_pill"]
-content_margin_left = 10.0
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pill"]
+content_margin_left = 12.0
 content_margin_top = 6.0
-content_margin_right = 10.0
+content_margin_right = 12.0
 content_margin_bottom = 6.0
-bg_color = Color(0.0392157, 0.0627451, 0.117647, 0.84)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.219608, 0.741176, 0.972549, 0.7)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+bg_color = Color(0.0509804, 0.0784314, 0.137255, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.219608, 0.741176, 0.972549, 0.45)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -117,7 +126,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_menu")
 
-[node name="LobbyViewportContainer" type="SubViewportContainer" parent="."]
+[node name="WarBackdrop" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -125,46 +134,28 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-stretch = true
+texture = ExtResource("3_backdrop")
+expand_mode = 1
+stretch_mode = 6
 
-[node name="LobbyViewport" type="SubViewport" parent="LobbyViewportContainer"]
-own_world_3d = true
-handle_input_locally = false
-msaa_3d = 0
-size = Vector2i(1280, 720)
-render_target_update_mode = 4
-
-[node name="LobbyStage3D" parent="LobbyViewportContainer/LobbyViewport" instance=ExtResource("3_stage3d")]
-
-[node name="TopScrim" type="ColorRect" parent="."]
+[node name="BackdropScrim" type="ColorRect" parent="."]
 layout_mode = 1
-anchors_preset = 10
-anchor_right = 1.0
-offset_bottom = 92.0
-grow_horizontal = 2
-mouse_filter = 2
-color = Color(0.0235294, 0.0392157, 0.0823529, 0.56)
-
-[node name="BottomScrim" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -96.0
 grow_horizontal = 2
-grow_vertical = 0
+grow_vertical = 2
 mouse_filter = 2
-color = Color(0.0235294, 0.0392157, 0.0823529, 0.62)
+color = Color(0.0313726, 0.0431373, 0.0666667, 0.62)
 
-[node name="TopAccentGlow" type="ColorRect" parent="."]
+[node name="TopAccentBar" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 3.0
 grow_horizontal = 2
 mouse_filter = 2
-color = Color(0.219608, 0.741176, 0.972549, 0.85)
+color = Color(0.960784, 0.619608, 0.0431373, 0.9)
 
 [node name="SafeMargin" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -173,26 +164,23 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 14
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 12
 
 [node name="MainLayout" type="VBoxContainer" parent="SafeMargin"]
 layout_mode = 2
-mouse_filter = 2
 theme_override_constants/separation = 10
 
 [node name="TopHeader" type="HBoxContainer" parent="SafeMargin/MainLayout"]
 layout_mode = 2
-mouse_filter = 2
 theme_override_constants/separation = 12
 
 [node name="RankHeroCard" type="PanelContainer" parent="SafeMargin/MainLayout/TopHeader"]
-custom_minimum_size = Vector2(266, 54)
+custom_minimum_size = Vector2(265, 56)
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass_pill")
+theme_override_styles/panel = SubResource("StyleBoxFlat_pill")
 
 [node name="RankHBox" type="HBoxContainer" parent="SafeMargin/MainLayout/TopHeader/RankHeroCard"]
 layout_mode = 2
@@ -207,9 +195,9 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_rank_crest")
 [node name="RankNumLabel" type="Label" parent="SafeMargin/MainLayout/TopHeader/RankHeroCard/RankHBox/RankCrest"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.05, 0.07, 0.12, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 18
-text = "۱"
+text = "1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -221,8 +209,7 @@ theme_override_constants/separation = 4
 
 [node name="RankTitleLabel" type="Label" parent="SafeMargin/MainLayout/TopHeader/RankHeroCard/RankHBox/RankTextVBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.972549, 0.984314, 1, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 13
 text = "سرباز تازه‌کار • 0 XP"
 
@@ -230,778 +217,968 @@ text = "سرباز تازه‌کار • 0 XP"
 custom_minimum_size = Vector2(0, 6)
 layout_mode = 2
 max_value = 100.0
-value = 0.0
 show_percentage = false
 
-[node name="BrandCenter" type="VBoxContainer" parent="SafeMargin/MainLayout/TopHeader"]
+[node name="BrandSpacerL" type="Control" parent="SafeMargin/MainLayout/TopHeader"]
 layout_mode = 2
 size_flags_horizontal = 3
-mouse_filter = 2
-alignment = 1
 
-[node name="TitleLabel" type="Label" parent="SafeMargin/MainLayout/TopHeader/BrandCenter"]
+[node name="BrandCenter" type="HBoxContainer" parent="SafeMargin/MainLayout/TopHeader"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.972549, 0.984314, 1, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 25
-text = "کانتر استرایک آرنا"
-horizontal_alignment = 1
+theme_override_constants/separation = 10
 
-[node name="SubtitleLabel" type="Label" parent="SafeMargin/MainLayout/TopHeader/BrandCenter"]
+[node name="LogoFrame" type="PanelContainer" parent="SafeMargin/MainLayout/TopHeader/BrandCenter"]
+custom_minimum_size = Vector2(52, 52)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_font_sizes/font_size = 12
-text = "نبرد آرکید ۳بعدی آفلاین • لابی تاکتیکی"
-horizontal_alignment = 1
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_logo_bg")
 
-[node name="QuickBar" type="HBoxContainer" parent="SafeMargin/MainLayout/TopHeader"]
+[node name="LogoRect" type="TextureRect" parent="SafeMargin/MainLayout/TopHeader/BrandCenter/LogoFrame"]
+layout_mode = 2
+texture = ExtResource("4_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TitleVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/TopHeader/BrandCenter"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 1
+
+[node name="TitleLabel" type="Label" parent="SafeMargin/MainLayout/TopHeader/BrandCenter/TitleVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 24
+text = "کانتر آرنا"
+
+[node name="SubLabel" type="Label" parent="SafeMargin/MainLayout/TopHeader/BrandCenter/TitleVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.89, 0.96, 0.9)
+theme_override_font_sizes/font_size = 11
+text = "عملیات تاکتیکی آفلاین • نسخه ۰.۱۱"
+
+[node name="BrandSpacerR" type="Control" parent="SafeMargin/MainLayout/TopHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="QuickAudioBar" type="HBoxContainer" parent="SafeMargin/MainLayout/TopHeader"]
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 8
 
-[node name="CareerPill" type="PanelContainer" parent="SafeMargin/MainLayout/TopHeader/QuickBar"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass_pill")
-
-[node name="CareerSummaryLabel" type="Label" parent="SafeMargin/MainLayout/TopHeader/QuickBar/CareerPill"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 12
-text = "۰ پیروزی • ۰ حذف"
-vertical_alignment = 1
-
-[node name="BtnQuickMusic" type="Button" parent="SafeMargin/MainLayout/TopHeader/QuickBar"]
-custom_minimum_size = Vector2(102, 42)
+[node name="BtnQuickMusic" type="Button" parent="SafeMargin/MainLayout/TopHeader/QuickAudioBar"]
+custom_minimum_size = Vector2(110, 40)
 layout_mode = 2
 toggle_mode = true
 button_pressed = true
 theme_override_font_sizes/font_size = 13
 text = "موسیقی: روشن"
 
-[node name="BtnQuickSfx" type="Button" parent="SafeMargin/MainLayout/TopHeader/QuickBar"]
-custom_minimum_size = Vector2(92, 42)
+[node name="BtnQuickSfx" type="Button" parent="SafeMargin/MainLayout/TopHeader/QuickAudioBar"]
+custom_minimum_size = Vector2(102, 40)
 layout_mode = 2
 toggle_mode = true
 button_pressed = true
 theme_override_font_sizes/font_size = 13
 text = "افکت: روشن"
 
-[node name="MiddleStage" type="HBoxContainer" parent="SafeMargin/MainLayout"]
+[node name="ContentSplit" type="HBoxContainer" parent="SafeMargin/MainLayout"]
 layout_mode = 2
 size_flags_vertical = 3
-mouse_filter = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 12
 
-[node name="NavRail" type="VBoxContainer" parent="SafeMargin/MainLayout/MiddleStage"]
-custom_minimum_size = Vector2(246, 0)
+[node name="NavRail" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit"]
+custom_minimum_size = Vector2(215, 0)
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="NavHeader" type="Label" parent="SafeMargin/MainLayout/MiddleStage/NavRail"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.580392, 0.741176, 0.909804, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 12
-text = "منوی فرماندهی"
-
-[node name="BtnTabLoadout" type="Button" parent="SafeMargin/MainLayout/MiddleStage/NavRail"]
-custom_minimum_size = Vector2(0, 52)
+[node name="BtnTabHome" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 toggle_mode = true
 button_pressed = true
-theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 15
-text = "زرادخانه و سلاح"
+text = "۱. اتاق عملیات"
 
-[node name="BtnTabArena" type="Button" parent="SafeMargin/MainLayout/MiddleStage/NavRail"]
-custom_minimum_size = Vector2(0, 52)
+[node name="BtnTabArsenal" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 toggle_mode = true
-theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 15
-text = "نقشه‌ها و قوانین"
+text = "۲. زرادخانه سلاح"
 
-[node name="BtnTabSettings" type="Button" parent="SafeMargin/MainLayout/MiddleStage/NavRail"]
-custom_minimum_size = Vector2(0, 52)
+[node name="BtnTabArena" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 toggle_mode = true
-theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 15
-text = "تنظیمات و کارنامه"
+text = "۳. نقشه و حالت"
 
-[node name="Spacer" type="Control" parent="SafeMargin/MainLayout/MiddleStage/NavRail"]
+[node name="BtnTabSettings" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+toggle_mode = true
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 15
+text = "۴. تنظیمات کامل"
+
+[node name="BtnTabProfile" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+toggle_mode = true
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 15
+text = "۵. پرونده سرباز"
+
+[node name="QuickStatusCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
 layout_mode = 2
 size_flags_vertical = 3
-mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="QuickMatchCard" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/NavRail"]
+[node name="QuickStatusLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/NavRail/QuickStatusCard"]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass_panel")
-
-[node name="QuickMargin" type="MarginContainer" parent="SafeMargin/MainLayout/MiddleStage/NavRail/QuickMatchCard"]
-layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
-
-[node name="QuickVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/NavRail/QuickMatchCard/QuickMargin"]
-layout_mode = 2
-theme_override_constants/separation = 7
-
-[node name="QuickTitle" type="Label" parent="SafeMargin/MainLayout/MiddleStage/NavRail/QuickMatchCard/QuickMargin/QuickVBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.84, 0.90, 0.96, 1)
 theme_override_font_sizes/font_size = 12
-text = "تغییر سریع نبرد"
-
-[node name="BtnSelectMap" type="Button" parent="SafeMargin/MainLayout/MiddleStage/NavRail/QuickMatchCard/QuickMargin/QuickVBox"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-theme_override_font_sizes/font_size = 13
-text = "نقشه: پایگاه فولادی"
-
-[node name="BtnMatchMode" type="Button" parent="SafeMargin/MainLayout/MiddleStage/NavRail/QuickMatchCard/QuickMargin/QuickVBox"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-theme_override_font_sizes/font_size = 13
-text = "حالت: کنترل مناطق"
-
-[node name="BtnQuickDiff" type="Button" parent="SafeMargin/MainLayout/MiddleStage/NavRail/QuickMatchCard/QuickMargin/QuickVBox"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-theme_override_font_sizes/font_size = 13
-text = "حریف: متعادل"
-
-[node name="CenterHeroStage" type="Control" parent="SafeMargin/MainLayout/MiddleStage"]
-layout_mode = 2
-size_flags_horizontal = 3
-mouse_filter = 2
-
-[node name="HeroDragZone" type="Control" parent="SafeMargin/MainLayout/MiddleStage/CenterHeroStage"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="DragHintLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/CenterHeroStage"]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -120.0
-offset_top = 4.0
-offset_right = 120.0
-offset_bottom = 26.0
-grow_horizontal = 2
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.690196, 0.784314, 0.901961, 0.78)
-theme_override_font_sizes/font_size = 11
-text = "برای چرخش ۳بعدی قهرمان به چپ و راست بکشید"
-horizontal_alignment = 1
-
-[node name="HeroWeaponQuickBar" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/CenterHeroStage"]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -152.0
-offset_top = -54.0
-offset_right = 152.0
-offset_bottom = -6.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_weapon_pill")
-
-[node name="WeaponPillRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/CenterHeroStage/HeroWeaponQuickBar"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="BtnPrevWeapon" type="Button" parent="SafeMargin/MainLayout/MiddleStage/CenterHeroStage/HeroWeaponQuickBar/WeaponPillRow"]
-custom_minimum_size = Vector2(38, 34)
-layout_mode = 2
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 16
-text = "‹"
-
-[node name="HeroWeaponLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/CenterHeroStage/HeroWeaponQuickBar/WeaponPillRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 14
-text = "پالس بلاستر"
-horizontal_alignment = 1
+text = "وضعیت آماده"
+autowrap_mode = 2
 vertical_alignment = 1
 
-[node name="BtnNextWeapon" type="Button" parent="SafeMargin/MainLayout/MiddleStage/CenterHeroStage/HeroWeaponQuickBar/WeaponPillRow"]
-custom_minimum_size = Vector2(38, 34)
-layout_mode = 2
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 16
-text = "›"
-
-[node name="InspectorColumn" type="Control" parent="SafeMargin/MainLayout/MiddleStage"]
-custom_minimum_size = Vector2(396, 0)
-layout_mode = 2
-
-[node name="LoadoutPanel" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass_panel")
-
-[node name="LoadoutMargin" type="MarginContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 12
-
-[node name="LoadoutVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin"]
-layout_mode = 2
-theme_override_constants/separation = 9
-
-[node name="LoadoutHeader" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 16
-text = "زرادخانه و تجهیزات نبرد"
-
-[node name="BlasterGrid" type="GridContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox"]
-layout_mode = 2
-theme_override_constants/h_separation = 8
-theme_override_constants/v_separation = 8
-columns = 2
-
-[node name="BtnBlasterPulse" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterGrid"]
-custom_minimum_size = Vector2(0, 44)
+[node name="PageStage" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit"]
 layout_mode = 2
 size_flags_horizontal = 3
-toggle_mode = true
-button_pressed = true
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 13
-text = "پالس بلاستر • متعادل"
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="BtnBlasterRepeater" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterGrid"]
-custom_minimum_size = Vector2(0, 44)
+[node name="PageHome" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HomeHeader" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 19
+text = "مرکز فرماندهی عملیات"
+
+[node name="HomeCardsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="WeaponBriefCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-toggle_mode = true
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 13
-text = "رگبار انرژی • سریع"
+theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
 
-[node name="BtnBlasterScatter" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterGrid"]
-custom_minimum_size = Vector2(0, 44)
+[node name="VBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Heading" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 15
+text = "سلاح مجهز فعلی"
+
+[node name="HomeWeaponIcon" type="TextureRect" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard/VBox"]
+custom_minimum_size = Vector2(0, 128)
+layout_mode = 2
+size_flags_vertical = 3
+texture = ExtResource("5_m4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="HomeWeaponTitle" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 18
+text = "کاربین M4"
+horizontal_alignment = 1
+
+[node name="HomeWeaponStats" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.90, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = "توضیحات سلاح"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="BtnGoArsenal" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "تغییر سلاح در زرادخانه"
+
+[node name="MissionBriefCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-toggle_mode = true
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 13
-text = "پلاسما • ۳تایی نزدیک"
+theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
 
-[node name="BtnBlasterRailgun" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterGrid"]
-custom_minimum_size = Vector2(0, 44)
+[node name="VBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Heading" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 15
+text = "مشخصات مأموریت"
+
+[node name="MissionSummaryLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 14
+text = "جزئیات مأموریت"
+autowrap_mode = 2
+
+[node name="QuickRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnHomeSwitchMap" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox/QuickRow"]
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_horizontal = 3
-toggle_mode = true
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 13
-text = "ریل‌گان • نفوذی قوی"
+text = "تعویض نقشه"
 
-[node name="BlasterStatCard" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox"]
+[node name="BtnHomeSwitchMode" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox/QuickRow"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "تعویض حالت"
+
+[node name="BtnHomeSwitchDiff" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "سختی حریف: متعادل"
+
+[node name="TipCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
 
-[node name="StatVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard"]
+[node name="TipLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/TipCard"]
 layout_mode = 2
-theme_override_constants/separation = 7
-
-[node name="BlasterDescLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_font_sizes/font_size = 12
-text = "پالس بلاستر: سلاح دقیق و متعادل برای تمام فواصل میدان."
+theme_override_colors/font_color = Color(0.86, 0.92, 0.98, 0.95)
+theme_override_font_sizes/font_size = 13
+text = "نکته تاکتیکی: در نبرد می‌توانید از بشکه‌های سوخت قرمز برای انفجار زنجیره‌ای دشمنان استفاده کنید و با دکمه نارنجک پشت سنگرها را پاکسازی نمایید."
 autowrap_mode = 2
 
-[node name="DmgRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox"]
+[node name="PageArsenal" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ArsenalHeader" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 19
+text = "زرادخانه سلاح‌های نظامی"
+
+[node name="WeaponCardsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Label" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/DmgRow"]
-custom_minimum_size = Vector2(86, 0)
+[node name="BtnWeaponM4" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow"]
+custom_minimum_size = Vector2(0, 108)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "قدرت ضربه"
+size_flags_horizontal = 3
+toggle_mode = true
 
-[node name="DamageBar" type="ProgressBar" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/DmgRow"]
-custom_minimum_size = Vector2(0, 10)
+[node name="VBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponM4"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponM4/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+texture = ExtResource("5_m4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponM4/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 13
+text = "کاربین M4"
+horizontal_alignment = 1
+
+[node name="BtnWeaponUzi" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow"]
+custom_minimum_size = Vector2(0, 108)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+
+[node name="VBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponUzi"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponUzi/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+texture = ExtResource("6_uzi")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponUzi/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 13
+text = "یوزی صداخفه‌کن"
+horizontal_alignment = 1
+
+[node name="BtnWeaponShotgun" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow"]
+custom_minimum_size = Vector2(0, 108)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+
+[node name="VBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponShotgun"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponShotgun/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+texture = ExtResource("7_shotgun")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponShotgun/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 13
+text = "شاتگان M870"
+horizontal_alignment = 1
+
+[node name="BtnWeaponSniper" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow"]
+custom_minimum_size = Vector2(0, 108)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+
+[node name="VBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponSniper"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponSniper/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+texture = ExtResource("8_sniper")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponSniper/VBox"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 13
+text = "اسنایپر AWP"
+horizontal_alignment = 1
+
+[node name="WeaponInspectorCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
+
+[node name="HBox" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PreviewIcon" type="TextureRect" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox"]
+custom_minimum_size = Vector2(140, 140)
+layout_mode = 2
+size_flags_vertical = 4
+texture = ExtResource("5_m4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="StatsVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
-max_value = 50.0
-value = 28.0
+theme_override_constants/separation = 8
+
+[node name="WeaponDescLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "توضیحات سلاح"
+autowrap_mode = 2
+
+[node name="DmgRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Lbl" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/DmgRow"]
+custom_minimum_size = Vector2(96, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "قدرت گلوله:"
+
+[node name="DamageBar" type="ProgressBar" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/DmgRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 100.0
 show_percentage = false
 
-[node name="DamageVal" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/DmgRow"]
-custom_minimum_size = Vector2(40, 0)
+[node name="DamageVal" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/DmgRow"]
+custom_minimum_size = Vector2(46, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 13
+text = "22"
+horizontal_alignment = 2
+
+[node name="RateRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Lbl" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/RateRow"]
+custom_minimum_size = Vector2(96, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "سرعت شلیک:"
+
+[node name="FireRateBar" type="ProgressBar" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/RateRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 100.0
+show_percentage = false
+
+[node name="RateVal" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/RateRow"]
+custom_minimum_size = Vector2(46, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "6/ث"
+horizontal_alignment = 2
+
+[node name="AmmoRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Lbl" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/AmmoRow"]
+custom_minimum_size = Vector2(96, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "ظرفیت خشاب:"
+
+[node name="AmmoBar" type="ProgressBar" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/AmmoRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 100.0
+show_percentage = false
+
+[node name="AmmoVal" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/AmmoRow"]
+custom_minimum_size = Vector2(46, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "24"
+horizontal_alignment = 2
+
+[node name="VelRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Lbl" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/VelRow"]
+custom_minimum_size = Vector2(96, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "سرعت مرمی:"
+
+[node name="SpeedBar" type="ProgressBar" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/VelRow"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 100.0
+show_percentage = false
+
+[node name="SpeedVal" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/VelRow"]
+custom_minimum_size = Vector2(46, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
 text = "28"
 horizontal_alignment = 2
 
-[node name="RateRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="Label" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/RateRow"]
-custom_minimum_size = Vector2(86, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "نرخ شلیک"
-
-[node name="FireRateBar" type="ProgressBar" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/RateRow"]
-custom_minimum_size = Vector2(0, 10)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-max_value = 10.0
-value = 4.2
-show_percentage = false
-
-[node name="RateVal" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/RateRow"]
-custom_minimum_size = Vector2(40, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 12
-text = "4.2/ث"
-horizontal_alignment = 2
-
-[node name="AmmoRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="Label" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/AmmoRow"]
-custom_minimum_size = Vector2(86, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "ظرفیت انرژی"
-
-[node name="AmmoBar" type="ProgressBar" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/AmmoRow"]
-custom_minimum_size = Vector2(0, 10)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-max_value = 32.0
-value = 16.0
-show_percentage = false
-
-[node name="AmmoVal" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/AmmoRow"]
-custom_minimum_size = Vector2(40, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.752941, 0.517647, 0.988235, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 12
-text = "16"
-horizontal_alignment = 2
-
-[node name="VelRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="Label" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/VelRow"]
-custom_minimum_size = Vector2(86, 0)
-layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "سرعت پرتابه"
-
-[node name="SpeedBar" type="ProgressBar" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/VelRow"]
-custom_minimum_size = Vector2(0, 10)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-max_value = 45.0
-value = 26.0
-show_percentage = false
-
-[node name="SpeedVal" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterStatCard/StatVBox/VelRow"]
-custom_minimum_size = Vector2(40, 0)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.32, 0.92, 0.65, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 12
-text = "26"
-horizontal_alignment = 2
-
-[node name="AbilitiesCard" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
-
-[node name="AbilitiesLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/AbilitiesCard"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.84, 0.91, 0.98, 1)
-theme_override_font_sizes/font_size = 12
-text = "مهارت‌های تاکتیکی:
-• جهش سریع (Dash): فرار برق‌آسا با عبور ایمن از گلوله
-• بمب پالس (AoE): پرتاب انفجاری با رانش فیزیکی قوی
-• تعویض آنی هر ۴ سلاح در قلب نبرد + جعبه‌های انفجاری"
-autowrap_mode = 2
-
-[node name="ArenaPanel" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn"]
+[node name="PageArena" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage"]
 visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass_panel")
-
-[node name="ArenaMargin" type="MarginContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 12
+theme_override_constants/separation = 10
 
-[node name="ArenaVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="ArenaHeader" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 16
-text = "انتخاب نقشه و حالت مسابقه"
-
-[node name="MapCardsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="BtnMapSector01" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/MapCardsRow"]
-custom_minimum_size = Vector2(0, 62)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-button_pressed = true
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 13
-text = "بخش ۰۱: پایگاه فولادی
-۳۲×۲۴ • شب سایبر"
-
-[node name="BtnMapSector02" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/MapCardsRow"]
-custom_minimum_size = Vector2(0, 62)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 13
-text = "بخش ۰۲: دژ مرکزی
-۳۴×۲۴ • صنعتی گرم"
-
-[node name="ModeCardsCol" type="VBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="BtnModeZoneControl" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/ModeCardsCol"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-toggle_mode = true
-button_pressed = true
-theme_override_font_sizes/font_size = 13
-text = "کنترل مناطق • تصرف دو نقطه (۲۵ امتیاز / ۱۲۰ث)"
-
-[node name="BtnModeTeamRush" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/ModeCardsCol"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-toggle_mode = true
-theme_override_font_sizes/font_size = 13
-text = "نبرد سریع تیمی • حذف مستقیم (۱۵ امتیاز / ۹۰ث)"
-
-[node name="BtnModeZoneBlitz" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/ModeCardsCol"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-toggle_mode = true
-theme_override_font_sizes/font_size = 13
-text = "تسخیر برق‌آسا • تصرف فوق‌سریع (۳۰ امتیاز / ۹۰ث)"
-
-[node name="MapInfoCard" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
-
-[node name="MapInfoLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/MapInfoCard"]
+[node name="ArenaHeader" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_font_sizes/font_size = 12
-text = "جزئیات نقشه"
-autowrap_mode = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 19
+text = "انتخاب نقشه، حالت بازی و سختی حریف"
 
-[node name="RosterCard" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox"]
+[node name="MapLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 14
+text = "میدان نبرد:"
+
+[node name="MapRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BtnMapSector01" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/MapRow"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 14
+text = "پایگاه نظامی آلفا (بتنی و متقارن)"
+
+[node name="BtnMapSector02" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/MapRow"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 14
+text = "پایگاه کویری براوو (کمین و انبار)"
+
+[node name="ModeLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 14
+text = "حالت عملیات:"
+
+[node name="ModeRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnModeZoneControl" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/ModeRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "کنترل منطقه (۱۲۰ ثانیه)"
+
+[node name="BtnModeTeamRush" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/ModeRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "نبرد امتیاز (۲۵ حذف)"
+
+[node name="BtnModeZoneBlitz" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/ModeRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "حمله سریع (۹۰ ثانیه)"
+
+[node name="DiffLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 14
+text = "مهارت و سختی سربازان دشمن:"
+
+[node name="DiffRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnDiffEasy" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/DiffRow"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "آسان"
+
+[node name="BtnDiffBalanced" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/DiffRow"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "متعادل"
+
+[node name="BtnDiffHard" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/DiffRow"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "حرفه‌ای"
+
+[node name="ArenaDetailCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
 
-[node name="ModeInfoLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/RosterCard"]
+[node name="ArenaDetailLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/ArenaDetailCard"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "جزئیات نقشه و ترکیب تیم‌ها"
+autowrap_mode = 2
+
+[node name="PageSettings" type="ScrollContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SettingsVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="PerfHeading" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 16
+text = "گرافیک و روان بودن تصویر (ویژه ۶۰ فریم)"
+
+[node name="FpsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Lbl" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+text = "نرخ فریم هدف:"
+
+[node name="BtnFps30" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "30 FPS"
+
+[node name="BtnFps45" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "45 FPS"
+
+[node name="BtnFps60" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "60 FPS (پیشنهادی)"
+
+[node name="QualityRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Lbl" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+text = "کیفیت گرافیک:"
+
+[node name="BtnQualLow" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "پایین (سریع)"
+
+[node name="BtnQualMed" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "متوسط (متعادل)"
+
+[node name="BtnQualHigh" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "بالا (جزئیات)"
+
+[node name="RenderToggleRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnRenderScale" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/RenderToggleRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "وضوح رندر: ۸۵٪"
+
+[node name="BtnShadows" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/RenderToggleRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "سایه‌ها: روشن"
+
+[node name="BtnShowFps" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/RenderToggleRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "نمایش FPS: خاموش"
+
+[node name="ControlsHeading" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
-theme_override_font_sizes/font_size = 12
-text = "جزئیات حالت و ترکیب ۲ آبی در برابر ۳ نارنجی"
-autowrap_mode = 2
-
-[node name="SettingsPanel" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn"]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass_panel")
-
-[node name="SettingsMargin" type="MarginContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 10
-
-[node name="SettingsVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="SettingsHeader" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 16
-text = "تنظیمات و کارنامه آفلاین"
+text = "کنترل لمسی و دوربین نبرد"
 
-[node name="SecPerfLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
+[node name="ControlsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_font_sizes/font_size = 11
-text = "گرافیک و نرخ فریم"
+theme_override_constants/separation = 8
 
-[node name="FpsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="BtnFps30" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow"]
-custom_minimum_size = Vector2(0, 35)
+[node name="BtnAimMode" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
-toggle_mode = true
-button_pressed = true
-theme_override_font_sizes/font_size = 13
-text = "۳۰ فریم (پایدار)"
-
-[node name="BtnFps60" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow"]
-custom_minimum_size = Vector2(0, 35)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-theme_override_font_sizes/font_size = 13
-text = "۶۰ فریم"
-
-[node name="QualityRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="BtnLow" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 35)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-theme_override_font_sizes/font_size = 13
-text = "کیفیت: کم"
-
-[node name="BtnMedium" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 35)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-button_pressed = true
-theme_override_font_sizes/font_size = 13
-text = "متوسط"
-
-[node name="BtnHigh" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 35)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-theme_override_font_sizes/font_size = 13
-text = "زیاد"
-
-[node name="SecControlLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.219608, 0.741176, 0.972549, 1)
-theme_override_font_sizes/font_size = 11
-text = "کنترل لمسی، سختی حریف و نمای نبرد"
-
-[node name="ControlsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="BtnAimMode" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow"]
-custom_minimum_size = Vector2(0, 36)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 13
 text = "نشانه: دو جوی‌استیک"
 
-[node name="BtnSensitivity" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow"]
-custom_minimum_size = Vector2(0, 36)
+[node name="BtnSensitivity" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 13
 text = "حساسیت: معمولی"
 
-[node name="TacticalRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="BtnDifficulty" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/TacticalRow"]
-custom_minimum_size = Vector2(0, 36)
+[node name="BtnCamPreset" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 13
-text = "سختی حریف: متعادل"
-
-[node name="BtnCamPreset" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/TacticalRow"]
-custom_minimum_size = Vector2(0, 36)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 13
 text = "نمای نبرد: استاندارد"
 
-[node name="AudioRow" type="HBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
+[node name="FeelRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 
-[node name="BtnMusic" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow"]
-custom_minimum_size = Vector2(0, 36)
+[node name="BtnCameraShake" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FeelRow"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
-button_pressed = true
-theme_override_font_sizes/font_size = 13
+text = "لرزش دوربین: روشن"
+
+[node name="BtnHaptics" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FeelRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "ویبره لمسی: روشن"
+
+[node name="AudioHeading" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.290196, 0.870588, 0.501961, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 16
+text = "تنظیمات صدا و بازگردانی"
+
+[node name="AudioRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnMusicToggle" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
 text = "موسیقی: روشن"
 
-[node name="BtnSfx" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow"]
-custom_minimum_size = Vector2(0, 36)
+[node name="BtnSfxToggle" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
-button_pressed = true
-theme_override_font_sizes/font_size = 13
-text = "افکت: روشن"
+text = "افکت صوتی: روشن"
 
-[node name="BtnVolume" type="Button" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow"]
-custom_minimum_size = Vector2(0, 36)
+[node name="BtnMasterVol" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 13
-text = "بلندی: ۸۵٪"
+text = "بلندی کل: ۸۵٪"
 
-[node name="RankCard" type="PanelContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox"]
+[node name="AudioMixRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnMusicVol" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "صدای موسیقی: ۷۲٪"
+
+[node name="BtnSfxVol" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "صدای شلیک: ۹۰٪"
+
+[node name="BtnResetSettings" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "بازگردانی به پیش‌فرض"
+
+[node name="PageProfile" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ProfileHeader" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 19
+text = "پرونده و کارنامه سرباز"
+
+[node name="RankProgressCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
+
+[node name="VBox" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile/RankProgressCard"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ProfileRankLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile/RankProgressCard/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 16
+text = "درجه فعلی: سرباز تازه‌کار"
+
+[node name="ProfileXpBar" type="ProgressBar" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile/RankProgressCard/VBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+max_value = 100.0
+show_percentage = false
+
+[node name="ProfileStatsCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_subcard")
 
-[node name="RankVBox" type="VBoxContainer" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/RankCard"]
+[node name="ProfileDetailLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile/ProfileStatsCard"]
 layout_mode = 2
-theme_override_constants/separation = 5
-
-[node name="RankLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/RankCard/RankVBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
-theme_override_fonts/font = ExtResource("2_vazir_bold")
-theme_override_font_sizes/font_size = 12
-text = "رتبه ۱: سرباز تازه‌کار"
-
-[node name="CareerDetailLabel" type="Label" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/RankCard/RankVBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.84, 0.91, 0.98, 1)
-theme_override_font_sizes/font_size = 12
-text = "۰ نبرد • ۰ پیروزی (۰٪) • ۰ حذف • رکورد: ۰"
-
-[node name="SettingsXpBar" type="ProgressBar" parent="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/RankCard/RankVBox"]
-custom_minimum_size = Vector2(0, 8)
-layout_mode = 2
-max_value = 100.0
-value = 0.0
-show_percentage = false
+theme_override_font_sizes/font_size = 14
+text = "آمار نبردهای آفلاین"
+autowrap_mode = 2
 
 [node name="BottomLaunchDock" type="HBoxContainer" parent="SafeMargin/MainLayout"]
-custom_minimum_size = Vector2(0, 62)
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 12
 
 [node name="TicketCard" type="PanelContainer" parent="SafeMargin/MainLayout/BottomLaunchDock"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_glass_pill")
+theme_override_styles/panel = SubResource("StyleBoxFlat_pill")
 
 [node name="StatusLabel" type="Label" parent="SafeMargin/MainLayout/BottomLaunchDock/TicketCard"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.87, 0.93, 0.99, 1)
 theme_override_font_sizes/font_size = 13
-text = "آماده اعزام: پایگاه فولادی • کنترل مناطق • پالس بلاستر"
+text = "آماده عملیات"
+vertical_alignment = 1
 
 [node name="BtnEnterArena" type="Button" parent="SafeMargin/MainLayout/BottomLaunchDock"]
-custom_minimum_size = Vector2(300, 60)
+custom_minimum_size = Vector2(260, 56)
 layout_mode = 2
-theme_override_fonts/font = ExtResource("2_vazir_bold")
+theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 21
-theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_primary_btn_hover")
-text = "شروع نبرد آرکید"
+theme_override_styles/hover = SubResource("StyleBoxFlat_cta_hover")
+theme_override_styles/normal = SubResource("StyleBoxFlat_cta")
+text = "شروع نبرد"
 
-[connection signal="pressed" from="SafeMargin/MainLayout/TopHeader/QuickBar/BtnQuickMusic" to="." method="_on_btn_music_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/TopHeader/QuickBar/BtnQuickSfx" to="." method="_on_btn_sfx_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/NavRail/BtnTabLoadout" to="." method="_on_btn_tab_loadout_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/NavRail/BtnTabArena" to="." method="_on_btn_tab_arena_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/NavRail/BtnTabSettings" to="." method="_on_btn_tab_settings_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/NavRail/QuickMatchCard/QuickMargin/QuickVBox/BtnSelectMap" to="." method="_on_btn_select_map_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/NavRail/QuickMatchCard/QuickMargin/QuickVBox/BtnMatchMode" to="." method="_on_btn_match_mode_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/NavRail/QuickMatchCard/QuickMargin/QuickVBox/BtnQuickDiff" to="." method="_on_btn_difficulty_pressed"]
-[connection signal="gui_input" from="SafeMargin/MainLayout/MiddleStage/CenterHeroStage/HeroDragZone" to="." method="_on_hero_drag_zone_gui_input"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/CenterHeroStage/HeroWeaponQuickBar/WeaponPillRow/BtnPrevWeapon" to="." method="_on_btn_prev_weapon_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/CenterHeroStage/HeroWeaponQuickBar/WeaponPillRow/BtnNextWeapon" to="." method="_on_btn_next_weapon_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterGrid/BtnBlasterPulse" to="." method="_on_btn_blaster_pulse_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterGrid/BtnBlasterRepeater" to="." method="_on_btn_blaster_repeater_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterGrid/BtnBlasterScatter" to="." method="_on_btn_blaster_scatter_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/LoadoutPanel/LoadoutMargin/LoadoutVBox/BlasterGrid/BtnBlasterRailgun" to="." method="_on_btn_blaster_railgun_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/MapCardsRow/BtnMapSector01" to="." method="_on_btn_map_sector01_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/MapCardsRow/BtnMapSector02" to="." method="_on_btn_map_sector02_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/ModeCardsCol/BtnModeZoneControl" to="." method="_on_btn_mode_zone_control_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/ModeCardsCol/BtnModeTeamRush" to="." method="_on_btn_mode_team_rush_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/ArenaPanel/ArenaMargin/ArenaVBox/ModeCardsCol/BtnModeZoneBlitz" to="." method="_on_btn_mode_zone_blitz_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow/BtnFps30" to="." method="_on_btn_fps_30_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/FpsRow/BtnFps60" to="." method="_on_btn_fps_60_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnLow" to="." method="_on_btn_low_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnMedium" to="." method="_on_btn_medium_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/QualityRow/BtnHigh" to="." method="_on_btn_high_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnAimMode" to="." method="_on_btn_aim_mode_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/ControlsRow/BtnSensitivity" to="." method="_on_btn_sensitivity_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/TacticalRow/BtnDifficulty" to="." method="_on_btn_difficulty_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/TacticalRow/BtnCamPreset" to="." method="_on_btn_cam_preset_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnMusic" to="." method="_on_btn_music_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnSfx" to="." method="_on_btn_sfx_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/MiddleStage/InspectorColumn/SettingsPanel/SettingsMargin/SettingsVBox/AudioRow/BtnVolume" to="." method="_on_btn_volume_pressed"]
-[connection signal="pressed" from="SafeMargin/MainLayout/BottomLaunchDock/BtnEnterArena" to="." method="_on_btn_enter_arena_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/TopHeader/QuickAudioBar/BtnQuickMusic" to="." method="_on_btn_music_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/TopHeader/QuickAudioBar/BtnQuickSfx" to="." method="_on_btn_sfx_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabHome" to="." method="_on_tab_pressed" binds= [0]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabArsenal" to="." method="_on_tab_pressed" binds= [1]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabArena" to="." method="_on_tab_pressed" binds= [2]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabSettings" to="." method="_on_tab_pressed" binds= [3]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabProfile" to="." method="_on_tab_pressed" binds= [4]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard/VBox/BtnGoArsenal" to="." method="_on_tab_pressed" binds= [1]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox/QuickRow/BtnHomeSwitchMap" to="." method="_on_quick_switch_map"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox/QuickRow/BtnHomeSwitchMode" to="." method="_on_quick_switch_mode"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox/BtnHomeSwitchDiff" to="." method="_on_quick_switch_diff"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponM4" to="." method="_on_select_weapon" binds= ["pulse_blaster"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponUzi" to="." method="_on_select_weapon" binds= ["rapid_repeater"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponShotgun" to="." method="_on_select_weapon" binds= ["plasma_scatter"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponSniper" to="." method="_on_select_weapon" binds= ["arc_railgun"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/MapRow/BtnMapSector01" to="." method="_on_select_map" binds= ["sector_01"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/MapRow/BtnMapSector02" to="." method="_on_select_map" binds= ["sector_02"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/ModeRow/BtnModeZoneControl" to="." method="_on_select_mode" binds= ["zone_control"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/ModeRow/BtnModeTeamRush" to="." method="_on_select_mode" binds= ["team_score_rush"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/ModeRow/BtnModeZoneBlitz" to="." method="_on_select_mode" binds= ["zone_blitz"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/DiffRow/BtnDiffEasy" to="." method="_on_select_diff" binds= ["easy"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/DiffRow/BtnDiffBalanced" to="." method="_on_select_diff" binds= ["balanced"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/DiffRow/BtnDiffHard" to="." method="_on_select_diff" binds= ["hard"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow/BtnFps30" to="." method="_on_fps_pressed" binds= [30]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow/BtnFps45" to="." method="_on_fps_pressed" binds= [45]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow/BtnFps60" to="." method="_on_fps_pressed" binds= [60]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow/BtnQualLow" to="." method="_on_quality_pressed" binds= ["low"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow/BtnQualMed" to="." method="_on_quality_pressed" binds= ["medium"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow/BtnQualHigh" to="." method="_on_quality_pressed" binds= ["high"]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/RenderToggleRow/BtnRenderScale" to="." method="_on_render_scale_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/RenderToggleRow/BtnShadows" to="." method="_on_shadows_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/RenderToggleRow/BtnShowFps" to="." method="_on_show_fps_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow/BtnAimMode" to="." method="_on_aim_mode_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow/BtnSensitivity" to="." method="_on_sensitivity_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow/BtnCamPreset" to="." method="_on_cam_preset_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FeelRow/BtnCameraShake" to="." method="_on_shake_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FeelRow/BtnHaptics" to="." method="_on_haptics_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow/BtnMusicToggle" to="." method="_on_btn_music_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow/BtnSfxToggle" to="." method="_on_btn_sfx_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow/BtnMasterVol" to="." method="_on_master_vol_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow/BtnMusicVol" to="." method="_on_music_vol_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow/BtnSfxVol" to="." method="_on_sfx_vol_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow/BtnResetSettings" to="." method="_on_reset_settings_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/BottomLaunchDock/BtnEnterArena" to="." method="_on_enter_arena_pressed"]

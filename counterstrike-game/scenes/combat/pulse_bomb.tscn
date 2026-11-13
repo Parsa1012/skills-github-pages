@@ -1,16 +1,11 @@
 [gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/combat/pulse_bomb.gd" id="1_bomb"]
-
-[sub_resource type="SphereMesh" id="SphereMesh_core"]
-radius = 0.21
-height = 0.42
-radial_segments = 14
-rings = 8
+[ext_resource type="PackedScene" path="res://assets/kenney/weapon/grenade.glb" id="2_grenade"]
 
 [sub_resource type="TorusMesh" id="TorusMesh_halo"]
-inner_radius = 0.27
-outer_radius = 0.34
+inner_radius = 0.25
+outer_radius = 0.32
 rings = 18
 ring_segments = 6
 
@@ -23,9 +18,8 @@ ring_segments = 4
 [node name="PulseBomb" type="Node3D"]
 script = ExtResource("1_bomb")
 
-[node name="CoreMesh" type="MeshInstance3D" parent="."]
-cast_shadow = 0
-mesh = SubResource("SphereMesh_core")
+[node name="GrenadeModel" parent="." instance=ExtResource("2_grenade")]
+transform = Transform3D(2.5, 0, 0, 0, 2.5, 0, 0, 0, 2.5, 0, 0, 0)
 
 [node name="HaloMesh" type="MeshInstance3D" parent="."]
 cast_shadow = 0

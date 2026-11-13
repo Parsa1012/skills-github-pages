@@ -58,6 +58,9 @@ var _base_pivot_scale: Vector3 = Vector3.ONE
 var _last_attacker_is_player: bool = false
 var _knockback_vel: Vector3 = Vector3.ZERO
 var _move_vel: Vector2 = Vector2.ZERO
+var _steer_timer: float = 0.0
+var _cached_steer_dir: Vector3 = Vector3.ZERO
+var _cached_evade: Vector3 = Vector3.ZERO
 
 
 func _ready() -> void:
@@ -68,6 +71,7 @@ func _ready() -> void:
 	_hp = _max_hp
 	_hover_time = randf() * TAU
 	_los_timer = randf() * 0.25
+	_steer_timer = randf() * 0.09
 	_strafe_sign = 1.0 if randf() >= 0.5 else -1.0
 	_facing_yaw = -PI * 0.5 if team_id == 0 else PI * 0.5
 	_setup_team_visuals()
@@ -106,9 +110,19 @@ func _setup_team_visuals() -> void:
 	_base_hp_col = hp_col
 
 	if _model_pivot != null:
-		var scale_mult: float = 1.28 if is_heavy else (0.86 if is_scout else 1.0)
+		var scale_mult: float = 1.24 if is_heavy else (0.90 if is_scout else 1.0)
 		_base_pivot_scale = Vector3(scale_mult, scale_mult, scale_mult)
 		_model_pivot.scale = _base_pivot_scale
+		var soldier_model: Node3D = _model_pivot.get_child(0) as Node3D if _model_pivot.get_child_count() > 0 else null
+		if soldier_model != null:
+			var skin_path: String = "res://assets/kenney/blocky_characters/Textures/skin_ally_commando.png" if team_id == 0 else (
+				"res://assets/kenney/blocky_characters/Textures/skin_enemy_heavy.png" if is_heavy else "res://assets/kenney/blocky_characters/Textures/skin_enemy_merc.png"
+			)
+			var weapon_path: String = "res://assets/kenney/weapon/shotgun.glb" if is_heavy else (
+				"res://assets/kenney/weapon/uziLongSilencer.glb" if is_scout else "res://assets/kenney/weapon/machinegun.glb"
+			)
+			var weapon_scl: float = 2.15 if is_heavy else (1.95 if is_scout else 2.05)
+			VisualFxUtils.equip_military_soldier(soldier_model, skin_path, team_id, is_heavy, weapon_path, weapon_scl)
 
 	if _team_ring != null:
 		if is_heavy:
@@ -168,6 +182,12 @@ func _physics_process(delta: float) -> void:
 		_target_ref = _find_best_visible_target()
 		_has_los = (_target_ref != null)
 
+	_steer_timer -= delta
+	var refresh_steer: bool = (_steer_timer <= 0.0)
+	if refresh_steer:
+		_steer_timer = 0.09
+		_cached_evade = _compute_danger_evasion()
+
 	if _has_los and _target_ref != null and is_instance_valid(_target_ref):
 		_state = BotState.ENGAGE
 	else:
@@ -175,14 +195,13 @@ func _physics_process(delta: float) -> void:
 
 	match _state:
 		BotState.PATROL:
-			_process_patrol(delta)
+			_process_patrol(delta, refresh_steer)
 		BotState.ENGAGE:
-			_process_engage(delta)
+			_process_engage(delta, refresh_steer)
 
-	var evade: Vector3 = _compute_danger_evasion()
-	if evade.length_squared() > 0.01:
-		_move_vel.x = move_toward(_move_vel.x, evade.x * 4.8, 22.0 * delta)
-		_move_vel.y = move_toward(_move_vel.y, evade.z * 4.8, 22.0 * delta)
+	if _cached_evade.length_squared() > 0.01:
+		_move_vel.x = move_toward(_move_vel.x, _cached_evade.x * 4.8, 22.0 * delta)
+		_move_vel.y = move_toward(_move_vel.y, _cached_evade.z * 4.8, 22.0 * delta)
 
 	_knockback_vel = _knockback_vel.move_toward(Vector3.ZERO, 16.0 * delta)
 	velocity.x = _move_vel.x + _knockback_vel.x
@@ -342,7 +361,7 @@ func _compute_ally_separation() -> Vector3:
 	return sep
 
 
-func _process_patrol(delta: float) -> void:
+func _process_patrol(delta: float, refresh_steer: bool = true) -> void:
 	var target: Vector3 = _pick_objective_target()
 	var to_target := Vector3(target.x - global_position.x, 0.0, target.z - global_position.z)
 
@@ -369,15 +388,17 @@ func _process_patrol(delta: float) -> void:
 		_patrol_leg_timer = 0.0
 
 	var diff_scales: Dictionary = _get_difficulty_scales()
-	var raw_dir: Vector3 = to_target.normalized() + _compute_ally_separation() * 0.65
-	var dir: Vector3 = _steer_around_obstacles(raw_dir.normalized() if raw_dir.length_squared() > 0.001 else to_target.normalized())
+	if refresh_steer or _cached_steer_dir.length_squared() < 0.001:
+		var raw_dir: Vector3 = to_target.normalized() + _compute_ally_separation() * 0.65
+		_cached_steer_dir = _steer_around_obstacles(raw_dir.normalized() if raw_dir.length_squared() > 0.001 else to_target.normalized())
+	var dir: Vector3 = _cached_steer_dir
 	var spd: float = (profile.move_speed if profile != null else 3.4) * 0.80 * float(diff_scales["speed"]) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
 	_move_vel.x = move_toward(_move_vel.x, dir.x * spd, 14.0 * delta)
 	_move_vel.y = move_toward(_move_vel.y, dir.z * spd, 14.0 * delta)
 	_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir.x, -dir.z), clampf(8.0 * delta, 0.0, 1.0))
 
 
-func _process_engage(delta: float) -> void:
+func _process_engage(delta: float, refresh_steer: bool = true) -> void:
 	if _target_ref == null or not is_instance_valid(_target_ref):
 		return
 	if _target_ref.has_method("is_alive") and not bool(_target_ref.call("is_alive")):
@@ -409,9 +430,10 @@ func _process_engage(delta: float) -> void:
 		radial_factor = -0.75
 
 	var diff_scales: Dictionary = _get_difficulty_scales()
-	var move_dir: Vector3 = strafe_vec * 0.75 + dir_to_target * radial_factor + _compute_ally_separation() * 0.6
-	if move_dir.length_squared() > 0.001:
-		move_dir = _steer_around_obstacles(move_dir.normalized())
+	if refresh_steer or _cached_steer_dir.length_squared() < 0.001:
+		var raw_move: Vector3 = strafe_vec * 0.75 + dir_to_target * radial_factor + _compute_ally_separation() * 0.6
+		_cached_steer_dir = _steer_around_obstacles(raw_move.normalized()) if raw_move.length_squared() > 0.001 else Vector3.ZERO
+	var move_dir: Vector3 = _cached_steer_dir
 	var spd: float = (profile.move_speed if profile != null else 3.4) * float(diff_scales["speed"]) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
 	_move_vel.x = move_toward(_move_vel.x, move_dir.x * spd, 16.0 * delta)
 	_move_vel.y = move_toward(_move_vel.y, move_dir.z * spd, 16.0 * delta)
@@ -542,9 +564,12 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 		var muzzle_flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 		if muzzle_flash is ImpactFlash:
 			(muzzle_flash as ImpactFlash).trigger(spawn_pos, bolt_col, 0.72, 0.08)
-	var sfx: String = "res://assets/kenney/audio/blaster.ogg" if team_id == 0 else "res://assets/kenney/audio/enemy_attack.ogg"
-	var pitch: float = randf_range(0.76, 0.84) if is_heavy else randf_range(0.94, 1.06)
-	AudioManager.play_sfx_path(sfx, pitch, -3.0)
+	var is_scout: bool = (profile != null and profile.profile_id == &"scout_drone")
+	var sfx: String = "res://assets/audio/sfx_gun_shotgun.wav" if is_heavy else (
+		"res://assets/audio/sfx_gun_uzi.wav" if is_scout else "res://assets/audio/sfx_gun_m4.wav"
+	)
+	var pitch: float = randf_range(0.88, 0.96) if is_heavy else randf_range(0.95, 1.06)
+	AudioManager.play_sfx_path(sfx, pitch, -4.5)
 
 
 func apply_pickup(pickup_type: int, value: float) -> bool:

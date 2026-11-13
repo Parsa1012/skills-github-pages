@@ -21,9 +21,12 @@ extends CanvasLayer
 @onready var _zone_mini_b: PanelContainer = $TopSafeMargin/TopHudBar/ZoneMiniB
 @onready var _zone_mini_b_label: Label = $TopSafeMargin/TopHudBar/ZoneMiniB/Label
 @onready var _timer_label: Label = $TopSafeMargin/TopHudBar/TimerBadge/TimerLabel
-@onready var _stats_label: Label = $TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/StatsLabel
-@onready var _hp_bar: ProgressBar = $TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow/HpBar
-@onready var _energy_bar: ProgressBar = $TopSafeMargin/TopHudBar/StatsBadge/StatsVBox/BarsRow/EnergyBar
+@onready var _fps_badge: PanelContainer = $TopSafeMargin/TopHudBar/FpsBadge
+@onready var _fps_label: Label = $TopSafeMargin/TopHudBar/FpsBadge/FpsLabel
+@onready var _weapon_icon_rect: TextureRect = $TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/WeaponIconRect
+@onready var _stats_label: Label = $TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/StatsVBox/StatsLabel
+@onready var _hp_bar: ProgressBar = $TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/StatsVBox/BarsRow/HpBar
+@onready var _energy_bar: ProgressBar = $TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/StatsVBox/BarsRow/EnergyBar
 @onready var _buff_badge: PanelContainer = $TopSafeMargin/TopHudBar/BuffBadge
 @onready var _buff_label: Label = $TopSafeMargin/TopHudBar/BuffBadge/BuffLabel
 
@@ -33,6 +36,7 @@ extends CanvasLayer
 @onready var _toast_label: Label = $CenterToastPanel/ToastLabel
 @onready var _pause_overlay: Control = $PauseOverlay
 @onready var _pause_aim_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseAimMode
+@onready var _pause_fps_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseFps
 @onready var _pause_music_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseMusic
 @onready var _pause_sfx_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseSfx
 @onready var _match_end_overlay: Control = $MatchEndOverlay
@@ -42,11 +46,13 @@ extends CanvasLayer
 var _toast_timer: float = 0.0
 var _hitmarker_timer: float = 0.0
 var _kill_feed_expire_timer: float = 0.0
+var _fps_update_timer: float = 0.0
 var _respawn_active: bool = false
 var _match_ended: bool = false
 var _damage_alpha: float = 0.0
 var _low_hp_warning: bool = false
 var _low_hp_pulse_time: float = 0.0
+var _weapon_icon_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -68,6 +74,8 @@ func _ready() -> void:
 		_toast_panel.visible = false
 	if _hitmarker_label != null:
 		_hitmarker_label.visible = false
+	_preload_weapon_icons()
+	_refresh_fps_visibility()
 
 	_setup_excluded_controls()
 	_apply_safe_area_margins()
@@ -184,6 +192,19 @@ func _process(delta: float) -> void:
 		_toast_timer -= delta
 		if _toast_timer <= 0.0 and _toast_panel != null:
 			_toast_panel.visible = false
+
+	if _fps_badge != null and _fps_badge.visible and _fps_label != null:
+		_fps_update_timer += delta
+		if _fps_update_timer >= 0.40:
+			_fps_update_timer = 0.0
+			var fps_val: int = int(round(Engine.get_frames_per_second()))
+			_fps_label.text = "%d FPS" % fps_val
+			var fps_col := Color(0.290196, 0.870588, 0.501961, 1.0)
+			if fps_val < 38:
+				fps_col = Color(0.984314, 0.45098, 0.086275, 1.0)
+			elif fps_val < 52:
+				fps_col = Color(0.984314, 0.74902, 0.141176, 1.0)
+			_fps_label.add_theme_color_override("font_color", fps_col)
 
 
 func _setup_excluded_controls() -> void:
@@ -333,19 +354,26 @@ func _on_player_stats_updated(hp: int, max_hp: int, energy: int, max_energy: int
 		_energy_bar.value = 0.0 if recharging else clampf(float(energy), 0.0, float(max_energy))
 
 	if _btn_switch_blaster != null:
-		if "رگبار" in blaster_name_fa:
-			_btn_switch_blaster.title_text = "رگبار"
+		var icon_key: String = "m4"
+		if "یوزی" in blaster_name_fa:
+			_btn_switch_blaster.title_text = "UZI"
 			_btn_switch_blaster.accent_color = Color(0.984314, 0.572549, 0.235294, 1.0)
-		elif "پلاسما" in blaster_name_fa:
-			_btn_switch_blaster.title_text = "پلاسما"
-			_btn_switch_blaster.accent_color = Color(0.658824, 0.333333, 0.968627, 1.0)
-		elif "ریل" in blaster_name_fa:
-			_btn_switch_blaster.title_text = "ریل‌گان"
+			icon_key = "uzi"
+		elif "شاتگان" in blaster_name_fa:
+			_btn_switch_blaster.title_text = "M870"
+			_btn_switch_blaster.accent_color = Color(0.937255, 0.266667, 0.266667, 1.0)
+			icon_key = "shotgun"
+		elif "اسنایپر" in blaster_name_fa or "AWP" in blaster_name_fa:
+			_btn_switch_blaster.title_text = "AWP"
 			_btn_switch_blaster.accent_color = Color(0.984314, 0.74902, 0.141176, 1.0)
+			icon_key = "sniper"
 		else:
-			_btn_switch_blaster.title_text = "پالس"
+			_btn_switch_blaster.title_text = "M4"
 			_btn_switch_blaster.accent_color = Color(0.219608, 0.741176, 0.972549, 1.0)
+			icon_key = "m4"
 		_btn_switch_blaster.queue_redraw()
+		if _weapon_icon_rect != null and _weapon_icon_cache.has(icon_key):
+			_weapon_icon_rect.texture = _weapon_icon_cache[icon_key] as Texture2D
 
 
 func _on_player_dash_updated(cooldown_left: float, cooldown_total: float, ready: bool) -> void:
@@ -460,6 +488,35 @@ func _refresh_pause_audio_buttons() -> void:
 		_pause_music_btn.text = "موسیقی: روشن" if SaveManager.music_enabled else "موسیقی: خاموش"
 	if _pause_sfx_btn != null:
 		_pause_sfx_btn.text = "افکت: روشن" if SaveManager.sfx_enabled else "افکت: خاموش"
+	_refresh_fps_visibility()
+
+
+func _preload_weapon_icons() -> void:
+	var paths: Dictionary = {
+		"m4": "res://assets/ui/icon_weapon_m4.png",
+		"uzi": "res://assets/ui/icon_weapon_uzi.png",
+		"shotgun": "res://assets/ui/icon_weapon_shotgun.png",
+		"sniper": "res://assets/ui/icon_weapon_sniper.png"
+	}
+	for k in paths.keys():
+		var p: String = paths[k]
+		if ResourceLoader.exists(p):
+			var tex: Resource = ResourceLoader.load(p)
+			if tex is Texture2D:
+				_weapon_icon_cache[k] = tex
+
+
+func _refresh_fps_visibility() -> void:
+	if _fps_badge != null:
+		_fps_badge.visible = SaveManager.show_fps
+	if _pause_fps_btn != null:
+		_pause_fps_btn.text = "نمایش FPS: روشن" if SaveManager.show_fps else "نمایش FPS: خاموش"
+
+
+func _on_btn_pause_fps_pressed() -> void:
+	AudioManager.play_ui_menu()
+	GameManager.set_show_fps(not SaveManager.show_fps)
+	_refresh_fps_visibility()
 
 
 func _on_btn_pause_music_pressed() -> void:

@@ -1,5 +1,5 @@
 extends Node
-## مدیر صدای مستقل و آفلاین برای موسیقی منو و نبرد + افکت‌های صوتی اختصاصی و Kenney.
+## مدیر صدای مستقل و آفلاین برای موسیقی جنگی منو و نبرد + افکت‌های صوتی سلاح‌ها.
 
 const UI_TAP_PATH: String = "res://assets/audio/sfx_ui_tap.wav"
 const UI_SWITCH_PATH: String = "res://assets/audio/sfx_ui_switch.wav"
@@ -101,7 +101,7 @@ func _load_bundled_audio() -> void:
 
 
 func apply_volumes() -> void:
-	var music_scale: float = (0.38 if _music_ducked else 1.0) * (0.42 if _music_mode == "arena" else 1.0)
+	var music_scale: float = (0.38 if _music_ducked else 1.0) * (0.46 if _music_mode == "arena" else 0.72)
 	var music_lin: float = SaveManager.master_volume * SaveManager.music_volume * music_scale if SaveManager.music_enabled else 0.0
 	var ui_lin: float = SaveManager.master_volume * SaveManager.ui_volume if SaveManager.sfx_enabled else 0.0
 	var sfx_lin: float = SaveManager.master_volume * SaveManager.sfx_volume if SaveManager.sfx_enabled else 0.0
@@ -179,6 +179,18 @@ func set_sfx_enabled(enabled: bool) -> void:
 
 func set_master_volume(volume: float) -> void:
 	SaveManager.master_volume = clampf(volume, 0.1, 1.0)
+	SaveManager.save_settings()
+	apply_volumes()
+
+
+func set_music_volume(volume: float) -> void:
+	SaveManager.music_volume = clampf(volume, 0.0, 1.0)
+	SaveManager.save_settings()
+	apply_volumes()
+
+
+func set_sfx_volume(volume: float) -> void:
+	SaveManager.sfx_volume = clampf(volume, 0.0, 1.0)
 	SaveManager.save_settings()
 	apply_volumes()
 

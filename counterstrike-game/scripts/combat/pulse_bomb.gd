@@ -4,7 +4,8 @@ extends Node3D
 
 const POOL_ID: StringName = &"pulse_bomb"
 
-@onready var _core_mesh: MeshInstance3D = $CoreMesh
+@onready var _core_mesh: MeshInstance3D = get_node_or_null("CoreMesh") as MeshInstance3D
+@onready var _grenade_model: Node3D = get_node_or_null("GrenadeModel") as Node3D
 @onready var _halo_mesh: MeshInstance3D = $HaloMesh
 @onready var _blast_ring: MeshInstance3D = $BlastZoneRing
 
@@ -87,6 +88,9 @@ func _physics_process(delta: float) -> void:
 	_fuse_timer -= delta
 	_pulse_time += delta * 18.0
 	var blink: float = 0.5 + 0.5 * sin(_pulse_time)
+	if _grenade_model != null:
+		_grenade_model.rotation.x += delta * 8.5
+		_grenade_model.rotation.y += delta * 6.0
 	if _core_mat != null:
 		_core_mat.emission = Color(0.984314, 0.74902, 0.141176, 1.0).lerp(Color(0.98, 0.25, 0.20, 1.0), blink)
 		_core_mat.emission_energy_multiplier = 1.6 + 1.4 * blink

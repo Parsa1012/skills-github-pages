@@ -162,6 +162,14 @@ func _setup_materials() -> void:
 		_buff_aura.material_override = _buff_aura_mat
 		_buff_aura.visible = false
 
+	if _kenney_soldier != null:
+		VisualFxUtils.equip_military_soldier(
+			_kenney_soldier,
+			"res://assets/kenney/blocky_characters/Textures/skin_player_swat.png",
+			team_id,
+			false
+		)
+
 
 func _setup_animations() -> void:
 	if _kenney_soldier == null:
@@ -273,6 +281,7 @@ func trigger_bomb() -> bool:
 	_bomb_cooldown = BOMB_COOLDOWN
 	_bomb_emit_timer = 0.0
 	AudioManager.play_bomb_throw_sfx()
+	GameManager.trigger_haptic(22)
 	EventBus.player_bomb_updated.emit(_bomb_cooldown, BOMB_COOLDOWN, false)
 	return true
 
@@ -292,6 +301,7 @@ func trigger_dash() -> bool:
 	_dash_cooldown = DASH_COOLDOWN
 	_dash_emit_timer = 0.0
 	AudioManager.play_dash_sfx()
+	GameManager.trigger_haptic(18)
 	EventBus.camera_trauma_requested.emit(0.08)
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
 	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
@@ -469,8 +479,8 @@ func _try_fire(horiz_speed: float) -> void:
 		knock_force = 0.9
 
 	var forward_dir := Vector3(-sin(_facing_yaw), 0.0, -cos(_facing_yaw)).normalized()
-	var chest_origin := global_position + Vector3(0.0, 0.74, 0.0)
-	var muzzle_pos: Vector3 = _muzzle_marker.global_position if _muzzle_marker != null else chest_origin + forward_dir * 0.68
+	var chest_origin := global_position + Vector3(0.0, 1.02, 0.0)
+	var muzzle_pos: Vector3 = _muzzle_marker.global_position if _muzzle_marker != null else chest_origin + forward_dir * 0.72
 	var barrel_check_end := Vector3(muzzle_pos.x, chest_origin.y, muzzle_pos.z)
 
 	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
@@ -595,6 +605,7 @@ func take_damage(amount: float, attacker_team: int, attacker_pos: Vector3 = Vect
 	_hit_flash_timer = 0.14
 	_hp = maxf(_hp - amount, 0.0)
 	AudioManager.play_player_hit_sfx()
+	GameManager.trigger_haptic(26)
 	EventBus.camera_trauma_requested.emit(0.24)
 	EventBus.player_damaged_feedback.emit(_hp / maxf(max_hp, 1.0))
 	if attacker_pos.is_finite():
@@ -701,8 +712,8 @@ func _respawn() -> void:
 
 func _emit_stats() -> void:
 	var b: EnergyBlasterData = _get_active_blaster()
-	var b_name: String = b.display_name if b != null else "پالس بلاستر"
-	var b_cap: int = b.energy_cell_capacity if b != null else 16
+	var b_name: String = b.display_name if b != null else "کاربین M4"
+	var b_cap: int = b.energy_cell_capacity if b != null else 24
 	EventBus.player_stats_updated.emit(int(ceil(_hp)), int(max_hp), _current_energy, b_cap, b_name, _recharging)
 
 
@@ -792,7 +803,7 @@ func _update_facing_and_aim(move_world: Vector3, aim_world: Vector3, move_len: f
 func _update_soldier_animation(horiz_speed: float, delta: float) -> void:
 	if _weapon_mount != null:
 		_recoil_offset = move_toward(_recoil_offset, 0.0, 1.1 * delta)
-		_weapon_mount.position.z = -0.24 + _recoil_offset
+		_weapon_mount.position.z = -0.44 + _recoil_offset
 
 	if _anim_player == null:
 		return

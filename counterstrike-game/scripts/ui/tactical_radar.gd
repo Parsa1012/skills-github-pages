@@ -13,7 +13,7 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	_redraw_timer += delta
-	if _redraw_timer >= 0.075:
+	if _redraw_timer >= 0.12:
 		_redraw_timer = 0.0
 		queue_redraw()
 
