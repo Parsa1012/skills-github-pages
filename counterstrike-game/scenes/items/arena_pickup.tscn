@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/items/arena_pickup.gd" id="1_pickup"]
+[ext_resource type="PackedScene" path="res://assets/kenney/weapon/ammo_machinegun.glb" id="2_ammo"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_pickup"]
 height = 1.4
@@ -42,3 +43,7 @@ mesh = SubResource("BoxMesh_core")
 [node name="CrossBarMesh" type="MeshInstance3D" parent="VisualPivot"]
 cast_shadow = 0
 mesh = SubResource("BoxMesh_cross")
+
+[node name="AmmoCrateModel" parent="VisualPivot" instance=ExtResource("2_ammo")]
+transform = Transform3D(2.6, 0, 0, 0, 2.6, 0, 0, 0, 2.6, -0.195, -1.27, -0.05)
+visible = false

@@ -15,6 +15,7 @@ enum PickupType {
 @onready var _visual_pivot: Node3D = $VisualPivot
 @onready var _core_mesh: MeshInstance3D = $VisualPivot/PickupCoreMesh
 @onready var _cross_mesh: MeshInstance3D = $VisualPivot/CrossBarMesh
+@onready var _ammo_model: Node3D = $VisualPivot/AmmoCrateModel
 @onready var _pad_mesh: MeshInstance3D = $PadRingMesh
 
 var _available: bool = true
@@ -44,18 +45,27 @@ func _configure_visuals() -> void:
 			_accent_color = Color(0.062745, 0.72549, 0.505882, 1.0)
 			if _cross_mesh != null:
 				_cross_mesh.visible = true
+			if _core_mesh != null:
+				_core_mesh.visible = true
+			if _ammo_model != null:
+				_ammo_model.visible = false
 		PickupType.OVERCHARGE:
 			_accent_color = Color(0.960784, 0.619608, 0.043137, 1.0)
 			if _cross_mesh != null:
 				_cross_mesh.visible = false
 			if _core_mesh != null:
-				_core_mesh.rotation_degrees = Vector3(45.0, 45.0, 0.0)
+				_core_mesh.visible = (_ammo_model == null)
+			if _ammo_model != null:
+				_ammo_model.visible = true
 		PickupType.SPEED_BOOST:
 			_accent_color = Color(0.658824, 0.333333, 0.968627, 1.0)
 			if _cross_mesh != null:
 				_cross_mesh.visible = false
 			if _core_mesh != null:
+				_core_mesh.visible = true
 				_core_mesh.rotation_degrees = Vector3(0.0, 45.0, 45.0)
+			if _ammo_model != null:
+				_ammo_model.visible = false
 
 	_core_mat = VisualFxUtils.make_emissive_pbr_material(_accent_color, _accent_color, 1.85, 0.45, 0.28)
 	if _core_mesh != null:
