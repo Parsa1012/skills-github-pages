@@ -5,7 +5,9 @@ const PROJECTILE_SCENE_PATH: String = "res://scenes/combat/energy_projectile.tsc
 const IMPACT_FLASH_SCENE_PATH: String = "res://scenes/combat/impact_flash.tscn"
 const PULSE_BOMB_SCENE_PATH: String = "res://scenes/combat/pulse_bomb.tscn"
 
+@onready var _world_env: WorldEnvironment = get_node_or_null("WorldEnvironment") as WorldEnvironment
 @onready var _sun_light: DirectionalLight3D = $DirectionalLight3D
+@onready var _rim_light: DirectionalLight3D = get_node_or_null("RimLight") as DirectionalLight3D
 @onready var _camera_rig: ArenaCameraRig = $ArenaCameraRig
 @onready var _player: PlayerController = $PlayerCharacter
 
@@ -262,14 +264,30 @@ func get_match_state() -> Dictionary:
 
 
 func _apply_quality_lighting(preset_name: String) -> void:
+	VisualFxUtils.apply_environment_quality(
+		_world_env,
+		preset_name,
+		SaveManager.selected_map_id == "sector_02"
+	)
+	if _rim_light != null:
+		match preset_name:
+			"low":
+				_rim_light.light_energy = 0.45
+			"medium":
+				_rim_light.light_energy = 0.65
+			_:
+				_rim_light.light_energy = 0.82
 	if _sun_light == null:
 		return
+	_sun_light.directional_shadow_max_distance = 44.0
+	_sun_light.shadow_bias = 0.04
+	_sun_light.shadow_normal_bias = 1.2
 	match preset_name:
 		"low":
 			_sun_light.shadow_enabled = false
 		"medium":
 			_sun_light.shadow_enabled = true
 			_sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-		"high":
+		_:
 			_sun_light.shadow_enabled = true
 			_sun_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS

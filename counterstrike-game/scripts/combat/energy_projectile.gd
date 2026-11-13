@@ -72,7 +72,7 @@ func launch(
 
 	rotation.y = atan2(-_direction.x, -_direction.z)
 	if _outer_mat != null:
-		_outer_mat.albedo_color = Color(bolt_color.r, bolt_color.g, bolt_color.b, 0.90)
+		_outer_mat.albedo_color = Color(bolt_color.r * 1.85, bolt_color.g * 1.85, bolt_color.b * 1.85, 0.88)
 
 
 func _physics_process(delta: float) -> void:

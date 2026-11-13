@@ -1,17 +1,17 @@
 class_name LobbyStage3D
 extends Node3D
-## صحنه ۳بعدی زنده لابی منوی اصلی (قهرمان چرخان با سلاح فعال، پهپاد دشمن، جام قهرمانی و نورپردازی متغیر نقشه).
+## صحنه ۳بعدی زنده لابی منوی اصلی (قهرمان چرخان با سلاح فعال، حلقه هولوگرام، کف‌پوش شیدری و نورپردازی ACES).
 
 @onready var _world_env: WorldEnvironment = $WorldEnvironment
 @onready var _key_light: DirectionalLight3D = $KeyLight
 @onready var _rim_light: DirectionalLight3D = $RimLight
 @onready var _camera: Camera3D = $LobbyCamera
 @onready var _hero_turntable: Node3D = $HeroTurntable
-@onready var _hero_pivot: Node3D = $HeroTurntable/HeroPivot
 @onready var _soldier_root: Node3D = $HeroTurntable/HeroPivot/KenneySoldier
 @onready var _weapon_mount: Node3D = $HeroTurntable/HeroPivot/WeaponMount
 @onready var _muzzle_core: MeshInstance3D = $HeroTurntable/HeroPivot/WeaponMount/MuzzleCore
 @onready var _pedestal_ring: MeshInstance3D = $HeroTurntable/PedestalRing
+@onready var _holo_ring: MeshInstance3D = get_node_or_null("HeroTurntable/HoloRing") as MeshInstance3D
 @onready var _floor_mesh: MeshInstance3D = $LobbyFloor
 @onready var _hover_drone: Node3D = $BackdropProps/HoverDronePivot
 @onready var _trophy_prop: Node3D = $BackdropProps/TrophyPlinth/KenneyTrophy
@@ -23,8 +23,9 @@ var _cam_tween: Tween = null
 var _theme_tween: Tween = null
 
 var _ring_mat: StandardMaterial3D = null
+var _holo_mat: StandardMaterial3D = null
 var _muzzle_mat: StandardMaterial3D = null
-var _floor_mat: StandardMaterial3D = null
+var _floor_shader_mat: ShaderMaterial = null
 
 var _spin_velocity: float = 0.0
 var _idle_time: float = 0.0
@@ -36,54 +37,54 @@ var _base_cam_pos: Vector3 = Vector3(0.0, 1.82, 5.25)
 func _ready() -> void:
 	_setup_materials()
 	_setup_soldier_animation()
+	_apply_quality_lighting(SaveManager.quality_preset)
+	EventBus.quality_preset_changed.connect(_apply_quality_lighting)
 	if _camera != null:
 		_base_cam_pos = _camera.position
 
 
+func _exit_tree() -> void:
+	if EventBus.quality_preset_changed.is_connected(_apply_quality_lighting):
+		EventBus.quality_preset_changed.disconnect(_apply_quality_lighting)
+
+
 func _setup_materials() -> void:
 	if _pedestal_ring != null:
-		_ring_mat = StandardMaterial3D.new()
-		_ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_ring_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.88)
+		_ring_mat = VisualFxUtils.make_unshaded_hdr_material(Color(0.219608, 0.741176, 0.972549, 1.0), 0.90, 1.55)
 		_pedestal_ring.material_override = _ring_mat
 
+	if _holo_ring != null:
+		_holo_mat = VisualFxUtils.make_unshaded_hdr_material(Color(0.219608, 0.741176, 0.972549, 1.0), 0.55, 1.65)
+		_holo_ring.material_override = _holo_mat
+
 	if _muzzle_core != null:
-		_muzzle_mat = StandardMaterial3D.new()
-		_muzzle_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_muzzle_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 1.0)
+		_muzzle_mat = VisualFxUtils.make_unshaded_hdr_material(Color(0.219608, 0.741176, 0.972549, 1.0), 1.0, 1.95)
 		_muzzle_core.material_override = _muzzle_mat
 
-	if _floor_mesh != null:
-		_floor_mat = StandardMaterial3D.new()
-		_floor_mat.albedo_color = Color(0.062745, 0.094118, 0.160784, 1.0)
-		_floor_mat.roughness = 0.62
-		_floor_mat.metallic = 0.28
-		_floor_mesh.material_override = _floor_mat
+	if _floor_mesh != null and _floor_mesh.material_override is ShaderMaterial:
+		_floor_shader_mat = (_floor_mesh.material_override as ShaderMaterial).duplicate() as ShaderMaterial
+		_floor_mesh.material_override = _floor_shader_mat
 
 
 func _setup_soldier_animation() -> void:
 	if _soldier_root == null:
 		return
-	_anim_player = _find_animation_player(_soldier_root)
+	_anim_player = _soldier_root.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _anim_player != null:
-		for anim_name in ["idle", "walk", "sprint"]:
-			if _anim_player.has_animation(anim_name):
-				var anim: Animation = _anim_player.get_animation(anim_name)
-				if anim != null:
-					anim.loop_mode = Animation.LOOP_LINEAR
+		VisualFxUtils.patch_kenney_soldier_animations(_anim_player)
 		if _anim_player.has_animation("idle"):
 			_anim_player.play("idle")
 
 
-func _find_animation_player(node: Node) -> AnimationPlayer:
-	if node is AnimationPlayer:
-		return node as AnimationPlayer
-	for child in node.get_children():
-		var found: AnimationPlayer = _find_animation_player(child)
-		if found != null:
-			return found
-	return null
+func _apply_quality_lighting(preset_name: String) -> void:
+	VisualFxUtils.apply_environment_quality(
+		_world_env,
+		preset_name,
+		_current_map_id == "sector_02"
+	)
+	if _key_light != null:
+		_key_light.shadow_enabled = (preset_name != "low")
+		_key_light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if preset_name == "high" else DirectionalLight3D.SHADOW_ORTHOGONAL
 
 
 func _process(delta: float) -> void:
@@ -95,6 +96,10 @@ func _process(delta: float) -> void:
 			_spin_velocity = lerpf(_spin_velocity, 0.0, clampf(5.5 * delta, 0.0, 1.0))
 		else:
 			_hero_turntable.rotation.y += 0.24 * delta
+
+	if _holo_ring != null:
+		_holo_ring.rotation.y -= 0.85 * delta
+		_holo_ring.position.y = 0.42 + sin(_idle_time * 2.4) * 0.05
 
 	if _hover_drone != null:
 		_hover_drone.position.y = 1.68 + sin(_idle_time * 2.1) * 0.14
@@ -146,9 +151,11 @@ func set_weapon(blaster: EnergyBlasterData, accent_color: Color) -> void:
 	_current_weapon_id = bid
 
 	if _ring_mat != null:
-		_ring_mat.albedo_color = Color(accent_color.r, accent_color.g, accent_color.b, 0.90)
+		_ring_mat.albedo_color = Color(accent_color.r * 1.55, accent_color.g * 1.55, accent_color.b * 1.55, 0.90)
+	if _holo_mat != null:
+		_holo_mat.albedo_color = Color(accent_color.r * 1.65, accent_color.g * 1.65, accent_color.b * 1.65, 0.52)
 	if _muzzle_mat != null:
-		_muzzle_mat.albedo_color = accent_color
+		_muzzle_mat.albedo_color = Color(accent_color.r * 1.95, accent_color.g * 1.95, accent_color.b * 1.95, 1.0)
 
 	if not changed and _weapon_instance != null:
 		return
@@ -184,10 +191,13 @@ func set_map_theme(map_id: String) -> void:
 	_current_map_id = map_id
 
 	var is_sector02: bool = (map_id == "sector_02")
-	var bg_col := Color(0.105882, 0.058824, 0.043137, 1.0) if is_sector02 else Color(0.039216, 0.062745, 0.12549, 1.0)
+	var bg_col := Color(0.105882, 0.058824, 0.043137, 1.0) if is_sector02 else Color(0.035294, 0.054902, 0.113725, 1.0)
 	var rim_col := Color(0.984314, 0.501961, 0.168627, 1.0) if is_sector02 else Color(0.219608, 0.741176, 0.972549, 1.0)
-	var key_col := Color(1.0, 0.909804, 0.823529, 1.0) if is_sector02 else Color(0.909804, 0.960784, 1.0, 1.0)
-	var floor_col := Color(0.117647, 0.078431, 0.062745, 1.0) if is_sector02 else Color(0.062745, 0.094118, 0.160784, 1.0)
+	var key_col := Color(1.0, 0.909804, 0.823529, 1.0) if is_sector02 else Color(0.94, 0.97, 1.0, 1.0)
+	var tile_a := Color(0.105882, 0.070588, 0.058824, 1.0) if is_sector02 else Color(0.054902, 0.082353, 0.141176, 1.0)
+	var tile_b := Color(0.141176, 0.094118, 0.07451, 1.0) if is_sector02 else Color(0.07451, 0.113725, 0.188235, 1.0)
+	var grid_col := Color(0.75, 0.38, 0.18, 1.0) if is_sector02 else Color(0.180392, 0.443137, 0.721569, 1.0)
+	var zone_col := Color(0.75, 0.32, 0.12, 1.0) if is_sector02 else Color(0.12, 0.44, 0.80, 1.0)
 
 	if not is_inside_tree():
 		if _world_env != null and _world_env.environment != null:
@@ -197,8 +207,13 @@ func set_map_theme(map_id: String) -> void:
 			_rim_light.light_color = rim_col
 		if _key_light != null:
 			_key_light.light_color = key_col
-		if _floor_mat != null:
-			_floor_mat.albedo_color = floor_col
+		if _floor_shader_mat != null:
+			_floor_shader_mat.set_shader_parameter("base_color", tile_a)
+			_floor_shader_mat.set_shader_parameter("alt_tile_color", tile_b)
+			_floor_shader_mat.set_shader_parameter("grid_line_color", grid_col)
+			_floor_shader_mat.set_shader_parameter("center_line_color", rim_col)
+			_floor_shader_mat.set_shader_parameter("blue_zone_tint", zone_col)
+			_floor_shader_mat.set_shader_parameter("orange_zone_tint", zone_col)
 		return
 
 	if _theme_tween != null and _theme_tween.is_valid():
@@ -211,5 +226,10 @@ func set_map_theme(map_id: String) -> void:
 		_theme_tween.tween_property(_rim_light, "light_color", rim_col, 0.45)
 	if _key_light != null:
 		_theme_tween.tween_property(_key_light, "light_color", key_col, 0.45)
-	if _floor_mat != null:
-		_theme_tween.tween_property(_floor_mat, "albedo_color", floor_col, 0.45)
+	if _floor_shader_mat != null:
+		_theme_tween.tween_property(_floor_shader_mat, "shader_parameter/base_color", tile_a, 0.45)
+		_theme_tween.tween_property(_floor_shader_mat, "shader_parameter/alt_tile_color", tile_b, 0.45)
+		_theme_tween.tween_property(_floor_shader_mat, "shader_parameter/grid_line_color", grid_col, 0.45)
+		_theme_tween.tween_property(_floor_shader_mat, "shader_parameter/center_line_color", rim_col, 0.45)
+		_theme_tween.tween_property(_floor_shader_mat, "shader_parameter/blue_zone_tint", zone_col, 0.45)
+		_theme_tween.tween_property(_floor_shader_mat, "shader_parameter/orange_zone_tint", zone_col, 0.45)

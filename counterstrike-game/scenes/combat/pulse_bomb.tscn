@@ -1,18 +1,24 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/combat/pulse_bomb.gd" id="1_bomb"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_core"]
-radius = 0.20
-height = 0.40
+radius = 0.21
+height = 0.42
 radial_segments = 14
 rings = 8
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_halo"]
-top_radius = 0.42
-bottom_radius = 0.46
-height = 0.04
-radial_segments = 20
+[sub_resource type="TorusMesh" id="TorusMesh_halo"]
+inner_radius = 0.27
+outer_radius = 0.34
+rings = 18
+ring_segments = 6
+
+[sub_resource type="TorusMesh" id="TorusMesh_blast_zone"]
+inner_radius = 3.40
+outer_radius = 3.55
+rings = 28
+ring_segments = 4
 
 [node name="PulseBomb" type="Node3D"]
 script = ExtResource("1_bomb")
@@ -23,4 +29,8 @@ mesh = SubResource("SphereMesh_core")
 
 [node name="HaloMesh" type="MeshInstance3D" parent="."]
 cast_shadow = 0
-mesh = SubResource("CylinderMesh_halo")
+mesh = SubResource("TorusMesh_halo")
+
+[node name="BlastZoneRing" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+mesh = SubResource("TorusMesh_blast_zone")

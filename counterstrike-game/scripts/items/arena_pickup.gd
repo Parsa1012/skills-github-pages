@@ -57,18 +57,13 @@ func _configure_visuals() -> void:
 			if _core_mesh != null:
 				_core_mesh.rotation_degrees = Vector3(0.0, 45.0, 45.0)
 
-	_core_mat = StandardMaterial3D.new()
-	_core_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_core_mat.albedo_color = _accent_color
+	_core_mat = VisualFxUtils.make_emissive_pbr_material(_accent_color, _accent_color, 1.85, 0.45, 0.28)
 	if _core_mesh != null:
 		_core_mesh.material_override = _core_mat
 	if _cross_mesh != null:
 		_cross_mesh.material_override = _core_mat
 
-	_pad_mat = StandardMaterial3D.new()
-	_pad_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_pad_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_pad_mat.albedo_color = Color(_accent_color.r, _accent_color.g, _accent_color.b, 0.65)
+	_pad_mat = VisualFxUtils.make_unshaded_hdr_material(_accent_color, 0.68, 1.55)
 	if _pad_mesh != null:
 		_pad_mesh.material_override = _pad_mat
 

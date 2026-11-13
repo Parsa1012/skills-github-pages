@@ -38,12 +38,22 @@ sky_material = SubResource("ProceduralSkyMaterial_s2")
 background_mode = 2
 sky = SubResource("Sky_s2")
 ambient_light_source = 2
-ambient_light_color = Color(0.92, 0.84, 0.76, 1)
-ambient_light_energy = 0.65
+ambient_light_color = Color(0.88, 0.78, 0.70, 1)
+ambient_light_energy = 0.58
+tonemap_mode = 3
+tonemap_white = 4.5
+glow_enabled = true
+glow_intensity = 0.72
+glow_bloom = 0.26
+glow_hdr_threshold = 0.92
+fog_enabled = true
+fog_light_color = Color(0.18, 0.11, 0.09, 1)
+fog_density = 0.009
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
-albedo_color = Color(0.24, 0.22, 0.27, 1)
-roughness = 0.85
+albedo_color = Color(0.19, 0.16, 0.21, 1)
+metallic = 0.44
+roughness = 0.46
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(34, 1, 24)
@@ -95,12 +105,12 @@ radial_segments = 24
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue_pad"]
 shading_mode = 0
 transparency = 1
-albedo_color = Color(0.219608, 0.741176, 0.972549, 0.24)
+albedo_color = Color(0.34, 1.15, 1.52, 0.36)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_orange_pad"]
 shading_mode = 0
 transparency = 1
-albedo_color = Color(0.984314, 0.45098, 0.086275, 0.24)
+albedo_color = Color(1.52, 0.68, 0.14, 0.36)
 
 [sub_resource type="BoxMesh" id="BoxMesh_team_pad"]
 size = Vector3(3.4, 0.03, 5.4)
@@ -114,8 +124,16 @@ environment = SubResource("Environment_s2")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.819152, 0.451984, -0.353129, 0, 0.615661, 0.788011, 0.573576, -0.645501, 0.50432, -8, 18, 10)
 light_color = Color(1, 0.917647, 0.796078, 1)
-light_energy = 1.24
+light_energy = 1.32
 shadow_enabled = true
+shadow_bias = 0.04
+shadow_normal_bias = 1.2
+directional_shadow_max_distance = 44.0
+
+[node name="RimLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.258819, 0.433013, 0, 0.858392, 0.512992, -0.5, 0.448264, -0.749576, 8, 12, -12)
+light_color = Color(0.984314, 0.501961, 0.168627, 1)
+light_energy = 0.84
 
 [node name="ArenaEnvironment" type="Node3D" parent="."]
 

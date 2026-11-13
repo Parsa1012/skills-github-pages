@@ -149,25 +149,16 @@ func _setup_materials() -> void:
 		_aim_beam_mat = mat
 
 	if _muzzle_flash != null:
-		_muzzle_flash_mat = StandardMaterial3D.new()
-		_muzzle_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_muzzle_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_muzzle_flash_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.9)
+		_muzzle_flash_mat = VisualFxUtils.make_unshaded_hdr_material(Color(0.219608, 0.741176, 0.972549, 1.0), 0.92, 2.0)
 		_muzzle_flash.material_override = _muzzle_flash_mat
 		_muzzle_flash.visible = false
 
 	if _team_ring != null:
-		_team_ring_mat = StandardMaterial3D.new()
-		_team_ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_team_ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_team_ring_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.65)
+		_team_ring_mat = VisualFxUtils.make_unshaded_hdr_material(Color(0.219608, 0.741176, 0.972549, 1.0), 0.68, 1.5)
 		_team_ring.material_override = _team_ring_mat
 
 	if _buff_aura != null:
-		_buff_aura_mat = StandardMaterial3D.new()
-		_buff_aura_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_buff_aura_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_buff_aura_mat.albedo_color = Color(0.984314, 0.74902, 0.141176, 0.72)
+		_buff_aura_mat = VisualFxUtils.make_unshaded_hdr_material(Color(0.984314, 0.74902, 0.141176, 1.0), 0.75, 1.8)
 		_buff_aura.material_override = _buff_aura_mat
 		_buff_aura.visible = false
 
@@ -178,37 +169,7 @@ func _setup_animations() -> void:
 	_anim_player = _kenney_soldier.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _anim_player == null:
 		return
-
-	# Make a per-instance editable library so loop modes and rest-leg tracks apply cleanly.
-	for anim_name in ["idle", "walk", "sprint"]:
-		if _anim_player.has_animation(anim_name):
-			var anim: Animation = _anim_player.get_animation(anim_name)
-			if anim != null:
-				anim.loop_mode = Animation.LOOP_LINEAR
-	if _anim_player.has_animation("die"):
-		var die_anim: Animation = _anim_player.get_animation("die")
-		if die_anim != null:
-			die_anim.loop_mode = Animation.LOOP_NONE
-
-	# Kenney's 'idle' omits leg/root tracks, which leaves legs stuck mid-stride after walking.
-	if _anim_player.has_animation("idle") and _anim_player.has_animation("static"):
-		var idle_anim: Animation = _anim_player.get_animation("idle")
-		var static_anim: Animation = _anim_player.get_animation("static")
-		if idle_anim != null and static_anim != null:
-			var existing_paths: Dictionary = {}
-			for t in idle_anim.get_track_count():
-				existing_paths[str(idle_anim.track_get_path(t))] = true
-			for st in static_anim.get_track_count():
-				var path_str: String = str(static_anim.track_get_path(st))
-				if not existing_paths.has(path_str) and (
-					"leg-" in path_str or path_str.ends_with(":position") or path_str.ends_with("root")
-				):
-					if static_anim.track_get_key_count(st) > 0:
-						var new_t: int = idle_anim.add_track(static_anim.track_get_type(st))
-						idle_anim.track_set_path(new_t, static_anim.track_get_path(st))
-						idle_anim.track_set_interpolation_type(new_t, static_anim.track_get_interpolation_type(st))
-						idle_anim.track_insert_key(new_t, 0.0, static_anim.track_get_key_value(st, 0))
-
+	VisualFxUtils.patch_kenney_soldier_animations(_anim_player)
 	if _anim_player.has_animation("idle"):
 		_anim_player.play("idle")
 
@@ -335,7 +296,7 @@ func trigger_dash() -> bool:
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
 	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 	if flash is ImpactFlash:
-		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.55, 0.0), Color(0.219608, 0.741176, 0.972549, 1.0))
+		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.55, 0.0), Color(0.219608, 0.741176, 0.972549, 1.0), 1.85, 0.14)
 	EventBus.player_dash_updated.emit(_dash_cooldown, DASH_COOLDOWN, false)
 	return true
 
@@ -361,9 +322,12 @@ func _physics_process(delta: float) -> void:
 			_muzzle_flash.visible = false
 
 	if _hit_flash_timer > 0.0:
-		_hit_flash_timer -= delta
+		_hit_flash_timer = maxf(0.0, _hit_flash_timer - delta)
 		if _team_ring_mat != null:
-			_team_ring_mat.albedo_color = Color(0.984314, 0.25, 0.25, 0.9) if _hit_flash_timer > 0.0 else Color(0.219608, 0.741176, 0.972549, 0.65)
+			var ring_col: Color = Color(0.984314, 0.25, 0.25, 1.0) if _hit_flash_timer > 0.0 else Color(0.219608, 0.741176, 0.972549, 1.0)
+			var boost: float = 2.0 if _hit_flash_timer > 0.0 else 1.5
+			var alpha: float = 0.92 if _hit_flash_timer > 0.0 else 0.68
+			_team_ring_mat.albedo_color = Color(ring_col.r * boost, ring_col.g * boost, ring_col.b * boost, alpha)
 
 	var had_buff: bool = (_damage_boost_timer > 0.0 or _speed_boost_timer > 0.0)
 	if _damage_boost_timer > 0.0:
@@ -489,7 +453,8 @@ func _try_fire(horiz_speed: float) -> void:
 	if _muzzle_flash != null:
 		_muzzle_flash.visible = true
 		if _muzzle_flash_mat != null:
-			_muzzle_flash_mat.albedo_color = Color(b.projectile_color.r, b.projectile_color.g, b.projectile_color.b, 0.92)
+			var c: Color = b.projectile_color
+			_muzzle_flash_mat.albedo_color = Color(c.r * 2.0, c.g * 2.0, c.b * 2.0, 0.95)
 	if b.pellets_per_shot > 1:
 		EventBus.camera_trauma_requested.emit(0.11)
 	elif b.pierce_count > 0:
@@ -616,11 +581,11 @@ func _update_buff_aura(delta: float) -> void:
 	var s: float = 1.0 + 0.07 * sin(_aura_pulse_time)
 	_buff_aura.scale = Vector3(s, 1.0, s)
 	if _dash_timer > 0.0:
-		_buff_aura_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.85)
+		_buff_aura_mat.albedo_color = Color(0.219608 * 1.8, 0.741176 * 1.8, 0.972549 * 1.8, 0.85)
 	elif _damage_boost_timer > 0.0:
-		_buff_aura_mat.albedo_color = Color(0.984314, 0.74902, 0.141176, 0.75)
+		_buff_aura_mat.albedo_color = Color(0.984314 * 1.8, 0.74902 * 1.8, 0.141176 * 1.8, 0.78)
 	else:
-		_buff_aura_mat.albedo_color = Color(0.658824, 0.333333, 0.968627, 0.75)
+		_buff_aura_mat.albedo_color = Color(0.658824 * 1.8, 0.333333 * 1.8, 0.968627 * 1.8, 0.78)
 
 
 func take_damage(amount: float, attacker_team: int, attacker_pos: Vector3 = Vector3.INF) -> void:
@@ -662,7 +627,7 @@ func _enter_respawn(attacker_team: int) -> void:
 	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
 	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 	if flash is ImpactFlash:
-		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.85, 0.0), Color(0.219608, 0.741176, 0.972549, 1.0))
+		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.85, 0.0), Color(0.219608, 0.741176, 0.972549, 1.0), 2.65, 0.24)
 	if _collision_shape != null:
 		_collision_shape.set_deferred("disabled", true)
 	if _anim_player != null and _anim_player.has_animation("die"):
@@ -806,6 +771,8 @@ func _update_facing_and_aim(move_world: Vector3, aim_world: Vector3, move_len: f
 
 	if _visual_root != null:
 		_visual_root.rotation.y = _facing_yaw
+		var target_lean: float = -0.14 if _dash_timer > 0.0 else (-0.06 if (has_move and _move_vel.length() > 3.0) else 0.0)
+		_visual_root.rotation.x = lerpf(_visual_root.rotation.x, target_lean, clampf(12.0 * delta, 0.0, 1.0))
 	if _aim_indicator != null:
 		_aim_indicator.rotation.y = _facing_yaw
 		var show_beam: bool = has_aim or fire_active
@@ -817,8 +784,9 @@ func _update_facing_and_aim(move_world: Vector3, aim_world: Vector3, move_len: f
 	if _aim_beam_mat != null:
 		var b: EnergyBlasterData = _get_active_blaster()
 		var base_col: Color = b.projectile_color if b != null else Color(0.219608, 0.741176, 0.972549, 1.0)
-		var alpha: float = 0.85 if fire_active else 0.56
-		_aim_beam_mat.albedo_color = Color(base_col.r, base_col.g, base_col.b, alpha)
+		var boost: float = 1.65 if fire_active else 1.25
+		var alpha: float = 0.88 if fire_active else 0.58
+		_aim_beam_mat.albedo_color = Color(base_col.r * boost, base_col.g * boost, base_col.b * boost, alpha)
 
 
 func _update_soldier_animation(horiz_speed: float, delta: float) -> void:

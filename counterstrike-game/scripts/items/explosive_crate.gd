@@ -26,9 +26,13 @@ func _ready() -> void:
 	collision_mask = 0
 	_hp = max_hp
 	if _band_mesh != null:
-		_band_mat = StandardMaterial3D.new()
-		_band_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_band_mat.albedo_color = Color(0.984314, 0.45098, 0.086275, 1.0)
+		_band_mat = VisualFxUtils.make_emissive_pbr_material(
+			Color(0.984314, 0.45098, 0.086275, 1.0),
+			Color(0.984314, 0.45098, 0.086275, 1.0),
+			1.75,
+			0.45,
+			0.35
+		)
 		_band_mesh.material_override = _band_mat
 
 
@@ -55,11 +59,16 @@ func _process(delta: float) -> void:
 	if _band_mat != null:
 		if _hit_flash_timer > 0.0:
 			_band_mat.albedo_color = Color(1.0, 0.96, 0.72, 1.0)
+			_band_mat.emission = Color(1.0, 0.96, 0.72, 1.0)
+			_band_mat.emission_energy_multiplier = 2.8
 		else:
 			var t: float = 0.5 + 0.5 * sin(_pulse_time)
 			var c_idle := Color(0.984314, 0.45098, 0.086275, 1.0)
 			var c_hot := Color(0.937255, 0.266667, 0.266667, 1.0)
-			_band_mat.albedo_color = c_idle.lerp(c_hot, t if low_hp else t * 0.35)
+			var cur_c: Color = c_idle.lerp(c_hot, t if low_hp else t * 0.35)
+			_band_mat.albedo_color = cur_c
+			_band_mat.emission = cur_c
+			_band_mat.emission_energy_multiplier = 2.4 if low_hp else 1.55
 
 
 func take_damage(amount: float, attacker_team: int = 0, from_player: bool = false) -> void:

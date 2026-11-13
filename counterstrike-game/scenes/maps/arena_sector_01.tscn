@@ -39,16 +39,27 @@ sky_material = SubResource("ProceduralSkyMaterial_arena")
 background_mode = 2
 sky = SubResource("Sky_arena")
 ambient_light_source = 2
-ambient_light_color = Color(0.752941, 0.819608, 0.909804, 1)
-ambient_light_energy = 0.62
+ambient_light_color = Color(0.68, 0.78, 0.92, 1)
+ambient_light_energy = 0.56
+tonemap_mode = 3
+tonemap_white = 4.5
+glow_enabled = true
+glow_intensity = 0.68
+glow_bloom = 0.24
+glow_hdr_threshold = 0.92
+fog_enabled = true
+fog_light_color = Color(0.08, 0.13, 0.23, 1)
+fog_density = 0.008
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
-albedo_color = Color(0.2, 0.254902, 0.333333, 1)
-roughness = 0.86
+albedo_color = Color(0.145098, 0.192157, 0.270588, 1)
+metallic = 0.42
+roughness = 0.48
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_deck"]
-albedo_color = Color(0.278431, 0.333333, 0.411765, 1)
-roughness = 0.8
+albedo_color = Color(0.219608, 0.27451, 0.352941, 1)
+metallic = 0.38
+roughness = 0.44
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(32, 1, 24)
@@ -115,12 +126,12 @@ radial_segments = 24
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue_pad"]
 shading_mode = 0
 transparency = 1
-albedo_color = Color(0.219608, 0.741176, 0.972549, 0.22)
+albedo_color = Color(0.34, 1.15, 1.52, 0.34)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_orange_pad"]
 shading_mode = 0
 transparency = 1
-albedo_color = Color(0.984314, 0.45098, 0.086275, 0.22)
+albedo_color = Color(1.52, 0.68, 0.14, 0.34)
 
 [sub_resource type="BoxMesh" id="BoxMesh_team_pad"]
 size = Vector3(3.4, 0.03, 5.4)
@@ -134,8 +145,16 @@ environment = SubResource("Environment_arena")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.819152, 0.451984, -0.353129, 0, 0.615661, 0.788011, 0.573576, -0.645501, 0.50432, -8, 18, 10)
 light_color = Color(1, 0.972549, 0.921569, 1)
-light_energy = 1.2
+light_energy = 1.28
 shadow_enabled = true
+shadow_bias = 0.04
+shadow_normal_bias = 1.2
+directional_shadow_max_distance = 44.0
+
+[node name="RimLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.258819, 0.433013, 0, 0.858392, 0.512992, -0.5, 0.448264, -0.749576, 8, 12, -12)
+light_color = Color(0.219608, 0.741176, 0.972549, 1)
+light_energy = 0.78
 
 [node name="ArenaEnvironment" type="Node3D" parent="."]
 

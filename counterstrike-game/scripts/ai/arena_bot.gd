@@ -113,19 +113,13 @@ func _setup_team_visuals() -> void:
 	if _team_ring != null:
 		if is_heavy:
 			_team_ring.scale = Vector3(1.25, 1.0, 1.25)
-		var rmat := StandardMaterial3D.new()
-		rmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		rmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		rmat.albedo_color = ring_col
-		_team_ring.material_override = rmat
+		_team_ring.material_override = VisualFxUtils.make_unshaded_hdr_material(ring_col, ring_col.a, 1.45)
 
 	if _hp_bar_pivot != null and is_heavy:
 		_hp_bar_pivot.position.y = 2.42
 
 	if _hp_bar_fill != null:
-		_hp_bar_mat = StandardMaterial3D.new()
-		_hp_bar_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_hp_bar_mat.albedo_color = hp_col
+		_hp_bar_mat = VisualFxUtils.make_unshaded_hdr_material(hp_col, 1.0, 1.45)
 		_hp_bar_fill.material_override = _hp_bar_mat
 
 
@@ -135,11 +129,7 @@ func _setup_model_animations() -> void:
 	_anim_player = _model_pivot.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _anim_player == null:
 		return
-	for anim_name in ["idle", "walk"]:
-		if _anim_player.has_animation(anim_name):
-			var anim: Animation = _anim_player.get_animation(anim_name)
-			if anim != null:
-				anim.loop_mode = Animation.LOOP_LINEAR
+	VisualFxUtils.patch_kenney_soldier_animations(_anim_player)
 	if _anim_player.has_animation("idle"):
 		_anim_player.play("idle")
 
@@ -160,7 +150,9 @@ func _physics_process(delta: float) -> void:
 		if _model_pivot != null:
 			_model_pivot.scale = _base_pivot_scale * (1.10 if _hit_flash_timer > 0.0 else 1.0)
 		if _hp_bar_mat != null:
-			_hp_bar_mat.albedo_color = Color(1.0, 0.95, 0.8, 1.0) if _hit_flash_timer > 0.0 else _base_hp_col
+			var bar_c: Color = Color(1.0, 0.96, 0.82, 1.0) if _hit_flash_timer > 0.0 else _base_hp_col
+			var boost: float = 2.1 if _hit_flash_timer > 0.0 else 1.45
+			_hp_bar_mat.albedo_color = Color(bar_c.r * boost, bar_c.g * boost, bar_c.b * boost, 1.0)
 
 	if _damage_boost_timer > 0.0:
 		_damage_boost_timer = maxf(0.0, _damage_boost_timer - delta)
@@ -205,6 +197,11 @@ func _physics_process(delta: float) -> void:
 
 	if _visual_root != null:
 		_visual_root.rotation.y = _facing_yaw
+		var local_vel: Vector3 = Vector3(velocity.x, 0.0, velocity.z).rotated(Vector3.UP, -_facing_yaw)
+		var target_roll: float = clampf(-local_vel.x * 0.045, -0.22, 0.22)
+		var target_pitch: float = clampf(local_vel.z * 0.035, -0.18, 0.14)
+		_visual_root.rotation.z = lerpf(_visual_root.rotation.z, target_roll, clampf(10.0 * delta, 0.0, 1.0))
+		_visual_root.rotation.x = lerpf(_visual_root.rotation.x, target_pitch, clampf(10.0 * delta, 0.0, 1.0))
 	_update_walk_animation()
 
 
@@ -318,11 +315,13 @@ func _compute_danger_evasion() -> Vector3:
 			if dist < 4.2:
 				evade += (dvec.normalized() if dist > 0.05 else Vector3.RIGHT) * (1.0 - dist / 4.2)
 	for c in get_tree().get_nodes_in_group("explosive_crates"):
-		if c is ExplosiveCrate and (c as ExplosiveCrate).is_intact() and float((c as ExplosiveCrate).get("_hp")) <= 22.0:
-			var dvec := Vector3(global_position.x - (c as Node3D).global_position.x, 0.0, global_position.z - (c as Node3D).global_position.z)
-			var dist: float = dvec.length()
-			if dist < 3.5:
-				evade += (dvec.normalized() if dist > 0.05 else Vector3.LEFT) * (0.85 - dist / 4.2)
+		if c is ExplosiveCrate:
+			var crate := c as ExplosiveCrate
+			if crate.is_intact() and crate._hp <= 22.0:
+				var dvec := Vector3(global_position.x - crate.global_position.x, 0.0, global_position.z - crate.global_position.z)
+				var dist: float = dvec.length()
+				if dist < 3.5:
+					evade += (dvec.normalized() if dist > 0.05 else Vector3.LEFT) * (0.85 - dist / 4.2)
 	if evade.length_squared() > 0.001:
 		return _steer_around_obstacles(evade.normalized())
 	return Vector3.ZERO
@@ -433,12 +432,14 @@ func _find_best_visible_target() -> Node3D:
 	var enemies: Array[Node3D] = []
 	for p in get_tree().get_nodes_in_group("player"):
 		if p is Node3D and is_instance_valid(p) and (not p.has_method("is_alive") or bool(p.call("is_alive"))):
-			if int(p.get("team_id")) != team_id:
+			var p_team: Variant = p.get("team_id")
+			if p_team != null and int(p_team) != team_id:
 				enemies.append(p as Node3D)
 	for b in get_tree().get_nodes_in_group("arena_bots"):
-		if b != self and b is Node3D and is_instance_valid(b) and (not b.has_method("is_alive") or bool(b.call("is_alive"))):
-			if int(b.get("team_id")) != team_id:
-				enemies.append(b as Node3D)
+		if b != self and b is ArenaBot and is_instance_valid(b):
+			var other := b as ArenaBot
+			if other.is_alive() and other.team_id != team_id:
+				enemies.append(other)
 
 	var best_node: Node3D = null
 	var best_dist: float = sight_range
@@ -538,6 +539,9 @@ func _fire_energy_bolt(aim_dir: Vector3) -> void:
 					bolt_col,
 					bolt_scale
 				)
+		var muzzle_flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
+		if muzzle_flash is ImpactFlash:
+			(muzzle_flash as ImpactFlash).trigger(spawn_pos, bolt_col, 0.72, 0.08)
 	var sfx: String = "res://assets/kenney/audio/blaster.ogg" if team_id == 0 else "res://assets/kenney/audio/enemy_attack.ogg"
 	var pitch: float = randf_range(0.76, 0.84) if is_heavy else randf_range(0.94, 1.06)
 	AudioManager.play_sfx_path(sfx, pitch, -3.0)
@@ -585,7 +589,7 @@ func _enter_respawn(attacker_team: int) -> void:
 	if _model_pivot != null:
 		_model_pivot.scale = _base_pivot_scale
 	if _hp_bar_mat != null:
-		_hp_bar_mat.albedo_color = _base_hp_col
+		_hp_bar_mat.albedo_color = Color(_base_hp_col.r * 1.45, _base_hp_col.g * 1.45, _base_hp_col.b * 1.45, 1.0)
 	velocity = Vector3.ZERO
 	_knockback_vel = Vector3.ZERO
 	_move_vel = Vector2.ZERO
@@ -595,7 +599,7 @@ func _enter_respawn(attacker_team: int) -> void:
 	var flash_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.572549, 0.235294, 1.0)
 	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 	if flash is ImpactFlash:
-		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.9, 0.0), flash_col)
+		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.9, 0.0), flash_col, 2.55, 0.22)
 
 	if _collision_shape != null:
 		_collision_shape.set_deferred("disabled", true)

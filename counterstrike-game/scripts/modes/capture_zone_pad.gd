@@ -17,6 +17,8 @@ signal zone_ownership_changed(zone: CaptureZonePad, new_owner_team: int)
 var owner_team: int = -1 # -1 = خنثی، 0 = آبی، 1 = نارنجی
 var _capture_value: float = 0.0 # -1.0 (نارنجی) ... 0.0 (خنثی) ... +1.0 (آبی)
 var _mat: StandardMaterial3D = null
+var _border_mat: StandardMaterial3D = null
+var _border_ring: MeshInstance3D = null
 var _units_inside: Array[Node3D] = []
 var _player_inside: bool = false
 var _last_emitted_progress: float = -1.0
@@ -33,6 +35,19 @@ func _ready() -> void:
 		_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		_mat.albedo_color = idle_color
 		_pad_mesh.material_override = _mat
+
+		_border_ring = MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 2.08
+		torus.outer_radius = 2.24
+		torus.rings = 28
+		torus.ring_segments = 4
+		_border_ring.mesh = torus
+		_border_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_border_ring.position = Vector3(0.0, 0.035, 0.0)
+		_border_mat = VisualFxUtils.make_unshaded_hdr_material(idle_color, 0.72, 1.55)
+		_border_ring.material_override = _border_mat
+		add_child(_border_ring)
 
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
@@ -115,13 +130,19 @@ func _physics_process(delta: float) -> void:
 func _update_visual_color(contested: bool, delta: float) -> void:
 	if _mat == null:
 		return
+	var target_col: Color = idle_color
 	if contested:
 		_pulse_time += delta * 8.0
 		var a: float = 0.55 + 0.30 * sin(_pulse_time)
-		_mat.albedo_color = Color(contested_color.r, contested_color.g, contested_color.b, a)
+		target_col = Color(contested_color.r, contested_color.g, contested_color.b, a)
+		_mat.albedo_color = target_col
+		if _border_mat != null:
+			_border_mat.albedo_color = Color(target_col.r * 1.65, target_col.g * 1.65, target_col.b * 1.65, 0.92)
 		if _pad_mesh != null:
 			var sc: float = 1.0 + 0.045 * sin(_pulse_time)
 			_pad_mesh.scale = Vector3(sc, 1.0, sc)
+			if _border_ring != null:
+				_border_ring.scale = Vector3(sc, 1.0, sc)
 		return
 
 	if _pad_mesh != null:
@@ -129,13 +150,21 @@ func _update_visual_color(contested: bool, delta: float) -> void:
 			_pulse_time += delta * 3.0
 			var sc_own: float = 1.0 + 0.02 * sin(_pulse_time)
 			_pad_mesh.scale = Vector3(sc_own, 1.0, sc_own)
+			if _border_ring != null:
+				_border_ring.scale = Vector3(sc_own, 1.0, sc_own)
 		else:
 			_pad_mesh.scale = Vector3.ONE
+			if _border_ring != null:
+				_border_ring.scale = Vector3.ONE
 
 	if _capture_value >= 0.0:
-		_mat.albedo_color = idle_color.lerp(blue_color, _capture_value)
+		target_col = idle_color.lerp(blue_color, _capture_value)
 	else:
-		_mat.albedo_color = idle_color.lerp(orange_color, -_capture_value)
+		target_col = idle_color.lerp(orange_color, -_capture_value)
+	_mat.albedo_color = target_col
+	if _border_mat != null:
+		var boost: float = 1.65 if owner_team >= 0 else 1.25
+		_border_mat.albedo_color = Color(target_col.r * boost, target_col.g * boost, target_col.b * boost, 0.86 if absf(_capture_value) > 0.1 else 0.52)
 
 
 func _on_body_entered(body: Node3D) -> void:

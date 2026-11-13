@@ -6,6 +6,7 @@ const POOL_ID: StringName = &"pulse_bomb"
 
 @onready var _core_mesh: MeshInstance3D = $CoreMesh
 @onready var _halo_mesh: MeshInstance3D = $HaloMesh
+@onready var _blast_ring: MeshInstance3D = $BlastZoneRing
 
 var _vel: Vector3 = Vector3.ZERO
 var _gravity: float = 16.5
@@ -19,6 +20,7 @@ var _active: bool = false
 var _pulse_time: float = 0.0
 var _core_mat: StandardMaterial3D = null
 var _halo_mat: StandardMaterial3D = null
+var _blast_mat: StandardMaterial3D = null
 
 
 func _ready() -> void:
@@ -32,16 +34,20 @@ func _exit_tree() -> void:
 
 func _ensure_materials() -> void:
 	if _core_mat == null and _core_mesh != null:
-		_core_mat = StandardMaterial3D.new()
-		_core_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_core_mat.albedo_color = Color(0.984314, 0.74902, 0.141176, 1.0)
+		_core_mat = VisualFxUtils.make_emissive_pbr_material(
+			Color(0.14, 0.17, 0.24, 1.0),
+			Color(0.984314, 0.74902, 0.141176, 1.0),
+			1.9,
+			0.68,
+			0.26
+		)
 		_core_mesh.material_override = _core_mat
 	if _halo_mat == null and _halo_mesh != null:
-		_halo_mat = StandardMaterial3D.new()
-		_halo_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_halo_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_halo_mat.albedo_color = Color(0.219608, 0.741176, 0.972549, 0.55)
+		_halo_mat = VisualFxUtils.make_unshaded_hdr_material(Color(0.219608, 0.741176, 0.972549, 1.0), 0.78, 1.75)
 		_halo_mesh.material_override = _halo_mat
+	if _blast_mat == null and _blast_ring != null:
+		_blast_mat = VisualFxUtils.make_unshaded_hdr_material(Color(0.984314, 0.45098, 0.086275, 1.0), 0.42, 1.45)
+		_blast_ring.material_override = _blast_mat
 
 
 func launch(
@@ -80,12 +86,19 @@ func _physics_process(delta: float) -> void:
 
 	_fuse_timer -= delta
 	_pulse_time += delta * 18.0
+	var blink: float = 0.5 + 0.5 * sin(_pulse_time)
 	if _core_mat != null:
-		var blink: float = 0.5 + 0.5 * sin(_pulse_time)
-		_core_mat.albedo_color = Color(0.984314, 0.74902, 0.141176, 1.0).lerp(Color(0.98, 0.30, 0.25, 1.0), blink)
+		_core_mat.emission = Color(0.984314, 0.74902, 0.141176, 1.0).lerp(Color(0.98, 0.25, 0.20, 1.0), blink)
+		_core_mat.emission_energy_multiplier = 1.6 + 1.4 * blink
 	if _halo_mesh != null:
 		var hs: float = 1.0 + 0.22 * sin(_pulse_time)
 		_halo_mesh.scale = Vector3(hs, hs, hs)
+		_halo_mesh.rotation.y += delta * 4.5
+	if _blast_ring != null:
+		_blast_ring.global_position = Vector3(global_position.x, 0.04, global_position.z)
+		if _blast_mat != null:
+			var warn_alpha: float = 0.25 + 0.45 * blink
+			_blast_mat.albedo_color = Color(1.5, 0.52, 0.14, warn_alpha)
 
 	_vel.y -= _gravity * delta
 	var start_pos: Vector3 = global_position

@@ -1,5 +1,5 @@
 extends Node
-## تست خودکار End-to-End برای بررسی کامل فاز ۸ در Godot 4.3 (اعداد آسیب، رانش فیزیکی، هوش مصنوعی تاکتیکی، حذف بخش‌های زاید و هر دو نقشه).
+## تست خودکار End-to-End برای بررسی کامل فاز ۱۰ در Godot 4.3 (اصلاح کد، گرافیک ACES/HDR، شیدر زرهی، امواج انفجار و هر دو نقشه).
 
 var _failures: Array[String] = []
 var _step: int = -1
@@ -18,7 +18,7 @@ func _ready() -> void:
 
 
 func _start_qa() -> void:
-	print("[QA] Starting automated runtime QA (Phase 8)...")
+	print("[QA] Starting automated runtime QA (Phase 10)...")
 	if get_parent() != get_tree().root:
 		reparent(get_tree().root)
 	get_tree().current_scene = null
@@ -74,6 +74,12 @@ func _process(_delta: float) -> void:
 			_assert(stage_3d != null, "Live 3D LobbyStage3D missing in MainMenu")
 			if stage_3d != null:
 				_assert(stage_3d.get_node_or_null("HeroTurntable/HeroPivot/KenneySoldier") != null, "3D Lobby Hero Soldier missing")
+				_assert(stage_3d.get_node_or_null("HeroTurntable/HoloRing") != null, "Phase 10 HoloRing missing in LobbyStage3D")
+				var lobby_floor: MeshInstance3D = stage_3d.get_node_or_null("LobbyFloor") as MeshInstance3D
+				_assert(lobby_floor != null and lobby_floor.material_override is ShaderMaterial, "Phase 10 LobbyFloor should use ShaderMaterial")
+				var lobby_env: WorldEnvironment = stage_3d.get_node_or_null("WorldEnvironment") as WorldEnvironment
+				_assert(lobby_env != null and lobby_env.environment != null and lobby_env.environment.tonemap_mode == Environment.TONE_MAPPER_ACES, "LobbyStage3D should enable ACES tonemapping")
+				_assert(lobby_env != null and lobby_env.environment != null and lobby_env.environment.glow_enabled, "LobbyStage3D should enable HDR glow")
 				_assert(stage_3d.get("_weapon_instance") != null, "3D Lobby equipped blaster mesh did not spawn")
 				menu.call("_on_btn_next_weapon_pressed")
 				_assert(SaveManager.starting_blaster_id == "rapid_repeater", "MainMenu weapon cycle next failed")
@@ -158,9 +164,10 @@ func _process(_delta: float) -> void:
 				"res://scenes/items/explosive_crate.tscn",
 				"res://scripts/ui/damage_numbers_overlay.gd",
 				"res://scenes/ui/lobby_stage_3d.tscn",
-				"res://scripts/ui/lobby_stage_3d.gd"
+				"res://scripts/ui/lobby_stage_3d.gd",
+				"res://scripts/core/visual_fx_utils.gd"
 			]:
-				_assert(ResourceLoader.exists(res_p), "Missing Phase 9 resource: %s" % res_p)
+				_assert(ResourceLoader.exists(res_p), "Missing Phase 10 resource: %s" % res_p)
 
 			GameManager.go_to_selected_arena()
 			_step = 1
@@ -168,6 +175,14 @@ func _process(_delta: float) -> void:
 		1:
 			var arena: Node = tree.current_scene
 			_assert(arena != null and arena.name == "ArenaSector01", "Expected ArenaSector01")
+			var arena_env: WorldEnvironment = arena.get_node_or_null("WorldEnvironment") as WorldEnvironment
+			_assert(arena_env != null and arena_env.environment != null and arena_env.environment.tonemap_mode == Environment.TONE_MAPPER_ACES, "ArenaSector01 should enable ACES tonemapping")
+			_assert(arena_env != null and arena_env.environment != null and arena_env.environment.glow_enabled, "ArenaSector01 should enable HDR glow")
+			_assert(arena.get_node_or_null("RimLight") is DirectionalLight3D, "ArenaSector01 RimLight missing")
+			arena.call("_apply_quality_lighting", "low")
+			var sun_l: DirectionalLight3D = arena.get_node_or_null("DirectionalLight3D") as DirectionalLight3D
+			_assert(sun_l != null and not sun_l.shadow_enabled, "Low quality preset did not disable sun shadows")
+			arena.call("_apply_quality_lighting", SaveManager.quality_preset)
 			var cam_rig: Node = arena.get_node_or_null("ArenaCameraRig")
 			_assert(cam_rig != null and not cam_rig.has_method("set_test_parameters"), "Camera test API should be completely removed from ArenaCameraRig")
 			var player: PlayerController = arena.get_node_or_null("PlayerCharacter") as PlayerController
@@ -240,7 +255,10 @@ func _process(_delta: float) -> void:
 				_assert(orange_target._hp < hp_before_crate, "ExplosiveCrate blast did not damage nearby Orange bot")
 
 			_assert(player.trigger_bomb(), "Player initial PulseBomb should succeed")
-			_assert(tree.get_nodes_in_group("pulse_bombs").size() >= 1, "Active PulseBomb should register in pulse_bombs group")
+			var active_bombs: Array[Node] = tree.get_nodes_in_group("pulse_bombs")
+			_assert(active_bombs.size() >= 1, "Active PulseBomb should register in pulse_bombs group")
+			if active_bombs.size() >= 1:
+				_assert(active_bombs[0].get_node_or_null("BlastZoneRing") != null, "Phase 10 PulseBomb BlastZoneRing missing")
 			_assert(not player.trigger_bomb(), "PulseBomb should respect cooldown immediately after throw")
 
 			# Cycle all 4 blasters
@@ -391,6 +409,7 @@ func _process(_delta: float) -> void:
 			var arena2: Node = tree.current_scene
 			_assert(arena2 != null and arena2.name == "ArenaSector02", "Expected ArenaSector02, got %s" % str(arena2))
 			if arena2 != null:
+				_assert(arena2.get_node_or_null("RimLight") is DirectionalLight3D, "ArenaSector02 RimLight missing")
 				var player2: PlayerController = arena2.get_node_or_null("PlayerCharacter") as PlayerController
 				_assert(player2 != null and player2.is_alive(), "ArenaSector02 PlayerCharacter missing or dead")
 				_assert(tree.get_nodes_in_group("arena_pickups").size() == 4, "ArenaSector02 expected 4 pickups")
@@ -418,7 +437,7 @@ func _process(_delta: float) -> void:
 			_step = 99
 		_:
 			if _failures.is_empty():
-				print("[QA_PASS] All Phase 9 automated runtime checks passed cleanly across Live 3D Menu, Sector 01 & Sector 02!")
+				print("[QA_PASS] All Phase 10 automated runtime checks passed cleanly across Live 3D Menu, ACES/HDR VFX, Sector 01 & Sector 02!")
 				tree.quit(0)
 			else:
 				print("[QA_FAIL] Total failures: %d" % _failures.size())
