@@ -250,7 +250,7 @@ func _refresh_ui() -> void:
 	if _home_diff_btn != null:
 		_home_diff_btn.text = "سختی حریف: %s" % diff_fa
 
-	var mode_desc: String = mode_cfg.description_fa if mode_cfg != null else ""
+	var mode_desc: String = _get_mode_desc_fa(mid)
 	var map_desc: String = (
 		"نبرد در پایگاه خشک کویری با جعبه‌های انبار گسترده و خطوط کمین میانی."
 		if is_s02
@@ -405,13 +405,23 @@ func _animate_weapon_bars(dmg: int, rof: float, ammo: int, vel: float) -> void:
 func _get_weapon_desc_fa(wid: String) -> String:
 	match wid:
 		"rapid_repeater":
-			return "مسلسل سبک یوزی صداخفه‌کن با نواخت شلیک فوق‌سریع و خشاب ۳۶ تیری؛ مناسب هجوم سریع و درگیری نزدیک."
+			return "مسلسل سبک یوزی صداخفه‌کن با نواخت شلیک فوق‌سریع و خشاب ۳۴ تیری؛ مناسب هجوم سریع و درگیری نزدیک."
 		"plasma_scatter":
-			return "شاتگان نظامی M870 با شلیک ۵ ساچمه هم‌زمان و قدرت ضربه ویرانگر در فواصل کوتاه پشت سنگرها."
+			return "شاتگان نظامی M870 با شلیک ۴ ساچمه هم‌زمان و قدرت ضربه ویرانگر در فواصل کوتاه پشت سنگرها."
 		"arc_railgun":
 			return "تفنگ تک‌تیرانداز سنگین AWP با گلوله پرسرعت، دقت بالا و آسیب کشنده برای شکار اهداف دوربرد."
 		_:
 			return "کاربین تهاجمی استاندارد M4 با تعادل عالی میان دقت، سرعت گلوله و قدرت آتش در تمام فواصل نبرد."
+
+
+func _get_mode_desc_fa(mid: String) -> String:
+	match mid:
+		"team_score_rush":
+			return "نبرد سریع تیمی بدون منطقه تصرف؛ هر حذف امتیاز مستقیم دارد و اولین تیم در امتیاز ۲۵ برنده می‌شود."
+		"zone_blitz":
+			return "نسخه سریع کنترل منطقه با تصرف ۲.۵ ثانیه‌ای پرچم‌ها و نبرد پرهیجان در راندهای ۹۰ ثانیه‌ای."
+		_:
+			return "رقابت تاکتیکی تصرف پرچم‌های شمالی و جنوبی همراه با امتیاز حذف دشمن تا رسیدن به سقف ۲۵ امتیاز."
 
 
 func _get_quality_fa(preset: String) -> String:
