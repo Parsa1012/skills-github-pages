@@ -41,9 +41,14 @@ extends CanvasLayer
 @onready var _pause_sfx_btn: Button = $PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow/BtnPauseSfx
 @onready var _match_end_overlay: Control = $MatchEndOverlay
 @onready var _end_title_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndTitleLabel
-@onready var _end_detail_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndDetailLabel
+@onready var _end_card: PanelContainer = $MatchEndOverlay/EndCard
+@onready var _end_score_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndScrollContainer/EndResultVBox/EndScoreLabel
+@onready var _end_stats_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndScrollContainer/EndResultVBox/EndStatsLabel
+@onready var _end_rounds_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndScrollContainer/EndResultVBox/EndRoundsLabel
+@onready var _end_detail_label: Label = $MatchEndOverlay/EndCard/EndMargin/EndVBox/EndScrollContainer/EndResultVBox/EndDetailLabel
 
 var _toast_timer: float = 0.0
+var _last_toast_message: String = ""
 var _hitmarker_timer: float = 0.0
 var _kill_feed_expire_timer: float = 0.0
 var _fps_update_timer: float = 0.0
@@ -229,6 +234,7 @@ func _process(delta: float) -> void:
 		_toast_timer -= delta
 		if _toast_timer <= 0.0 and _toast_panel != null:
 			_toast_panel.visible = false
+			_last_toast_message = ""
 
 	if _fps_badge != null and _fps_badge.visible and _fps_label != null:
 		_fps_update_timer += delta
@@ -277,6 +283,7 @@ func _apply_safe_area_margins() -> void:
 		_bottom_safe_margin.add_theme_constant_override("margin_top", 8)
 		_bottom_safe_margin.add_theme_constant_override("margin_bottom", int(pad["bottom"]))
 	_apply_responsive_touch_layout(vp_size, pad)
+	_layout_match_results(vp_size)
 
 
 func _apply_responsive_touch_layout(viewport_size: Vector2, safe_pad: Dictionary) -> void:
@@ -374,7 +381,9 @@ func _on_match_paused_changed(is_paused: bool) -> void:
 		_bottom_safe_margin.visible = not is_paused
 
 
-func _on_match_ended(winning_team: int, blue_score: int, orange_score: int, player_eliminations: int) -> void:
+func _on_match_ended(winning_team: int, _blue_score: int, _orange_score: int, _player_eliminations: int) -> void:
+	if _match_ended:
+		return
 	_match_ended = true
 	_respawn_active = false
 	_low_hp_warning = false
@@ -389,43 +398,96 @@ func _on_match_ended(winning_team: int, blue_score: int, orange_score: int, play
 		_bottom_safe_margin.visible = false
 
 	if _end_title_label != null:
-		if winning_team == 0:
-			_end_title_label.text = "پیروزی تیم آبی!"
-			_end_title_label.add_theme_color_override("font_color", Color(0.219608, 0.741176, 0.972549, 1.0))
-		elif winning_team == 1:
-			_end_title_label.text = "پایان نبرد — تیم نارنجی پیروز شد"
-			_end_title_label.add_theme_color_override("font_color", Color(0.984314, 0.45098, 0.086275, 1.0))
-		else:
-			_end_title_label.text = "نتیجه مساوی!"
-			_end_title_label.add_theme_color_override("font_color", Color(0.984314, 0.74902, 0.141176, 1.0))
+		match winning_team:
+			0:
+				_end_title_label.text = "پیروزی!"
+				_end_title_label.add_theme_color_override("font_color", Color(0.219608, 0.741176, 0.972549, 1.0))
+			1:
+				_end_title_label.text = "شکست"
+				_end_title_label.add_theme_color_override("font_color", Color(0.984314, 0.45098, 0.086275, 1.0))
+			_:
+				_end_title_label.text = "مساوی"
+				_end_title_label.add_theme_color_override("font_color", Color(0.984314, 0.74902, 0.141176, 1.0))
 
-	var xp_gained: int = 50 + (75 if winning_team == 0 else 0) + maxi(0, player_eliminations) * 15
-	var ctrl: Node = get_parent()
-	if ctrl != null and ctrl.has_method("get_last_xp_gained"):
-		xp_gained = int(ctrl.call("get_last_xp_gained"))
+	var snapshot: Dictionary = GameManager.get_match_snapshot()
+	var total_blue: int = int(snapshot.get("blue_total", 0))
+	var total_orange: int = int(snapshot.get("orange_total", 0))
+	var kills: int = int(snapshot.get("player_eliminations", 0))
+	var deaths: int = int(snapshot.get("player_deaths", 0))
+	if _end_score_label != null:
+		_end_score_label.text = "آبی  %d   —   %d  نارنجی" % [total_blue, total_orange]
+	if _end_stats_label != null:
+		_end_stats_label.text = "آمار شما   •   حذف: %d   •   دفعات حذف‌شدن: %d   •   زمان: %s" % [
+			kills, deaths, _format_match_duration(float(snapshot.get("elapsed_sec", 0.0)))
+		]
+	if _end_rounds_label != null:
+		_end_rounds_label.text = _format_round_results(snapshot.get("round_results", []))
+
 	var rank: Dictionary = SaveManager.get_rank_info()
-
 	if _end_detail_label != null:
-		_end_detail_label.text = (
-			"امتیاز کل: آبی %d — %d نارنجی  |  حذف تیم آبی: %d\n"
-			+ "برد دورها: آبی %d — %d نارنجی\n"
-			+ "تجربه: +%d XP  •  رتبه %d (%s)\n"
-			+ "کارنامه: %d پیروزی از %d نبرد"
-		) % [
-			blue_score,
-			orange_score,
-			player_eliminations,
-			GameManager.blue_round_wins,
-			GameManager.orange_round_wins,
-			xp_gained,
+		_end_detail_label.text = "تجربه: +%d XP   •   رتبه %d (%s)   •   کارنامه: %d برد از %d نبرد" % [
+			GameManager.last_match_xp,
 			int(rank["level"]),
 			str(rank["title_fa"]),
 			SaveManager.total_wins,
 			SaveManager.total_matches
 		]
-
+	_layout_match_results(get_viewport().get_visible_rect().size)
 	if _match_end_overlay != null:
 		_match_end_overlay.visible = true
+		_match_end_overlay.modulate.a = 0.0
+	call_deferred("_animate_match_results")
+
+
+func _format_round_results(rounds_value: Variant) -> String:
+	if not rounds_value is Array or (rounds_value as Array).is_empty():
+		return "نتیجه دورها در دسترس نیست"
+	var lines: PackedStringArray = []
+	for result_value in rounds_value as Array:
+		if not result_value is Dictionary:
+			continue
+		var result: Dictionary = result_value
+		var winner_id: int = int(result.get("winner", -1))
+		var winner_text: String = "آبی" if winner_id == 0 else ("نارنجی" if winner_id == 1 else "مساوی")
+		lines.append("دور %d   •   آبی %d — %d نارنجی   •   %s" % [
+			int(result.get("round", lines.size() + 1)),
+			int(result.get("blue_score", 0)),
+			int(result.get("orange_score", 0)),
+			winner_text
+		])
+	return "نتایج دورها\n" + "\n".join(lines)
+
+
+func _format_match_duration(duration_sec: float) -> String:
+	var total_seconds: int = maxi(0, int(round(duration_sec)))
+	return "%02d:%02d" % [int(total_seconds / 60), total_seconds % 60]
+
+
+func _layout_match_results(viewport_size: Vector2) -> void:
+	if _end_card == null:
+		return
+	var card_width: float = clampf(viewport_size.x - 32.0, 300.0, 620.0)
+	var card_height: float = clampf(viewport_size.y - 24.0, 300.0, 620.0)
+	_end_card.offset_left = -card_width * 0.5
+	_end_card.offset_right = card_width * 0.5
+	_end_card.offset_top = -card_height * 0.5
+	_end_card.offset_bottom = card_height * 0.5
+
+
+func _animate_match_results() -> void:
+	if _match_end_overlay == null or not is_inside_tree():
+		return
+	await get_tree().process_frame
+	if _end_card == null:
+		return
+	_end_card.pivot_offset = _end_card.size * 0.5
+	_end_card.scale = Vector2(0.96, 0.96)
+	_end_card.modulate.a = 0.0
+	var tween: Tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_match_end_overlay, "modulate:a", 1.0, 0.24)
+	tween.tween_property(_end_card, "scale", Vector2.ONE, 0.28)
+	tween.tween_property(_end_card, "modulate:a", 1.0, 0.22)
 
 
 func _on_aim_fire_mode_changed(_mode_name: String) -> void:
@@ -653,9 +715,15 @@ func _on_player_respawn_countdown(seconds_left: float, active: bool) -> void:
 func _show_toast(message_fa: String, accent_color: Color) -> void:
 	if _respawn_active or _toast_panel == null or _toast_label == null:
 		return
+	if _toast_panel.visible and _last_toast_message == message_fa:
+		return
+	_last_toast_message = message_fa
 	_toast_label.text = message_fa
 	_toast_label.add_theme_color_override("font_color", accent_color)
 	_toast_panel.visible = true
+	_toast_panel.modulate.a = 0.0
+	var tween: Tween = create_tween()
+	tween.tween_property(_toast_panel, "modulate:a", 1.0, 0.12)
 	_toast_timer = 2.2
 
 

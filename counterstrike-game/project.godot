@@ -43,6 +43,7 @@ EventBus="*res://scripts/autoload/event_bus.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 PoolManager="*res://scripts/autoload/pool_manager.gd"
+SceneTransition="*res://scripts/autoload/scene_transition.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
 EquipmentManager="*res://scripts/autoload/equipment_manager.gd"
 

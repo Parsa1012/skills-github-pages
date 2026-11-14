@@ -30,6 +30,9 @@ func _ready() -> void:
 	add_to_group("arena_match_controller")
 	get_tree().paused = false
 	_setup_bot_navigation()
+	var ambient_fx := ArenaEnvironmentalFx.new()
+	ambient_fx.name = "ArenaEnvironmentalFx"
+	add_child(ambient_fx)
 	AudioManager.play_arena_music()
 	GameManager.current_state = GameManager.AppState.ARENA_PLAY
 	_mode_config = GameManager.get_active_mode_config()
@@ -237,9 +240,9 @@ func _on_bot_defeated(bot: ArenaBot, attacker_team: int) -> void:
 		_add_round_score(0, 1)
 		if bot != null and bot.team_id == 1:
 			var by_player: bool = bot.was_last_hit_by_player()
-			_player_eliminations += 1
-			GameManager.record_player_elimination()
 			if by_player:
+				_player_eliminations += 1
+				GameManager.record_player_elimination()
 				_player_kill_streak += 1
 				EventBus.kill_feed_event.emit("بازیکن", bot_name_fa, 0)
 				_announce_streak_if_reached()
@@ -272,6 +275,7 @@ func _on_player_defeated(_attacker_team: int) -> void:
 	if _match_over:
 		return
 	_player_kill_streak = 0
+	GameManager.record_player_death()
 	_add_round_score(1, 1)
 	EventBus.kill_feed_event.emit("تیم نارنجی", "بازیکن", 1)
 	_check_win_conditions()

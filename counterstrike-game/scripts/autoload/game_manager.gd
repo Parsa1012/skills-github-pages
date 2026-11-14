@@ -36,6 +36,9 @@ var match_mode_id: String = "zone_control"
 var _match_result_recorded: bool = false
 var _last_match_winner: int = -1
 var match_player_eliminations: int = 0
+var match_player_deaths: int = 0
+var match_elapsed_sec: float = 0.0
+var round_results: Array[Dictionary] = []
 var last_match_xp: int = 0
 
 
@@ -282,10 +285,10 @@ func record_match_result(won: bool, eliminations: int) -> int:
 	var safe_elims: int = maxi(0, eliminations)
 	var xp_earned: int = 50 + (75 if won else 0) + safe_elims * 15
 	SaveManager.total_matches += 1
-	if won:
-		SaveManager.total_wins += 1
 	SaveManager.total_eliminations += safe_elims
 	SaveManager.best_match_eliminations = maxi(SaveManager.best_match_eliminations, safe_elims)
+	if won:
+		SaveManager.total_wins += 1
 	SaveManager.career_xp += xp_earned
 	SaveManager.save_settings()
 	return xp_earned
@@ -317,7 +320,7 @@ func change_scene(scene_path: String) -> void:
 	if scene_path.is_empty():
 		return
 	get_tree().paused = false
-	var err: Error = get_tree().change_scene_to_file(scene_path)
+	var err: Error = SceneTransition.transition_to(scene_path)
 	if err != OK:
 		push_error("Failed to load scene: %s (Error %d)" % [scene_path, err])
 
@@ -326,6 +329,7 @@ func _process(delta: float) -> void:
 	if get_tree() == null or get_tree().paused:
 		return
 	if match_phase == MatchPhase.LIVE_ROUND:
+		match_elapsed_sec += delta
 		round_time_remaining = maxf(0.0, round_time_remaining - delta)
 		var seconds_left := int(ceil(round_time_remaining))
 		if seconds_left != _last_timer_second:
@@ -334,6 +338,7 @@ func _process(delta: float) -> void:
 		if round_time_remaining <= 0.0:
 			EventBus.round_time_expired.emit()
 	elif match_phase == MatchPhase.ROUND_BREAK:
+		match_elapsed_sec += delta
 		round_break_remaining = maxf(0.0, round_break_remaining - delta)
 		if round_break_remaining <= 0.0:
 			EventBus.next_round_requested.emit()
@@ -367,6 +372,9 @@ func start_offline_match(mode_id: String, target_score: int, default_duration: f
 	_match_result_recorded = false
 	_last_match_winner = -1
 	match_player_eliminations = 0
+	match_player_deaths = 0
+	match_elapsed_sec = 0.0
+	round_results.clear()
 	last_match_xp = 0
 	_last_timer_second = -1
 	current_state = AppState.ARENA_PLAY
@@ -394,6 +402,8 @@ func award_round_points(team_id: int, points: int) -> void:
 func complete_current_round(winning_team: int, reason: String = "score") -> bool:
 	if match_phase != MatchPhase.LIVE_ROUND:
 		return match_phase == MatchPhase.COMPLETE
+	if winning_team not in [-1, 0, 1]:
+		winning_team = -1
 	if winning_team == -1:
 		if round_blue_score > round_orange_score:
 			winning_team = 0
@@ -403,6 +413,14 @@ func complete_current_round(winning_team: int, reason: String = "score") -> bool
 		blue_round_wins += 1
 	elif winning_team == 1:
 		orange_round_wins += 1
+	round_results.append({
+		"round": round_index,
+		"blue_score": round_blue_score,
+		"orange_score": round_orange_score,
+		"winner": winning_team,
+		"reason": reason,
+		"duration_sec": maxi(0, int(round(round_duration_sec - round_time_remaining)))
+	})
 	EventBus.round_ended.emit(winning_team, reason)
 	var match_complete := blue_round_wins >= rounds_to_win or orange_round_wins >= rounds_to_win or round_index >= total_rounds
 	if match_complete:
@@ -437,6 +455,11 @@ func record_player_elimination() -> void:
 		match_player_eliminations += 1
 
 
+func record_player_death() -> void:
+	if match_phase == MatchPhase.LIVE_ROUND:
+		match_player_deaths += 1
+
+
 func _finish_offline_match(winning_team: int) -> void:
 	if match_phase == MatchPhase.COMPLETE:
 		return
@@ -445,9 +468,12 @@ func _finish_offline_match(winning_team: int) -> void:
 	if not _match_result_recorded:
 		_match_result_recorded = true
 		last_match_xp = record_match_result(winning_team == 0, match_player_eliminations)
+	var player: Node = get_tree().get_first_node_in_group("player")
+	if player != null and player.has_method("play_match_result_animation"):
+		player.call("play_match_result_animation", winning_team == 0)
 	get_tree().paused = true
 	AudioManager.stop_all_music()
-	AudioManager.play_match_end_sfx(winning_team == 0)
+	AudioManager.play_match_end_sfx(winning_team)
 	EventBus.match_ended.emit(winning_team, total_blue_score, total_orange_score, match_player_eliminations)
 	_emit_match_state()
 
@@ -474,7 +500,11 @@ func get_match_snapshot() -> Dictionary:
 		"blue_total": total_blue_score,
 		"orange_total": total_orange_score,
 		"time_remaining": round_time_remaining,
-		"winner": _last_match_winner
+		"winner": _last_match_winner,
+		"player_eliminations": match_player_eliminations,
+		"player_deaths": match_player_deaths,
+		"elapsed_sec": match_elapsed_sec,
+		"round_results": round_results.duplicate(true)
 	}
 
 
@@ -508,6 +538,9 @@ func reset_match_state() -> void:
 	_match_result_recorded = false
 	_last_match_winner = -1
 	match_player_eliminations = 0
+	match_player_deaths = 0
+	match_elapsed_sec = 0.0
+	round_results.clear()
 	last_match_xp = 0
 	match_mode_id = "none"
 	round_target_score = 0

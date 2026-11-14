@@ -49,6 +49,110 @@ func _on_crate_exploded(_world_pos: Vector3) -> void:
 	_crate_exploded_seen = true
 
 
+func _test_audio_manager() -> void:
+	_assert(ResourceLoader.exists(AudioManager.MENU_BGM_PATH), "Menu music asset missing")
+	_assert(ResourceLoader.exists(AudioManager.ARENA_BGM_PATH), "Arena background music asset missing")
+	_assert(ResourceLoader.exists(AudioManager.ARENA_AMBIENCE_PATH), "Original arena ambience asset missing")
+	_assert(ResourceLoader.exists(AudioManager.FOOTSTEP_SFX_PATH), "Original movement effect asset missing")
+	var old_music_volume: float = SaveManager.music_volume
+	var old_sfx_volume: float = SaveManager.sfx_volume
+	var old_music_enabled: bool = SaveManager.music_enabled
+	var old_sfx_enabled: bool = SaveManager.sfx_enabled
+	AudioManager.set_music_volume(0.47)
+	AudioManager.set_sfx_volume(0.63)
+	AudioManager.set_music_enabled(false)
+	AudioManager.set_sfx_enabled(false)
+	_assert(is_equal_approx(SaveManager.music_volume, 0.47) and not SaveManager.music_enabled, "Independent music preferences failed")
+	_assert(is_equal_approx(SaveManager.sfx_volume, 0.63) and not SaveManager.sfx_enabled, "Independent SFX preferences failed")
+	AudioManager.set_music_enabled(old_music_enabled)
+	AudioManager.set_sfx_enabled(old_sfx_enabled)
+	AudioManager.set_music_volume(old_music_volume)
+	AudioManager.set_sfx_volume(old_sfx_volume)
+
+
+func _test_match_completion_outcomes() -> void:
+	var career_before: Dictionary = {
+		"matches": SaveManager.total_matches,
+		"wins": SaveManager.total_wins,
+		"eliminations": SaveManager.total_eliminations,
+		"best": SaveManager.best_match_eliminations,
+		"xp": SaveManager.career_xp
+	}
+
+	GameManager.start_offline_match("qa", 10, 60.0, 1)
+	GameManager._process(2.25)
+	GameManager.record_player_elimination()
+	GameManager.record_player_elimination()
+	GameManager.record_player_death()
+	GameManager.award_round_points(0, 7)
+	GameManager.award_round_points(1, 3)
+	_assert(GameManager.complete_current_round(0, "qa_blue_win"), "Blue single-round win did not complete")
+	var blue_result: Dictionary = GameManager.get_match_snapshot()
+	_assert(int(blue_result["winner"]) == 0 and int(blue_result["player_eliminations"]) == 2 and int(blue_result["player_deaths"]) == 1, "Blue result or player stats are inaccurate")
+	_assert(float(blue_result["elapsed_sec"]) >= 2.25, "Match duration did not accumulate elapsed live time")
+	_assert((blue_result["round_results"] as Array).size() == 1, "Blue result round history missing or duplicated")
+	var counted_matches: int = SaveManager.total_matches
+	_assert(GameManager.complete_current_round(0, "duplicate"), "Repeated round completion did not remain idempotent")
+	_assert(SaveManager.total_matches == counted_matches and (GameManager.get_match_snapshot()["round_results"] as Array).size() == 1, "Duplicate completion recorded another result")
+	_assert(SaveManager.total_eliminations == int(career_before["eliminations"]) + 2, "Career eliminations were not recorded for the win")
+
+	GameManager.reset_match_state()
+	GameManager.start_offline_match("qa", 10, 60.0, 1)
+	GameManager.award_round_points(0, 2)
+	GameManager.award_round_points(1, 8)
+	_assert(GameManager.complete_current_round(1, "qa_orange_win"), "Orange single-round win did not complete")
+	_assert(int(GameManager.get_match_snapshot()["winner"]) == 1, "Orange victory was not recorded as a defeat for the player")
+	_assert(SaveManager.total_matches == int(career_before["matches"]) + 2 and SaveManager.total_wins == int(career_before["wins"]) + 1, "Defeat was not counted once without adding a win")
+
+	GameManager.reset_match_state()
+	GameManager.start_offline_match("qa", 10, 60.0, 1)
+	GameManager.award_round_points(0, 4)
+	GameManager.award_round_points(1, 4)
+	_assert(GameManager.complete_current_round(-1, "timer"), "Timed tied match did not complete")
+	var draw_result: Dictionary = GameManager.get_match_snapshot()
+	_assert(int(draw_result["winner"]) == -1 and int(draw_result["round_results"][0]["winner"]) == -1, "A tied match was not preserved as a draw")
+	_assert(SaveManager.total_eliminations == int(career_before["eliminations"]) + 2, "Empty-result matches changed the career elimination total")
+	_assert(SaveManager.total_matches == int(career_before["matches"]) + 3 and SaveManager.total_wins == int(career_before["wins"]) + 1, "Draw was not counted as a played match without granting a win")
+
+	GameManager.reset_match_state()
+	GameManager.start_offline_match("qa", 10, 60.0, 3)
+	GameManager.award_round_points(1, 5)
+	GameManager.complete_current_round(1, "series_1")
+	GameManager.start_next_round()
+	GameManager.award_round_points(1, 5)
+	_assert(GameManager.complete_current_round(1, "series_2"), "Orange best-of-three did not finish on its second round win")
+	_assert(int(GameManager.get_match_snapshot()["winner"]) == 1 and (GameManager.get_match_snapshot()["round_results"] as Array).size() == 2, "Best-of-three early finish recorded incorrect rounds")
+
+	GameManager.reset_match_state()
+	GameManager.start_offline_match("qa", 10, 60.0, 5)
+	var series_winners: Array[int] = [0, -1, 1, 0, 0]
+	for round_winner in series_winners:
+		if not GameManager.round_results.is_empty():
+			_assert(GameManager.start_next_round(), "Best-of-five failed to start its next round")
+		if round_winner == 0:
+			GameManager.award_round_points(0, 6)
+			GameManager.award_round_points(1, 2)
+		elif round_winner == 1:
+			GameManager.award_round_points(1, 6)
+			GameManager.award_round_points(0, 2)
+		else:
+			GameManager.award_round_points(0, 3)
+			GameManager.award_round_points(1, 3)
+		GameManager.complete_current_round(round_winner, "best_of_five")
+	var series_result: Dictionary = GameManager.get_match_snapshot()
+	_assert(GameManager.is_match_complete() and int(series_result["winner"]) == 0, "Best-of-five comeback did not award the correct winner")
+	_assert((series_result["round_results"] as Array).size() == 5, "Best-of-five round history was incomplete")
+
+	GameManager.reset_match_state()
+	SaveManager.total_matches = int(career_before["matches"])
+	SaveManager.total_wins = int(career_before["wins"])
+	SaveManager.total_eliminations = int(career_before["eliminations"])
+	SaveManager.best_match_eliminations = int(career_before["best"])
+	SaveManager.career_xp = int(career_before["xp"])
+	SaveManager.save_settings()
+	AudioManager.play_menu_music()
+
+
 func _make_touch(control: Control, touch_id: int, local_position: Vector2, pressed: bool) -> InputEventScreenTouch:
 	var event := InputEventScreenTouch.new()
 	event.index = touch_id
@@ -300,6 +404,7 @@ func _process(_delta: float) -> void:
 			var menu: Node = tree.current_scene
 			_assert(menu != null and menu.name == "MainMenu", "Expected MainMenu, got %s" % str(menu))
 			_assert(tree.root.theme != null, "Persian theme not applied on root viewport")
+			_test_audio_manager()
 			_assert(menu.get_node_or_null("WarBackdrop") is TextureRect, "WarBackdrop missing in MainMenu")
 			_assert(menu.get_node_or_null("LobbyViewportContainer") == null, "Heavy 3D SubViewport should be removed from MainMenu")
 			_assert(menu.find_child("BtnLargeText", true, false) is Button, "Accessible large-text control missing")
@@ -347,7 +452,7 @@ func _process(_delta: float) -> void:
 			var logo_rect: TextureRect = menu.find_child("LogoRect", true, false) as TextureRect
 			_assert(logo_rect != null and logo_rect.texture != null, "Game logo missing in MainMenu")
 
-			for tab_idx in range(5):
+			for tab_idx in range(6):
 				menu.call("_show_tab", tab_idx, false)
 				var pages: Variant = menu.get("_pages")
 				_assert(pages is Array and (pages[tab_idx] as Control).visible, "MainMenu tab %d failed to activate" % tab_idx)
@@ -679,6 +784,19 @@ func _process(_delta: float) -> void:
 
 			arena.call("_complete_round", "qa_transition")
 			_assert(GameManager.is_match_complete() and bool(arena.get("_match_over")), "Match manager failed to complete a one-round match")
+			var result_hud: Node = arena.get_node_or_null("TouchControlsHUD")
+			if result_hud != null:
+				var result_overlay: Control = result_hud.get_node_or_null("MatchEndOverlay") as Control
+				var result_score: Label = result_hud.get_node_or_null("MatchEndOverlay/EndCard/EndMargin/EndVBox/EndScrollContainer/EndResultVBox/EndScoreLabel") as Label
+				var result_rounds: Label = result_hud.get_node_or_null("MatchEndOverlay/EndCard/EndMargin/EndVBox/EndScrollContainer/EndResultVBox/EndRoundsLabel") as Label
+				var result_stats: Label = result_hud.get_node_or_null("MatchEndOverlay/EndCard/EndMargin/EndVBox/EndScrollContainer/EndResultVBox/EndStatsLabel") as Label
+				var result_title: Label = result_hud.get_node_or_null("MatchEndOverlay/EndCard/EndMargin/EndVBox/EndTitleLabel") as Label
+				var expected_title: String = "پیروزی!" if int(GameManager.get_match_snapshot()["winner"]) == 0 else ("شکست" if int(GameManager.get_match_snapshot()["winner"]) == 1 else "مساوی")
+				_assert(result_overlay != null and result_overlay.visible, "Completed match did not display its results screen")
+				_assert(result_score != null and str(GameManager.total_blue_score) in result_score.text and str(GameManager.total_orange_score) in result_score.text, "Results screen final score disagrees with match manager")
+				_assert(result_rounds != null and "دور 1" in result_rounds.text, "Results screen did not display the completed round")
+				_assert(result_title != null and result_title.text == expected_title, "Results screen winner label disagrees with match manager")
+				_assert(result_stats != null and "زمان:" in result_stats.text, "Results screen player stats or match duration missing")
 
 			GameManager.set_selected_mode("team_score_rush")
 			GameManager.set_selected_map("sector_02")
@@ -720,6 +838,7 @@ func _process(_delta: float) -> void:
 			GameManager.reset_settings_to_defaults()
 			menu.call("_refresh_ui")
 			_assert(not SaveManager.large_text_enabled, "Accessibility setting did not reset after gameplay QA")
+			_test_match_completion_outcomes()
 			_step = 99
 		_:
 			if _failures.is_empty():

@@ -127,6 +127,22 @@ func is_alive() -> bool:
 	return _alive
 
 
+func play_match_result_animation(won: bool) -> void:
+	if _anim_player != null:
+		var result_animation: String = "victory" if won else "idle"
+		if _anim_player.has_animation(result_animation):
+			_anim_player.play(result_animation, 0.18)
+		elif _anim_player.has_animation("idle"):
+			_anim_player.play("idle", 0.18)
+	if _visual_root == null or not is_instance_valid(_visual_root):
+		return
+	var target_scale: Vector3 = _visual_root.scale
+	var emphasis: float = 1.055 if won else 0.985
+	var tween: Tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tween.tween_property(_visual_root, "scale", target_scale * emphasis, 0.20).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_visual_root, "scale", target_scale, 0.26).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
 func is_dashing() -> bool:
 	return _alive and _dash_timer > 0.05
 
@@ -474,7 +490,7 @@ func _update_footsteps(horiz_speed: float, delta: float) -> void:
 	_step_timer -= delta
 	if _step_timer <= 0.0:
 		_step_timer = 0.28 if horiz_speed > 4.6 else 0.38
-		AudioManager.play_sfx_path("res://assets/kenney/audio/walking.ogg", randf_range(0.92, 1.08), -12.0)
+		AudioManager.play_footstep_sfx()
 
 
 func _try_fire(horiz_speed: float) -> void:

@@ -6,6 +6,8 @@ const UI_SWITCH_PATH: String = "res://assets/audio/sfx_ui_switch.wav"
 const UI_CONFIRM_PATH: String = "res://assets/audio/sfx_ui_confirm.wav"
 const MENU_BGM_PATH: String = "res://assets/audio/bgm_menu_arcade.wav"
 const ARENA_BGM_PATH: String = "res://assets/audio/bgm_arena_combat.wav"
+const ARENA_AMBIENCE_PATH: String = "res://assets/audio/bgm_arena_ambience.wav"
+const FOOTSTEP_SFX_PATH: String = "res://assets/audio/sfx_step_soft.wav"
 const PICKUP_SFX_PATH: String = "res://assets/audio/sfx_pickup_item.wav"
 const RECHARGE_SFX_PATH: String = "res://assets/audio/sfx_recharge_done.wav"
 const ZONE_CAPTURE_SFX_PATH: String = "res://assets/audio/sfx_zone_capture.wav"
@@ -21,6 +23,7 @@ const MAX_UI_PLAYERS: int = 4
 const MAX_SFX_PLAYERS: int = 12
 
 var _music_player: AudioStreamPlayer = null
+var _ambience_player: AudioStreamPlayer = null
 var _ui_players: Array[AudioStreamPlayer] = []
 var _sfx_players: Array[AudioStreamPlayer] = []
 var _ui_cursor: int = 0
@@ -28,6 +31,8 @@ var _sfx_cursor: int = 0
 
 var _menu_music: AudioStream = null
 var _arena_music: AudioStream = null
+var _arena_ambience: AudioStream = null
+var _sfx_cooldown_until_msec: Dictionary = {}
 var _ui_tap_sfx: AudioStream = null
 var _ui_switch_sfx: AudioStream = null
 var _ui_confirm_sfx: AudioStream = null
@@ -48,6 +53,9 @@ func _exit_tree() -> void:
 	if _music_player != null:
 		_music_player.stop()
 		_music_player.stream = null
+	if _ambience_player != null:
+		_ambience_player.stop()
+		_ambience_player.stream = null
 	for p in _ui_players:
 		if is_instance_valid(p):
 			p.stop()
@@ -58,6 +66,8 @@ func _exit_tree() -> void:
 			p.stream = null
 	_menu_music = null
 	_arena_music = null
+	_arena_ambience = null
+	_sfx_cooldown_until_msec.clear()
 	_ui_tap_sfx = null
 	_ui_switch_sfx = null
 	_ui_confirm_sfx = null
@@ -69,6 +79,11 @@ func _build_player_pools() -> void:
 	_music_player.name = "MusicPlayer"
 	_music_player.finished.connect(_on_music_finished)
 	add_child(_music_player)
+
+	_ambience_player = AudioStreamPlayer.new()
+	_ambience_player.name = "ArenaAmbiencePlayer"
+	_ambience_player.finished.connect(_on_ambience_finished)
+	add_child(_ambience_player)
 
 	for i in MAX_UI_PLAYERS:
 		var p := AudioStreamPlayer.new()
@@ -101,6 +116,12 @@ func _load_bundled_audio() -> void:
 		var abgm: Resource = ResourceLoader.load(ARENA_BGM_PATH)
 		if abgm is AudioStream:
 			_arena_music = abgm as AudioStream
+	if ResourceLoader.exists(ARENA_AMBIENCE_PATH):
+		var ambient: Resource = ResourceLoader.load(ARENA_AMBIENCE_PATH)
+		if ambient is AudioStreamWAV:
+			var ambient_wav := ambient as AudioStreamWAV
+			ambient_wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			_arena_ambience = ambient_wav
 
 
 func apply_volumes() -> void:
@@ -108,6 +129,14 @@ func apply_volumes() -> void:
 	var music_lin: float = SaveManager.master_volume * SaveManager.music_volume * music_scale if SaveManager.music_enabled else 0.0
 	var ui_lin: float = SaveManager.master_volume * SaveManager.ui_volume if SaveManager.sfx_enabled else 0.0
 	var sfx_lin: float = SaveManager.master_volume * SaveManager.sfx_volume if SaveManager.sfx_enabled else 0.0
+	var ambience_lin: float = sfx_lin * 0.20
+
+	if _ambience_player != null:
+		_ambience_player.volume_db = linear_to_db(ambience_lin) if ambience_lin > 0.001 else -80.0
+		if ambience_lin <= 0.001 and _ambience_player.playing:
+			_ambience_player.stop()
+		elif ambience_lin > 0.001 and _music_mode == "arena":
+			_ensure_ambience_playing()
 
 	if _music_player != null:
 		_music_player.volume_db = linear_to_db(music_lin) if music_lin > 0.001 else -80.0
@@ -143,6 +172,8 @@ func _ensure_music_playing() -> void:
 
 func play_menu_music() -> void:
 	_music_mode = "menu"
+	if _ambience_player != null:
+		_ambience_player.stop()
 	_music_ducked = false
 	apply_volumes()
 	_ensure_music_playing()
@@ -153,10 +184,13 @@ func play_arena_music() -> void:
 	_music_ducked = false
 	apply_volumes()
 	_ensure_music_playing()
+	_ensure_ambience_playing()
 
 
 func stop_all_music() -> void:
 	_music_mode = ""
+	if _ambience_player != null and _ambience_player.playing:
+		_ambience_player.stop()
 	if _music_player != null and _music_player.playing:
 		_music_player.stop()
 
@@ -164,6 +198,21 @@ func stop_all_music() -> void:
 func set_music_ducked(ducked: bool) -> void:
 	_music_ducked = ducked
 	apply_volumes()
+
+
+func _ensure_ambience_playing() -> void:
+	if _ambience_player == null or _arena_ambience == null or not SaveManager.sfx_enabled:
+		return
+	if _ambience_player.stream != _arena_ambience:
+		_ambience_player.stop()
+		_ambience_player.stream = _arena_ambience
+	if not _is_dummy_audio_driver() and not _ambience_player.playing:
+		_ambience_player.play()
+
+
+func _on_ambience_finished() -> void:
+	if _music_mode == "arena":
+		_ensure_ambience_playing()
 
 
 func set_music_enabled(enabled: bool) -> void:
@@ -218,12 +267,21 @@ func play_dash_sfx() -> void:
 	play_sfx_path(DASH_SFX_PATH, randf_range(0.96, 1.06), -2.5)
 
 
+func play_footstep_sfx() -> void:
+	play_sfx_path(FOOTSTEP_SFX_PATH, randf_range(0.94, 1.06), -14.0)
+
+
 func play_hitmarker_sfx(is_kill: bool = false) -> void:
 	play_sfx_path(HITMARKER_SFX_PATH, 1.24 if is_kill else randf_range(0.96, 1.04), -1.5 if is_kill else -5.5)
 
 
-func play_match_end_sfx(won: bool) -> void:
-	play_sfx_path(VICTORY_SFX_PATH if won else DEFEAT_SFX_PATH, 1.0, 0.0)
+func play_match_end_sfx(winning_team: int) -> void:
+	if winning_team == 0:
+		play_sfx_path(VICTORY_SFX_PATH, 1.0, 0.0)
+	elif winning_team == 1:
+		play_sfx_path(DEFEAT_SFX_PATH, 1.0, 0.0)
+	else:
+		play_sfx_path(UI_CONFIRM_PATH, 0.88, -3.0)
 
 
 func play_bomb_throw_sfx() -> void:
@@ -249,6 +307,12 @@ func play_ui_pop(pitch_scale: float = 1.0) -> void:
 func play_sfx_path(resource_path: String, pitch_scale: float = 1.0, volume_offset_db: float = 0.0) -> void:
 	if _is_dummy_audio_driver() or not SaveManager.sfx_enabled or resource_path.is_empty():
 		return
+	var now_msec: int = Time.get_ticks_msec()
+	var next_allowed: int = int(_sfx_cooldown_until_msec.get(resource_path, 0))
+	if now_msec < next_allowed:
+		return
+	var min_gap: int = 190 if resource_path == FOOTSTEP_SFX_PATH else 42
+	_sfx_cooldown_until_msec[resource_path] = now_msec + min_gap
 	var stream: AudioStream = _sfx_cache.get(resource_path, null) as AudioStream
 	if stream == null and ResourceLoader.exists(resource_path):
 		var loaded: Resource = ResourceLoader.load(resource_path)
