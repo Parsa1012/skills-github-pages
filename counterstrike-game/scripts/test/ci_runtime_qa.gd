@@ -88,7 +88,7 @@ func _run_movement_camera_qa(player: PlayerController, hud: Node, arena: Node) -
 			_assert(extents.x <= half_bounds.x + 0.1 and extents.y <= half_bounds.y + 0.1, "Camera view escapes map bounds at viewport %s" % str(viewport_size))
 			var edge_focus: Vector3 = camera_rig._clamp_focus(Vector3(100.0, 1.0, -100.0))
 			_assert(edge_focus.x <= camera_rig.bounds_max.x - extents.x + 0.1 and edge_focus.z >= camera_rig.bounds_min.y + extents.y - 0.1, "Camera did not clamp to map bounds")
-if get_viewport() != null:
+			if get_viewport() != null:
 				camera_rig.configure_for_viewport(get_viewport().get_visible_rect().size)
 
 	if movement_stick != null and aim_stick != null:
