@@ -1,0 +1,336 @@
+name: Build Counterstrike Arena Android Debug APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - arena/bb66f5eb-skills-github-pages
+    paths:
+      - "counterstrike-game/**"
+      - ".github/workflows/build-counterstrike-apk.yml"
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.7.2-stable"
+  GODOT_TEMPLATE_DIR: "4.7.2.stable"
+  PROJECT_DIR: "counterstrike-game"
+  APK_FILENAME: "counterstrike-arena-debug-arm64.apk"
+
+jobs:
+  build-android-debug-apk:
+    name: Build Debug APK (Godot 4.7.2 / arm64-v8a)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK packages
+        run: |
+          set -euo pipefail
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "${SDK_DIR}" ]; then
+            echo "ERROR: Android SDK directory not found at ${SDK_DIR}" >&2
+            exit 1
+          fi
+          echo "ANDROID_HOME=${SDK_DIR}" >> "${GITHUB_ENV}"
+          echo "ANDROID_SDK_ROOT=${SDK_DIR}" >> "${GITHUB_ENV}"
+
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          if [ -z "${SDKMANAGER}" ] && [ -x "${SDK_DIR}/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER="${SDK_DIR}/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          if [ -z "${SDKMANAGER}" ]; then
+            echo "ERROR: sdkmanager not found in ${SDK_DIR}" >&2
+            exit 1
+          fi
+
+          echo "${SDK_DIR}/platform-tools" >> "${GITHUB_PATH}"
+          echo "$(dirname "${SDKMANAGER}")" >> "${GITHUB_PATH}"
+
+          yes | "${SDKMANAGER}" --licenses >/dev/null 2>&1 || true
+          "${SDKMANAGER}" --install "platform-tools" "build-tools;35.0.0" "platforms;android-35"
+          ls -la "${SDK_DIR}/build-tools/35.0.0/apksigner"
+
+      - name: Cache Godot 4.7.2-stable binary and export templates
+        id: cache-godot
+        uses: actions/cache@v5
+        with:
+          path: |
+            /tmp/godot-cache
+          key: godot-${{ env.GODOT_VERSION }}-linux-android-v1
+
+      - name: Download and install Godot 4.7.2-stable and Export Templates
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/godot-cache
+          GODOT_ZIP="/tmp/godot-cache/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          TEMPLATES_TPZ="/tmp/godot-cache/Godot_v${GODOT_VERSION}_export_templates.tpz"
+
+          if [ ! -f "${GODOT_ZIP}" ]; then
+            curl -fsSL -o "${GODOT_ZIP}" \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          fi
+          if [ ! -f "${TEMPLATES_TPZ}" ]; then
+            curl -fsSL -o "${TEMPLATES_TPZ}" \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          fi
+
+          mkdir -p /tmp/godot-bin
+          unzip -oq "${GODOT_ZIP}" -d /tmp/godot-bin
+          sudo install -m 0755 "/tmp/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64" /usr/local/bin/godot4
+
+          TEMPLATES_DEST="${HOME}/.local/share/godot/export_templates/${GODOT_TEMPLATE_DIR}"
+          rm -rf /tmp/godot-templates "${TEMPLATES_DEST}"
+          mkdir -p /tmp/godot-templates "$(dirname "${TEMPLATES_DEST}")"
+          unzip -oq "${TEMPLATES_TPZ}" -d /tmp/godot-templates
+          mv /tmp/godot-templates/templates "${TEMPLATES_DEST}"
+
+          godot4 --version
+          ldd /usr/local/bin/godot4 | grep "not found" || true
+          ls -lh "${TEMPLATES_DEST}/android_debug.apk"
+
+      - name: Generate ephemeral CI Android debug keystore
+        run: |
+          set -euo pipefail
+          mkdir -p "${HOME}/.android"
+          rm -f "${HOME}/.android/debug.keystore"
+          keytool -genkeypair -v \
+            -keystore "${HOME}/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Import Godot project resources and verify rendered scenes
+        run: |
+          set -euo pipefail
+          if ! command -v xvfb-run >/dev/null 2>&1; then
+            echo "ERROR: xvfb-run is required to exercise the GL Compatibility renderer in CI."
+            exit 1
+          fi
+          emit_error_log() {
+            local log_file="$1"
+            local label="$2"
+            if [ -f "${log_file}" ]; then
+              local summary
+              summary="$(grep -iE "ERROR|SCRIPT ERROR|Parse Error|Failed" "${log_file}" | head -n 10 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+              if [ -n "${summary}" ]; then
+                echo "::error title=${label}::${summary}"
+              else
+                summary="$(tail -n 10 "${log_file}" | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+                echo "::error title=${label}::${summary}"
+              fi
+            fi
+          }
+
+          echo "=== Step 1: Headless resource import ==="
+          if ! godot4 --headless --path "${PROJECT_DIR}" --import >/tmp/godot-import.log 2>&1; then
+            cat /tmp/godot-import.log
+            emit_error_log /tmp/godot-import.log "Godot import failed"
+            exit 1
+          fi
+          cat /tmp/godot-import.log
+
+          echo "=== Step 2: Initialize EditorSettings ==="
+          if ! godot4 --headless --editor --path "${PROJECT_DIR}" --quit >/tmp/godot-editor.log 2>&1; then
+            cat /tmp/godot-editor.log
+            emit_error_log /tmp/godot-editor.log "Godot editor init failed"
+            exit 1
+          fi
+          cat /tmp/godot-editor.log
+
+          echo "=== Step 3: Smoke test boot -> main_menu ==="
+          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --disable-vsync --audio-driver Dummy --verbose --path "${PROJECT_DIR}" --quit-after 30 >/tmp/godot-smoke-boot.log 2>&1; then
+            cat /tmp/godot-smoke-boot.log
+            emit_error_log /tmp/godot-smoke-boot.log "Godot boot smoke test failed"
+            exit 1
+          fi
+          cat /tmp/godot-smoke-boot.log
+
+          echo "=== Step 4: Smoke test arena_sector_01.tscn ==="
+          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --disable-vsync --audio-driver Dummy --verbose --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
+            cat /tmp/godot-smoke-arena.log
+            emit_error_log /tmp/godot-smoke-arena.log "Godot arena_sector_01 smoke test failed"
+            exit 1
+          fi
+          cat /tmp/godot-smoke-arena.log
+
+          echo "=== Step 5: Smoke test arena_sector_02.tscn ==="
+          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --disable-vsync --audio-driver Dummy --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_02.tscn --quit-after 20 >/tmp/godot-smoke-arena2.log 2>&1; then
+            cat /tmp/godot-smoke-arena2.log
+            emit_error_log /tmp/godot-smoke-arena2.log "Godot arena_sector_02 smoke test failed"
+            exit 1
+          fi
+          cat /tmp/godot-smoke-arena2.log
+
+          echo "=== Step 6: End-to-End Runtime QA Suite ==="
+          QA_EXIT=0
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --disable-vsync --audio-driver Dummy --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn --quit-after 600 >/tmp/godot-qa.log 2>&1 || QA_EXIT=$?
+          cat /tmp/godot-qa.log
+
+          # Surface errors first (with stack context) then warnings as CI annotations
+          python3 - <<'PY'
+          import pathlib
+          errs, warns = [], []
+          for log_name in ["/tmp/godot-import.log", "/tmp/godot-editor.log", "/tmp/godot-smoke-boot.log", "/tmp/godot-smoke-arena.log", "/tmp/godot-smoke-arena2.log", "/tmp/godot-qa.log"]:
+              p = pathlib.Path(log_name)
+              if not p.exists():
+                  continue
+              lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+              for i, line in enumerate(lines):
+                  if any(k in line for k in ("ERROR:", "SCRIPT ERROR", "Parse Error", "QA_FAIL")):
+                      ctx = (lines[i - 1].strip() + " || " if i > 0 and lines[i - 1].strip() else "") + line
+                      for j in range(i + 1, min(i + 3, len(lines))):
+                          if lines[j].strip():
+                              ctx += " | " + lines[j].strip()
+                      safe = ctx.replace("%", "%25").replace("\r", "%0D").replace("\n", " ")
+                      errs.append(f"::error title=Godot error ({p.name})::{safe[:280]}")
+                  elif any(k in line for k in ("WARNING:", "Leaked", "still in use")):
+                      ctx = line
+                      if i + 1 < len(lines) and ("at:" in lines[i + 1] or "res://" in lines[i + 1]):
+                          ctx += " | " + lines[i + 1].strip()
+                      safe = ctx.replace("%", "%25").replace("\r", "%0D").replace("\n", " ")
+                      warns.append(f"::warning title=Godot log ({p.name})::{safe[:240]}")
+          for msg in (errs[:6] + warns[:4]):
+              print(msg)
+          PY
+
+          if [ "${QA_EXIT}" -ne 0 ] || ! grep -q "\[QA_PASS\]" /tmp/godot-qa.log; then
+            emit_error_log /tmp/godot-qa.log "Godot runtime QA suite failed (exit=${QA_EXIT})"
+            exit 1
+          fi
+
+          if grep -E "ERROR:|SCRIPT ERROR|Parse Error|Failed to load resource|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log; then
+            echo "::error title=Godot runtime or resource error::$(grep -E 'ERROR:|SCRIPT ERROR|Parse Error|Failed to load resource|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log | head -n 8 | tr '\n' ' ')"
+            exit 1
+          fi
+
+      - name: Configure Godot Android export editor settings
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          cfg_dir = Path.home() / ".config" / "godot"
+          cfg_dir.mkdir(parents=True, exist_ok=True)
+          print("Existing godot config files:", [p.name for p in cfg_dir.iterdir()])
+
+          targets = sorted(cfg_dir.glob("editor_settings-*.tres"))
+          for name in ["editor_settings-4.7.tres", "editor_settings-4.tres"]:
+              p = cfg_dir / name
+              if p not in targets:
+                  targets.append(p)
+
+          updates = {
+              "export/android/android_sdk_path": os.environ["ANDROID_HOME"],
+              "export/android/java_sdk_path": os.environ["JAVA_HOME"],
+              "export/android/debug_keystore": str(Path.home() / ".android" / "debug.keystore"),
+              "export/android/debug_keystore_user": "androiddebugkey",
+              "export/android/debug_keystore_pass": "android",
+          }
+
+          for settings_file in targets:
+              if settings_file.exists():
+                  text = settings_file.read_text(encoding="utf-8")
+              else:
+                  text = '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n'
+
+              if "[resource]" not in text:
+                  text += "\n[resource]\n"
+
+              for key, val in updates.items():
+                  escaped = val.replace("\\", "\\\\").replace('"', '\\"')
+                  line = f'{key} = "{escaped}"'
+                  pattern = re.compile(rf'^{re.escape(key)}\s*=.*$', re.M)
+                  if pattern.search(text):
+                      text = pattern.sub(line, text)
+                  else:
+                      text = text.rstrip() + "\n" + line + "\n"
+
+              settings_file.write_text(text, encoding="utf-8")
+              print(f"Configured {settings_file}")
+          PY
+
+      - name: Export Android Debug APK (arm64-v8a)
+        run: |
+          set -euo pipefail
+          OUT_DIR="${GITHUB_WORKSPACE}/${PROJECT_DIR}/builds"
+          OUT_APK="${OUT_DIR}/${APK_FILENAME}"
+          mkdir -p "${OUT_DIR}"
+          if ! godot4 --headless --verbose --path "${PROJECT_DIR}" --export-debug "Android" "${OUT_APK}" >/tmp/godot-export.log 2>&1; then
+            cat /tmp/godot-export.log
+            summary="$(tail -n 30 /tmp/godot-export.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            cfg_files="$(ls -la "${HOME}/.config/godot" 2>&1 | tr '\n' ' ')"
+            echo "::error title=Godot Android export failed::${summary} | CFG: ${cfg_files}"
+            exit 1
+          fi
+          cat /tmp/godot-export.log
+
+          echo "=== APK File Info ==="
+          ls -lh "${OUT_APK}"
+
+      - name: Verify APK architecture (arm64-v8a only), assets, and signature
+        run: |
+          set -euo pipefail
+          OUT_APK="${GITHUB_WORKSPACE}/${PROJECT_DIR}/builds/${APK_FILENAME}"
+          test -s "${OUT_APK}"
+
+          echo "=== Native Libraries in APK ==="
+          unzip -l "${OUT_APK}" | grep 'lib/' || true
+          unzip -l "${OUT_APK}" | grep -q 'lib/arm64-v8a/libgodot_android.so'
+          if unzip -l "${OUT_APK}" | grep -qE 'lib/(armeabi-v7a|x86|x86_64)/'; then
+            echo "ERROR: Unexpected non-arm64-v8a native libraries found in APK!"
+            exit 1
+          fi
+
+          echo "=== Bundled Persian Font, War Assets & Kenney Models in APK ==="
+          unzip -l "${OUT_APK}" | grep -E 'assets/(audio|fonts|ui|kenney|materials)/|Vazirmatn|sfx_ui_|sfx_gun_|character-j|machinegun|menu_war_backdrop' | head -n 35 || true
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/audio/sfx_ui_tap\.wav|sfx_ui_tap\.wav-.*\.sample'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/audio/sfx_gun_m4\.wav|sfx_gun_m4\.wav-.*\.sample'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/kenney/blocky_characters/character-j\.glb|character-j\.glb'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/kenney/weapon/machinegun\.glb|machinegun\.glb'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/ui/menu_war_backdrop\.jpg|menu_war_backdrop\.jpg'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/ui/launcher_icon\.png|launcher_icon\.png'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/ui/map_sector_alpha\.png|map_sector_alpha\.png'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/ui/map_sector_bravo\.png|map_sector_bravo\.png'
+          unzip -l "${OUT_APK}" | grep -qE 'Vazirmatn-Regular\.ttf|Vazirmatn-Regular\.ttf-.*\.fontdata'
+          if unzip -l "${OUT_APK}" | grep -qE 'main_menu\.mp3|ui_click\.mp3|ui_menu\.mp3|ui_pop\.mp3'; then
+            echo "ERROR: Prohibited previous-project MP3 files found in APK!"
+            exit 1
+          fi
+
+          echo "=== APK Signature Verification ==="
+          "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --verbose "${OUT_APK}"
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: counterstrike-arena-debug-arm64-apk
+          path: ${{ env.PROJECT_DIR }}/builds/${{ env.APK_FILENAME }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Godot diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: counterstrike-godot-diagnostics-${{ github.run_id }}
+          path: /tmp/godot-*.log
+          if-no-files-found: warn
+          retention-days: 5

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnergyBlasterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/energy_blaster_data.gd" id="1_blaster"]
+
+[resource]
+script = ExtResource("1_blaster")
+blaster_id = &"arc_railgun"
+display_name = "اسنایپر AWP"
+category = 3
+energy_damage = 52.0
+pulse_cooldown = 0.62
+projectile_speed = 46.0
+energy_cell_capacity = 6
+recharge_seconds = 1.4
+spread_still_deg = 0.15
+spread_moving_deg = 0.9
+pellets_per_shot = 1
+projectile_color = Color(0.996078, 0.858824, 0.298039, 1)
+model_scene_path = "res://assets/kenney/weapon/sniper.glb"
+model_scale = 1.16
+shoot_sfx_path = "res://assets/audio/sfx_gun_sniper.wav"
+icon_path = "res://assets/ui/icon_weapon_sniper.png"
+bolt_scale = Vector3(0.95, 0.95, 2.35)
+pierce_count = 1
+arena_credit_cost = 0

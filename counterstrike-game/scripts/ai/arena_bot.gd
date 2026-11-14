@@ -1,0 +1,941 @@
+class_name ArenaBot
+extends CharacterBody3D
+## هوش مصنوعی بات تاکتیکی تیمی (پشتیبانی از تیم آبی/نارنجی، تصرف مناطق، خط دید و بازگشت).
+
+signal bot_defeated(bot: ArenaBot, attacker_team: int)
+
+enum BotState {
+	PATROL,
+	INVESTIGATE,
+	ENGAGE,
+	DEFEND,
+	WAIT,
+	RECOVER,
+	RESPAWN
+}
+
+@export var team_id: int = 1
+@export var profile: ArenaBotProfile
+@export var patrol_offset_a: Vector3 = Vector3(0.0, 0.0, -3.2)
+@export var patrol_offset_b: Vector3 = Vector3(0.0, 0.0, 3.2)
+@export var fire_cooldown: float = 1.05
+@export var projectile_speed: float = 16.0
+@export var projectile_damage: float = 10.0
+@export var hover_bob_enabled: bool = true
+@export var debug_ai: bool = false
+
+@onready var _collision_shape: CollisionShape3D = $CollisionShape3D
+@onready var _visual_root: Node3D = $VisualRoot
+@onready var _model_pivot: Node3D = $VisualRoot/ModelPivot
+@onready var _muzzle_left: Marker3D = $VisualRoot/MuzzleLeft
+@onready var _muzzle_right: Marker3D = $VisualRoot/MuzzleRight
+@onready var _team_ring: MeshInstance3D = $TeamRingMesh
+@onready var _hp_bar_pivot: Node3D = $HpBarPivot
+@onready var _hp_bar_fill: MeshInstance3D = $HpBarPivot/HpBarFill
+
+var _state: int = BotState.PATROL
+var _brain: ArenaBotBrain = ArenaBotBrain.new()
+var _navigation: ArenaNavigationGrid = null
+var _navigation_path: PackedVector3Array = PackedVector3Array()
+var _navigation_target: Vector3 = Vector3.ZERO
+var _navigation_timer: float = 0.0
+var _navigation_failure_reported: String = ""
+var _visible_target: Node3D = null
+var _last_known_target_pos: Vector3 = Vector3.ZERO
+var _target_memory_timer: float = 0.0
+var _event_target_pos: Vector3 = Vector3.ZERO
+var _event_memory_timer: float = 0.0
+var _wait_timer: float = 0.0
+var _stuck_sample_timer: float = 0.0
+var _stuck_time: float = 0.0
+var _previous_sample_pos: Vector3 = Vector3.ZERO
+var _recover_time: float = 0.0
+var _recover_goal: Vector3 = Vector3.ZERO
+var _home_pos: Vector3 = Vector3.ZERO
+var _max_hp: float = 100.0
+var _hp: float = 100.0
+var _patrol_index: int = 0
+var _patrol_leg_timer: float = 0.0
+var _patrol_stuck_timer: float = 0.0
+var _patrol_check_pos: Vector3 = Vector3.ZERO
+var _zone_seek_pause_timer: float = 0.0
+var _hover_time: float = 0.0
+var _los_timer: float = 0.0
+var _fire_timer: float = 0.6
+var _respawn_timer: float = 0.0
+var _has_los: bool = false
+var _target_ref: Node3D = null
+var _facing_yaw: float = PI * 0.5
+var _strafe_sign: float = 1.0
+var _strafe_timer: float = 0.0
+var _use_left_muzzle: bool = true
+var _gravity: float = 18.0
+var _anim_player: AnimationPlayer = null
+var _hp_bar_mat: StandardMaterial3D = null
+var _base_hp_col: Color = Color(0.984314, 0.45098, 0.086275, 1.0)
+var _hit_flash_timer: float = 0.0
+var _damage_boost_timer: float = 0.0
+var _speed_boost_timer: float = 0.0
+var _base_pivot_scale: Vector3 = Vector3.ONE
+var _last_attacker_is_player: bool = false
+var _knockback_vel: Vector3 = Vector3.ZERO
+var _move_vel: Vector2 = Vector2.ZERO
+var _steer_timer: float = 0.0
+var _cached_steer_dir: Vector3 = Vector3.ZERO
+var _cached_evade: Vector3 = Vector3.ZERO
+
+
+func _ready() -> void:
+	add_to_group("arena_bots")
+	_home_pos = global_position
+	_patrol_check_pos = _home_pos
+	_previous_sample_pos = global_position
+	_max_hp = profile.max_shield if profile != null else 100.0
+	_hp = _max_hp
+	_hover_time = randf() * TAU
+	_los_timer = randf() * 0.25
+	_steer_timer = randf() * 0.09
+	_strafe_sign = 1.0 if randf() >= 0.5 else -1.0
+	_facing_yaw = -PI * 0.5 if team_id == 0 else PI * 0.5
+	_setup_team_visuals()
+	_setup_model_animations()
+	_update_hp_bar()
+	if EventBus.crate_exploded.is_connected(_on_nearby_crate_exploded) == false:
+		EventBus.crate_exploded.connect(_on_nearby_crate_exploded)
+	call_deferred("_attach_navigation")
+
+
+func _exit_tree() -> void:
+	if EventBus.crate_exploded.is_connected(_on_nearby_crate_exploded):
+		EventBus.crate_exploded.disconnect(_on_nearby_crate_exploded)
+
+
+func is_alive() -> bool:
+	return _state != BotState.RESPAWN
+
+
+func was_last_hit_by_player() -> bool:
+	return _last_attacker_is_player
+
+
+func apply_knockback(impulse: Vector3) -> void:
+	if _state == BotState.RESPAWN:
+		return
+	var flat := Vector3(impulse.x, 0.0, impulse.z)
+	_knockback_vel += flat
+	if _knockback_vel.length() > 13.5:
+		_knockback_vel = _knockback_vel.normalized() * 13.5
+
+
+func _setup_team_visuals() -> void:
+	var is_heavy: bool = (profile != null and profile.profile_id == &"heavy_sentinel")
+	var is_scout: bool = (profile != null and profile.profile_id == &"scout_drone")
+
+	var ring_col := Color(0.219608, 0.741176, 0.972549, 0.65) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 0.62)
+	var hp_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)
+	if is_heavy:
+		ring_col = Color(0.937255, 0.266667, 0.266667, 0.75)
+		hp_col = Color(0.937255, 0.266667, 0.266667, 1.0)
+	elif is_scout:
+		hp_col = Color(0.984314, 0.74902, 0.141176, 1.0)
+	_base_hp_col = hp_col
+
+	if _model_pivot != null:
+		var scale_mult: float = 1.24 if is_heavy else (0.90 if is_scout else 1.0)
+		_base_pivot_scale = Vector3(scale_mult, scale_mult, scale_mult)
+		_model_pivot.scale = _base_pivot_scale
+		var soldier_model: Node3D = _model_pivot.get_child(0) as Node3D if _model_pivot.get_child_count() > 0 else null
+		if soldier_model != null:
+			var skin_path: String = "res://assets/kenney/blocky_characters/Textures/skin_ally_commando.png" if team_id == 0 else (
+				"res://assets/kenney/blocky_characters/Textures/skin_enemy_heavy.png" if is_heavy else "res://assets/kenney/blocky_characters/Textures/skin_enemy_merc.png"
+			)
+			var weapon_path: String = "res://assets/kenney/weapon/shotgun.glb" if is_heavy else (
+				"res://assets/kenney/weapon/uziLongSilencer.glb" if is_scout else "res://assets/kenney/weapon/machinegun.glb"
+			)
+			var weapon_scl: float = 2.15 if is_heavy else (1.95 if is_scout else 2.05)
+			VisualFxUtils.equip_military_soldier(soldier_model, skin_path, team_id, is_heavy, weapon_path, weapon_scl)
+
+	if _team_ring != null:
+		if is_heavy:
+			_team_ring.scale = Vector3(1.25, 1.0, 1.25)
+		_team_ring.material_override = VisualFxUtils.make_unshaded_hdr_material(ring_col, ring_col.a, 1.45)
+
+	if _hp_bar_pivot != null and is_heavy:
+		_hp_bar_pivot.position.y = 2.42
+
+	if _hp_bar_fill != null:
+		_hp_bar_mat = VisualFxUtils.make_unshaded_hdr_material(hp_col, 1.0, 1.45)
+		_hp_bar_fill.material_override = _hp_bar_mat
+
+
+func _setup_model_animations() -> void:
+	if _model_pivot == null:
+		return
+	_anim_player = _model_pivot.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _anim_player == null:
+		return
+	VisualFxUtils.patch_kenney_soldier_animations(_anim_player)
+	if _anim_player.has_animation("idle"):
+		_anim_player.play("idle")
+
+
+func _physics_process(delta: float) -> void:
+	if hover_bob_enabled and _model_pivot != null:
+		_hover_time += delta * 3.4
+		_model_pivot.position.y = 0.52 + sin(_hover_time) * 0.10
+
+	if _state == BotState.RESPAWN:
+		_respawn_timer -= delta
+		if _respawn_timer <= 0.0:
+			_respawn_at_home()
+		return
+
+	if _hit_flash_timer > 0.0:
+		_hit_flash_timer = maxf(0.0, _hit_flash_timer - delta)
+		if _model_pivot != null:
+			_model_pivot.scale = _base_pivot_scale * (1.10 if _hit_flash_timer > 0.0 else 1.0)
+		if _hp_bar_mat != null:
+			var bar_c: Color = Color(1.0, 0.96, 0.82, 1.0) if _hit_flash_timer > 0.0 else _base_hp_col
+			var boost: float = 2.1 if _hit_flash_timer > 0.0 else 1.45
+			_hp_bar_mat.albedo_color = Color(bar_c.r * boost, bar_c.g * boost, bar_c.b * boost, 1.0)
+
+	if _damage_boost_timer > 0.0:
+		_damage_boost_timer = maxf(0.0, _damage_boost_timer - delta)
+	if _speed_boost_timer > 0.0:
+		_speed_boost_timer = maxf(0.0, _speed_boost_timer - delta)
+
+	if _zone_seek_pause_timer > 0.0:
+		_zone_seek_pause_timer = maxf(0.0, _zone_seek_pause_timer - delta)
+
+	var difficulty: Dictionary = _get_difficulty_settings()
+	_los_timer -= delta
+	if _los_timer <= 0.0:
+		_los_timer = float(difficulty["perception_interval"]) + randf_range(-0.025, 0.035)
+		_visible_target = _find_best_visible_target()
+		_has_los = _visible_target != null
+		if _has_los:
+			_last_known_target_pos = _visible_target.global_position
+			_target_memory_timer = 1.65
+	if not _has_los:
+		_target_memory_timer = maxf(0.0, _target_memory_timer - delta)
+	_event_memory_timer = maxf(0.0, _event_memory_timer - delta)
+
+	_steer_timer -= delta
+	var refresh_steer: bool = (_steer_timer <= 0.0)
+	if refresh_steer:
+		_steer_timer = 0.11
+		_cached_evade = _compute_danger_evasion()
+
+	_update_stuck_monitor(delta)
+	var previous_state: int = _state
+	var reaction_delay: float = (profile.reaction_delay_sec if profile != null else 0.34) * float(difficulty["reaction_multiplier"])
+	var has_investigation: bool = _target_memory_timer > 0.0 or _event_memory_timer > 0.0
+	_state = _brain.update(
+		_visible_target,
+		_cached_evade.length_squared() > 0.08,
+		has_investigation,
+		_stuck_time >= 1.25,
+		_wait_timer > 0.0,
+		delta,
+		reaction_delay
+	)
+	_target_ref = _brain.get_confirmed_target()
+	if _state != previous_state:
+		_on_state_changed(previous_state, _state)
+
+	match _state:
+		BotState.PATROL:
+			_process_patrol(delta, refresh_steer)
+		BotState.INVESTIGATE:
+			_process_investigate(delta, refresh_steer)
+		BotState.ENGAGE:
+			_process_engage(delta, refresh_steer)
+		BotState.DEFEND:
+			_process_defend(delta)
+		BotState.WAIT:
+			_process_wait(delta)
+		BotState.RECOVER:
+			_process_recover(delta, refresh_steer)
+
+	if _cached_evade.length_squared() > 0.01 and _state != BotState.DEFEND:
+		_move_vel.x = move_toward(_move_vel.x, _cached_evade.x * 4.8, 22.0 * delta)
+		_move_vel.y = move_toward(_move_vel.y, _cached_evade.z * 4.8, 22.0 * delta)
+
+	_knockback_vel = _knockback_vel.move_toward(Vector3.ZERO, 16.0 * delta)
+	velocity.x = _move_vel.x + _knockback_vel.x
+	velocity.z = _move_vel.y + _knockback_vel.z
+
+	if not is_on_floor():
+		velocity.y -= _gravity * delta
+	elif velocity.y < 0.0:
+		velocity.y = -0.1
+
+	move_and_slide()
+
+	if _visual_root != null:
+		_visual_root.rotation.y = _facing_yaw
+		var local_vel: Vector3 = Vector3(velocity.x, 0.0, velocity.z).rotated(Vector3.UP, -_facing_yaw)
+		var target_roll: float = clampf(-local_vel.x * 0.045, -0.22, 0.22)
+		var target_pitch: float = clampf(local_vel.z * 0.035, -0.18, 0.14)
+		_visual_root.rotation.z = lerpf(_visual_root.rotation.z, target_roll, clampf(10.0 * delta, 0.0, 1.0))
+		_visual_root.rotation.x = lerpf(_visual_root.rotation.x, target_pitch, clampf(10.0 * delta, 0.0, 1.0))
+	_update_walk_animation()
+
+
+func _update_walk_animation() -> void:
+	if _anim_player == null:
+		return
+	var horiz_speed: float = Vector3(velocity.x, 0.0, velocity.z).length()
+	if horiz_speed > 0.45 and _anim_player.has_animation("walk"):
+		if _anim_player.current_animation != "walk":
+			_anim_player.play("walk", 0.12)
+		_anim_player.speed_scale = clampf(horiz_speed / 3.5, 0.7, 1.35)
+	elif _anim_player.has_animation("idle"):
+		if _anim_player.current_animation != "idle":
+			_anim_player.play("idle", 0.14)
+		_anim_player.speed_scale = 1.0
+
+
+func _attach_navigation() -> void:
+	for candidate in get_tree().get_nodes_in_group("arena_navigation"):
+		if candidate is ArenaNavigationGrid:
+			_navigation = candidate as ArenaNavigationGrid
+			return
+
+
+func _on_nearby_crate_exploded(world_pos: Vector3) -> void:
+	if _state == BotState.RESPAWN or global_position.distance_to(world_pos) > 13.0:
+		return
+	_event_target_pos = Vector3(world_pos.x, global_position.y, world_pos.z)
+	_event_memory_timer = randf_range(2.5, 4.5)
+
+
+func get_ai_debug_info() -> Dictionary:
+	return {
+		"state": _brain.state_name(),
+		"difficulty": str(ArenaBotDifficulty.normalize_id(SaveManager.bot_difficulty)),
+		"target_visible": _has_los,
+		"target_memory_seconds": snappedf(_target_memory_timer, 0.05),
+		"stuck_seconds": snappedf(_stuck_time, 0.05),
+		"navigation_ready": _navigation != null and _navigation.is_built,
+		"navigation_failure": _navigation.last_failure if _navigation != null else "not_attached"
+	}
+
+
+func _get_difficulty_settings() -> Dictionary:
+	return ArenaBotDifficulty.get_settings(SaveManager.bot_difficulty)
+
+
+func _on_state_changed(previous: int, current: int) -> void:
+	if current == BotState.WAIT:
+		var difficulty: Dictionary = _get_difficulty_settings()
+		_wait_timer = randf_range(float(difficulty["wait_min"]), float(difficulty["wait_max"]))
+	elif current == BotState.RECOVER:
+		_recover_time = 0.0
+		_recover_goal = _choose_recovery_goal()
+		_navigation_path.clear()
+	elif current == BotState.PATROL or current == BotState.ENGAGE:
+		_navigation_path.clear()
+	if debug_ai:
+		print("[BotAI:%s] %s -> %s" % [name, ArenaBotBrain.STATE_LABELS.get(previous, "?"), ArenaBotBrain.STATE_LABELS.get(current, "?")])
+
+
+func _get_navigation_direction(target: Vector3, delta: float) -> Vector3:
+	if _navigation == null or not _navigation.is_built:
+		return Vector3.ZERO
+	var difficulty: Dictionary = _get_difficulty_settings()
+	_navigation_timer -= delta
+	var target_changed: bool = _navigation_target.distance_to(target) > maxf(0.75, _navigation.cell_size * 0.85)
+	if target_changed or _navigation_timer <= 0.0:
+		_navigation_target = target
+		_navigation_path = _navigation.find_path(global_position, target)
+		_navigation_timer = float(difficulty["navigation_interval"]) + randf_range(0.0, 0.12)
+		if _navigation_path.is_empty() and debug_ai and _navigation.last_failure != _navigation_failure_reported:
+			_navigation_failure_reported = _navigation.last_failure
+			push_warning("[BotNav:%s] route unavailable: %s" % [name, _navigation.last_failure])
+	while not _navigation_path.is_empty():
+		var waypoint: Vector3 = _navigation_path[0]
+		if Vector2(global_position.x - waypoint.x, global_position.z - waypoint.z).length() > 0.52:
+			break
+		_navigation_path.remove_at(0)
+	if _navigation_path.is_empty():
+		return Vector3.ZERO
+	var next_point: Vector3 = _navigation_path[0]
+	return Vector3(next_point.x - global_position.x, 0.0, next_point.z - global_position.z).normalized()
+
+
+func _update_stuck_monitor(delta: float) -> void:
+	_stuck_sample_timer += delta
+	if _stuck_sample_timer < 0.55:
+		return
+	var sample_delta: float = _stuck_sample_timer
+	_stuck_sample_timer = 0.0
+	var moved: float = Vector2(global_position.x - _previous_sample_pos.x, global_position.z - _previous_sample_pos.z).length()
+	_previous_sample_pos = global_position
+	var is_trying_to_move: bool = _move_vel.length() > 1.1 and _state != BotState.WAIT
+	if is_trying_to_move and moved < 0.12:
+		_stuck_time += sample_delta
+	else:
+		_stuck_time = maxf(0.0, _stuck_time - sample_delta * 1.4)
+
+
+func _process_investigate(delta: float, refresh_steer: bool) -> void:
+	var target: Vector3 = _last_known_target_pos if _target_memory_timer > 0.0 else _event_target_pos
+	var to_target := Vector3(target.x - global_position.x, 0.0, target.z - global_position.z)
+	if to_target.length() <= 0.85:
+		_target_memory_timer = 0.0
+		_event_memory_timer = 0.0
+		_move_vel = _move_vel.move_toward(Vector2.ZERO, 12.0 * delta)
+		return
+	var nav_dir: Vector3 = _get_navigation_direction(target, delta)
+	if nav_dir.length_squared() < 0.001:
+		nav_dir = _steer_around_obstacles(to_target.normalized())
+	else:
+		_navigation_failure_reported = ""
+	var speed: float = (profile.move_speed if profile != null else 3.4) * 0.78
+	_move_vel.x = move_toward(_move_vel.x, nav_dir.x * speed, 12.0 * delta)
+	_move_vel.y = move_toward(_move_vel.y, nav_dir.z * speed, 12.0 * delta)
+	_facing_yaw = lerp_angle(_facing_yaw, atan2(-nav_dir.x, -nav_dir.z), clampf(8.0 * delta, 0.0, 1.0))
+
+
+func _process_defend(delta: float) -> void:
+	var away: Vector3 = _cached_evade
+	if away.length_squared() > 0.01:
+		away = _steer_around_obstacles(away.normalized())
+		_move_vel.x = move_toward(_move_vel.x, away.x * 4.4, 20.0 * delta)
+		_move_vel.y = move_toward(_move_vel.y, away.z * 4.4, 20.0 * delta)
+	else:
+		_move_vel = _move_vel.move_toward(Vector2.ZERO, 16.0 * delta)
+
+
+func _process_wait(delta: float) -> void:
+	_wait_timer = maxf(0.0, _wait_timer - delta)
+	_move_vel = _move_vel.move_toward(Vector2.ZERO, 18.0 * delta)
+	if _anim_player != null and _anim_player.has_animation("idle") and _move_vel.length() < 0.2:
+		if _anim_player.current_animation != "idle":
+			_anim_player.play("idle", 0.18)
+
+
+func _choose_recovery_goal() -> Vector3:
+	var backward := Vector3(-_move_vel.x, 0.0, -_move_vel.y)
+	if backward.length_squared() < 0.01:
+		backward = Vector3.RIGHT.rotated(Vector3.UP, randf_range(-PI, PI))
+	else:
+		backward = backward.normalized()
+	var candidates: Array[Vector3] = [
+		global_position + backward * 2.3,
+		global_position + backward.rotated(Vector3.UP, 0.9) * 2.4,
+		global_position + backward.rotated(Vector3.UP, -0.9) * 2.4,
+		_home_pos
+	]
+	for candidate in candidates:
+		if _navigation != null and _navigation.is_built:
+			var safe: Vector3 = _navigation.nearest_walkable_position(candidate, 5)
+			if safe != Vector3.ZERO and not _navigation.find_path(global_position, safe).is_empty():
+				return safe
+	return candidates[0] if not candidates.is_empty() else global_position + backward * 1.8
+
+
+func _process_recover(delta: float, refresh_steer: bool) -> void:
+	_recover_time += delta
+	if _recover_goal == Vector3.ZERO:
+		_recover_goal = _choose_recovery_goal()
+	var away: Vector3 = Vector3(_recover_goal.x - global_position.x, 0.0, _recover_goal.z - global_position.z)
+	if away.length() > 0.65:
+		var nav_dir: Vector3 = _get_navigation_direction(_recover_goal, delta)
+		if nav_dir.length_squared() < 0.001:
+			var steer: Vector3 = away.normalized()
+			if refresh_steer or _cached_steer_dir.length_squared() < 0.001:
+				_cached_steer_dir = _steer_around_obstacles(steer.rotated(Vector3.UP, deg_to_rad(48.0 * _strafe_sign)))
+			nav_dir = _cached_steer_dir
+		_move_vel.x = move_toward(_move_vel.x, nav_dir.x * 3.6, 16.0 * delta)
+		_move_vel.y = move_toward(_move_vel.y, nav_dir.z * 3.6, 16.0 * delta)
+	else:
+		_stuck_time = 0.0
+		_move_vel = _move_vel.move_toward(Vector2.ZERO, 16.0 * delta)
+		if _recover_time > 0.5:
+			_recover_goal = Vector3.ZERO
+	if _recover_time > 4.0 and _navigation != null and _navigation.is_built:
+		var safe_pos: Vector3 = _navigation.find_recovery_position(global_position, away)
+		if safe_pos != Vector3.ZERO:
+			global_position = safe_pos
+			velocity = Vector3.ZERO
+			_move_vel = Vector2.ZERO
+			_stuck_time = 0.0
+			_recover_time = 0.0
+			_navigation_path.clear()
+			if debug_ai:
+				print("[BotNav:%s] relocated to nearest safe tile after blocked recovery" % name)
+
+
+func _pick_objective_target() -> Vector3:
+	if _hp < _max_hp * 0.50:
+		var best_med: Node3D = null
+		var best_med_dist: float = 9.0
+		for p in get_tree().get_nodes_in_group("arena_pickups"):
+			if p is ArenaPickup:
+				var pk := p as ArenaPickup
+				if pk.pickup_type == ArenaPickup.PickupType.MEDKIT and pk.is_available():
+					var d: float = global_position.distance_to(pk.global_position)
+					if d < best_med_dist:
+						best_med_dist = d
+						best_med = pk
+		if best_med != null:
+			return Vector3(best_med.global_position.x, global_position.y, best_med.global_position.z)
+
+	var focus: float = profile.zone_objective_focus if profile != null else 0.0
+	var difficulty: Dictionary = _get_difficulty_settings()
+	var mode_cfg: ArenaModeConfig = GameManager.get_active_mode_config()
+	var zones_enabled: bool = (mode_cfg == null or mode_cfg.enable_capture_zones)
+	if focus * float(difficulty["objective_bias"]) >= 0.45 and _zone_seek_pause_timer <= 0.0 and zones_enabled:
+		var best_zone: Node3D = null
+		var best_dist: float = 18.0
+		for z in get_tree().get_nodes_in_group("capture_zones"):
+			if z is CaptureZonePad:
+				var pad := z as CaptureZonePad
+				if pad.get_owner_team() != team_id:
+					var d: float = global_position.distance_to(pad.global_position)
+					if d < best_dist:
+						best_dist = d
+						best_zone = pad
+		if best_zone != null:
+			return Vector3(best_zone.global_position.x, global_position.y, best_zone.global_position.z)
+
+	if team_id == 0:
+		var players: Array[Node] = get_tree().get_nodes_in_group("player")
+		if not players.is_empty() and players[0] is Node3D:
+			var pnode := players[0] as Node3D
+			if not pnode.has_method("is_alive") or bool(pnode.call("is_alive")):
+				if global_position.distance_to(pnode.global_position) > 5.8:
+					return Vector3(
+						clampf(pnode.global_position.x - 1.5, -13.2, 13.2),
+						global_position.y,
+						clampf(pnode.global_position.z - 2.6, -9.2, 9.2)
+					)
+
+	var offset: Vector3 = patrol_offset_a if _patrol_index == 0 else patrol_offset_b
+	return _home_pos + offset
+
+
+func _get_difficulty_scales() -> Dictionary:
+	var settings: Dictionary = _get_difficulty_settings()
+	# Difficulty changes decisions and reaction, never movement speed, fire rate, or damage.
+	return {"speed": 1.0, "cooldown": 1.0, "error": float(settings["aim_error_multiplier"])}
+
+
+func _steer_around_obstacles(desired_dir: Vector3) -> Vector3:
+	var flat := Vector3(desired_dir.x, 0.0, desired_dir.z)
+	if flat.length_squared() < 0.0001:
+		return desired_dir
+	flat = flat.normalized()
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var origin: Vector3 = global_position + Vector3(0.0, 0.55, 0.0)
+	var fwd_q := PhysicsRayQueryParameters3D.create(origin, origin + flat * 1.35, 1, [get_rid()])
+	fwd_q.collide_with_areas = false
+	var fwd_hit: Dictionary = space_state.intersect_ray(fwd_q)
+	if fwd_hit.is_empty():
+		return flat
+
+	var left_dir: Vector3 = flat.rotated(Vector3.UP, deg_to_rad(38.0))
+	var right_dir: Vector3 = flat.rotated(Vector3.UP, deg_to_rad(-38.0))
+	var left_q := PhysicsRayQueryParameters3D.create(origin, origin + left_dir * 1.45, 1, [get_rid()])
+	var right_q := PhysicsRayQueryParameters3D.create(origin, origin + right_dir * 1.45, 1, [get_rid()])
+	var left_blocked: bool = not space_state.intersect_ray(left_q).is_empty()
+	var right_blocked: bool = not space_state.intersect_ray(right_q).is_empty()
+
+	if not left_blocked and right_blocked:
+		return flat.rotated(Vector3.UP, deg_to_rad(56.0)).normalized()
+	if not right_blocked and left_blocked:
+		return flat.rotated(Vector3.UP, deg_to_rad(-56.0)).normalized()
+	return flat.rotated(Vector3.UP, deg_to_rad(56.0 * _strafe_sign)).normalized()
+
+
+func _compute_danger_evasion() -> Vector3:
+	var evade := Vector3.ZERO
+	for b in get_tree().get_nodes_in_group("pulse_bombs"):
+		if b is Node3D and is_instance_valid(b):
+			var dvec := Vector3(global_position.x - (b as Node3D).global_position.x, 0.0, global_position.z - (b as Node3D).global_position.z)
+			var dist: float = dvec.length()
+			if dist < 4.2:
+				evade += (dvec.normalized() if dist > 0.05 else Vector3.RIGHT) * (1.0 - dist / 4.2)
+	for c in get_tree().get_nodes_in_group("explosive_crates"):
+		if c is ExplosiveCrate:
+			var crate := c as ExplosiveCrate
+			if crate.is_intact() and crate._hp <= 22.0:
+				var dvec := Vector3(global_position.x - crate.global_position.x, 0.0, global_position.z - crate.global_position.z)
+				var dist: float = dvec.length()
+				if dist < 3.5:
+					evade += (dvec.normalized() if dist > 0.05 else Vector3.LEFT) * (0.85 - dist / 4.2)
+	if evade.length_squared() > 0.001:
+		return _steer_around_obstacles(evade.normalized())
+	return Vector3.ZERO
+
+
+func _compute_ally_separation() -> Vector3:
+	var sep := Vector3.ZERO
+	for b in get_tree().get_nodes_in_group("arena_bots"):
+		if b == self or not (b is ArenaBot) or not is_instance_valid(b):
+			continue
+		var other := b as ArenaBot
+		if other.team_id != team_id or not other.is_alive():
+			continue
+		var diff := Vector3(global_position.x - other.global_position.x, 0.0, global_position.z - other.global_position.z)
+		var dist: float = diff.length()
+		if dist > 0.01 and dist < 2.2:
+			sep += diff.normalized() * ((2.2 - dist) / 2.2)
+	return sep
+
+
+func _process_patrol(delta: float, refresh_steer: bool = true) -> void:
+	var target: Vector3 = _pick_objective_target()
+	var to_target := Vector3(target.x - global_position.x, 0.0, target.z - global_position.z)
+
+	_patrol_leg_timer += delta
+	_patrol_stuck_timer += delta
+	if _patrol_stuck_timer >= 1.25:
+		_patrol_stuck_timer = 0.0
+		if global_position.distance_to(_patrol_check_pos) < 0.25:
+			_patrol_index = 1 - _patrol_index
+			_patrol_leg_timer = 0.0
+			_zone_seek_pause_timer = 3.5
+		_patrol_check_pos = global_position
+
+	if to_target.length() < 0.75:
+		_move_vel.x = move_toward(_move_vel.x, 0.0, 14.0 * delta)
+		_move_vel.y = move_toward(_move_vel.y, 0.0, 14.0 * delta)
+		if _patrol_leg_timer >= 0.45 and _wait_timer <= 0.0:
+			_patrol_index = 1 - _patrol_index
+			_patrol_leg_timer = 0.0
+			_wait_timer = randf_range(float(_get_difficulty_settings()["wait_min"]), float(_get_difficulty_settings()["wait_max"]))
+		return
+
+	if _patrol_leg_timer >= 5.5:
+		_patrol_index = 1 - _patrol_index
+		_patrol_leg_timer = 0.0
+
+	var diff_scales: Dictionary = _get_difficulty_scales()
+	var nav_dir: Vector3 = _get_navigation_direction(target, delta)
+	if nav_dir.length_squared() > 0.001:
+		_cached_steer_dir = (nav_dir + _compute_ally_separation() * 0.65).normalized()
+	elif refresh_steer or _cached_steer_dir.length_squared() < 0.001:
+		var raw_dir: Vector3 = to_target.normalized() + _compute_ally_separation() * 0.65
+		_cached_steer_dir = _steer_around_obstacles(raw_dir.normalized() if raw_dir.length_squared() > 0.001 else to_target.normalized())
+	var dir: Vector3 = _cached_steer_dir
+	var spd: float = (profile.move_speed if profile != null else 3.4) * 0.80 * float(diff_scales["speed"]) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
+	_move_vel.x = move_toward(_move_vel.x, dir.x * spd, 14.0 * delta)
+	_move_vel.y = move_toward(_move_vel.y, dir.z * spd, 14.0 * delta)
+	_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir.x, -dir.z), clampf(8.0 * delta, 0.0, 1.0))
+
+
+func _process_engage(delta: float, refresh_steer: bool = true) -> void:
+	if _target_ref == null or not is_instance_valid(_target_ref):
+		return
+	if _target_ref.has_method("is_alive") and not bool(_target_ref.call("is_alive")):
+		_has_los = false
+		_target_ref = null
+		return
+	if _target_ref.has_method("is_intact") and not bool(_target_ref.call("is_intact")):
+		_has_los = false
+		_target_ref = null
+		return
+
+	var to_target := Vector3(_target_ref.global_position.x - global_position.x, 0.0, _target_ref.global_position.z - global_position.z)
+	var dist: float = to_target.length()
+	if dist < 0.01:
+		return
+	var dir_to_target: Vector3 = to_target / dist
+	_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir_to_target.x, -dir_to_target.z), clampf(12.0 * delta, 0.0, 1.0))
+
+	_strafe_timer -= delta
+	if _strafe_timer <= 0.0:
+		_strafe_timer = randf_range(1.1, 2.2)
+		_strafe_sign *= -1.0
+
+	var strafe_vec := Vector3(-dir_to_target.z, 0.0, dir_to_target.x) * _strafe_sign
+	var radial_factor: float = 0.0
+	if dist > 9.8:
+		radial_factor = 0.65
+	elif dist < 5.4:
+		radial_factor = -0.75
+
+	var diff_scales: Dictionary = _get_difficulty_scales()
+	if refresh_steer or _cached_steer_dir.length_squared() < 0.001:
+		var raw_move: Vector3 = strafe_vec * 0.75 + dir_to_target * radial_factor + _compute_ally_separation() * 0.6
+		_cached_steer_dir = _steer_around_obstacles(raw_move.normalized()) if raw_move.length_squared() > 0.001 else Vector3.ZERO
+	var move_dir: Vector3 = _cached_steer_dir
+	var spd: float = (profile.move_speed if profile != null else 3.4) * float(diff_scales["speed"]) * (1.28 if _speed_boost_timer > 0.0 else 1.0)
+	_move_vel.x = move_toward(_move_vel.x, move_dir.x * spd, 16.0 * delta)
+	_move_vel.y = move_toward(_move_vel.y, move_dir.z * spd, 16.0 * delta)
+
+	_fire_timer -= delta
+	if _fire_timer <= 0.0:
+		var is_scout: bool = (profile != null and profile.profile_id == &"scout_drone")
+		var is_heavy: bool = (profile != null and profile.profile_id == &"heavy_sentinel")
+		_fire_timer = fire_cooldown * float(diff_scales["cooldown"]) * (0.72 if is_scout else (1.28 if is_heavy else 1.0))
+		_fire_energy_bolt(dir_to_target)
+
+
+func _find_best_visible_target() -> Node3D:
+	var sight_range: float = profile.sight_range if profile != null else 15.5
+	var origin: Vector3 = global_position + Vector3(0.0, 0.92, 0.0)
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+
+	var enemies: Array[Node3D] = []
+	for p in get_tree().get_nodes_in_group("player"):
+		if p is Node3D and is_instance_valid(p) and (not p.has_method("is_alive") or bool(p.call("is_alive"))):
+			var p_team: Variant = p.get("team_id")
+			if p_team != null and int(p_team) != team_id:
+				enemies.append(p as Node3D)
+	for b in get_tree().get_nodes_in_group("arena_bots"):
+		if b != self and b is ArenaBot and is_instance_valid(b):
+			var other := b as ArenaBot
+			if other.is_alive() and other.team_id != team_id:
+				enemies.append(other)
+
+	var best_node: Node3D = null
+	var best_dist: float = sight_range
+
+	# Opportunistically snipe an ExplosiveCrate if an enemy is standing in blast radius
+	for c in get_tree().get_nodes_in_group("explosive_crates"):
+		if c is ExplosiveCrate and (c as ExplosiveCrate).is_intact():
+			var crate := c as ExplosiveCrate
+			var d_crate: float = global_position.distance_to(crate.global_position)
+			if d_crate > sight_range:
+				continue
+			var enemy_near: bool = false
+			for en in enemies:
+				if en.global_position.distance_to(crate.global_position) <= 3.3:
+					enemy_near = true
+					break
+			if enemy_near:
+				var cq := PhysicsRayQueryParameters3D.create(origin, crate.global_position + Vector3(0.0, 0.6, 0.0), 1 | 2, [get_rid()])
+				cq.collide_with_areas = false
+				var chit: Dictionary = space_state.intersect_ray(cq)
+				if not chit.is_empty() and chit.get("collider", null) == crate:
+					return crate
+
+	for cand_node in enemies:
+		var target_pos: Vector3 = cand_node.global_position + Vector3(0.0, 0.92, 0.0)
+		var dist: float = origin.distance_to(target_pos)
+		if dist > best_dist:
+			continue
+
+		var query := PhysicsRayQueryParameters3D.create(origin, target_pos, 1 | 2, [get_rid()])
+		query.collide_with_areas = false
+		query.collide_with_bodies = true
+		var hit: Dictionary = space_state.intersect_ray(query)
+		if not hit.is_empty() and hit.get("collider") == cand_node:
+			best_dist = dist
+			best_node = cand_node
+
+	return best_node
+
+
+func _fire_energy_bolt(aim_dir: Vector3) -> void:
+	var muzzle: Marker3D = _muzzle_left if _use_left_muzzle else _muzzle_right
+	_use_left_muzzle = not _use_left_muzzle
+	var torso_origin := global_position + Vector3(0.0, 0.92, 0.0)
+	var spawn_pos: Vector3 = muzzle.global_position if muzzle != null else torso_origin + aim_dir * 0.65
+
+	var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var pre_query := PhysicsRayQueryParameters3D.create(torso_origin, spawn_pos, 1 | 2, [get_rid()])
+	pre_query.collide_with_areas = false
+	pre_query.collide_with_bodies = true
+	pre_query.hit_from_inside = true
+	var pre_hit: Dictionary = space_state.intersect_ray(pre_query)
+
+	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+	var is_heavy: bool = (profile != null and profile.profile_id == &"heavy_sentinel")
+	var bolt_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else (Color(0.937255, 0.266667, 0.266667, 1.0) if is_heavy else Color(0.984314, 0.45098, 0.086275, 1.0))
+
+	var dmg: float = projectile_damage * (1.30 if _damage_boost_timer > 0.0 else 1.0)
+	if not pre_hit.is_empty():
+		var hit_pos: Vector3 = pre_hit.get("position", spawn_pos)
+		var collider: Object = pre_hit.get("collider", null)
+		if collider != null and collider.has_method("take_damage"):
+			var target_team: Variant = collider.get("team_id")
+			if target_team == null or int(target_team) != team_id:
+				var hit_dmg: float = dmg * (2.0 if is_heavy else 1.0)
+				if collider is PlayerController:
+					collider.call("take_damage", hit_dmg, team_id, torso_origin)
+					(collider as PlayerController).apply_knockback(aim_dir * 3.0)
+				elif collider is ExplosiveCrate or collider is ArenaBot:
+					collider.call("take_damage", hit_dmg, team_id, false)
+					if collider is ArenaBot:
+						(collider as ArenaBot).apply_knockback(aim_dir * 3.0)
+				else:
+					collider.call("take_damage", hit_dmg, team_id)
+		var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
+		if flash is ImpactFlash:
+			(flash as ImpactFlash).trigger(hit_pos, bolt_col)
+	else:
+		var diff_scales: Dictionary = _get_difficulty_scales()
+		var precision: float = profile.aim_precision if profile != null else 0.72
+		var max_err_rad: float = deg_to_rad((1.0 - precision) * 14.0) * float(diff_scales["error"])
+		var offsets_deg: Array[float] = [0.0]
+		if is_heavy:
+			offsets_deg = [-4.5, 4.5]
+		var bolt_scale: Vector3 = Vector3(1.25, 1.25, 1.1) if is_heavy else Vector3.ONE
+		for off_deg in offsets_deg:
+			var shoot_dir: Vector3 = aim_dir.rotated(Vector3.UP, deg_to_rad(off_deg) + randf_range(-max_err_rad, max_err_rad))
+			var proj: Node = PoolManager.acquire(EnergyProjectile.POOL_ID, proj_parent)
+			if proj is EnergyProjectile:
+				(proj as EnergyProjectile).launch(
+					spawn_pos,
+					shoot_dir,
+					projectile_speed,
+					dmg,
+					team_id,
+					self,
+					bolt_col,
+					bolt_scale
+				)
+		var muzzle_flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
+		if muzzle_flash is ImpactFlash:
+			(muzzle_flash as ImpactFlash).trigger(spawn_pos, bolt_col, 0.72, 0.08)
+	var is_scout: bool = (profile != null and profile.profile_id == &"scout_drone")
+	var sfx: String = "res://assets/audio/sfx_gun_shotgun.wav" if is_heavy else (
+		"res://assets/audio/sfx_gun_uzi.wav" if is_scout else "res://assets/audio/sfx_gun_m4.wav"
+	)
+	var pitch: float = randf_range(0.88, 0.96) if is_heavy else randf_range(0.95, 1.06)
+	AudioManager.play_sfx_path(sfx, pitch, -4.5)
+
+
+func apply_pickup(pickup_type: int, value: float) -> bool:
+	if _state == BotState.RESPAWN:
+		return false
+	match pickup_type:
+		0: # MEDKIT
+			if _hp >= _max_hp - 0.5:
+				return false
+			_hp = minf(_max_hp, _hp + value)
+			_update_hp_bar()
+			return true
+		1: # OVERCHARGE
+			_damage_boost_timer = maxf(_damage_boost_timer, value)
+			return true
+		2: # SPEED_BOOST
+			_speed_boost_timer = maxf(_speed_boost_timer, value)
+			return true
+	return false
+
+
+func take_damage(amount: float, attacker_team: int, from_player: bool = false) -> void:
+	if _state == BotState.RESPAWN or attacker_team == team_id:
+		return
+
+	_last_attacker_is_player = from_player
+	_hit_flash_timer = 0.09
+	_hp = maxf(_hp - amount, 0.0)
+	_update_hp_bar()
+	if _hp <= 0.0:
+		_enter_respawn(attacker_team)
+	else:
+		AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_hurt.ogg", randf_range(0.95, 1.08), -2.0)
+
+
+func _enter_respawn(attacker_team: int) -> void:
+	var previous_state: int = _state
+	_state = BotState.RESPAWN
+	_brain.state = ArenaBotBrain.State.RESPAWN
+	_on_state_changed(previous_state, _state)
+	_respawn_timer = 3.0
+	_hit_flash_timer = 0.0
+	_damage_boost_timer = 0.0
+	_speed_boost_timer = 0.0
+	if _model_pivot != null:
+		_model_pivot.scale = _base_pivot_scale
+	if _hp_bar_mat != null:
+		_hp_bar_mat.albedo_color = Color(_base_hp_col.r * 1.45, _base_hp_col.g * 1.45, _base_hp_col.b * 1.45, 1.0)
+	velocity = Vector3.ZERO
+	_knockback_vel = Vector3.ZERO
+	_move_vel = Vector2.ZERO
+	AudioManager.play_sfx_path("res://assets/kenney/audio/enemy_destroy.ogg", randf_range(0.94, 1.04))
+
+	var proj_parent: Node = get_tree().current_scene if get_tree() != null else get_parent()
+	var flash_col := Color(0.219608, 0.741176, 0.972549, 1.0) if team_id == 0 else Color(0.984314, 0.572549, 0.235294, 1.0)
+	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
+	if flash is ImpactFlash:
+		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.9, 0.0), flash_col, 2.55, 0.22)
+
+	if _collision_shape != null:
+		_collision_shape.set_deferred("disabled", true)
+	if _visual_root != null:
+		_visual_root.visible = false
+	if _team_ring != null:
+		_team_ring.visible = false
+	if _hp_bar_pivot != null:
+		_hp_bar_pivot.visible = false
+
+	bot_defeated.emit(self, attacker_team)
+
+
+func _find_safe_home_pos() -> Vector3:
+	var offsets: Array[Vector3] = [
+		Vector3.ZERO,
+		Vector3(0.0, 0.0, -1.6),
+		Vector3(0.0, 0.0, 1.6),
+		Vector3(-1.6, 0.0, 0.0)
+	]
+	var units: Array[Node] = []
+	units.append_array(get_tree().get_nodes_in_group("player"))
+	units.append_array(get_tree().get_nodes_in_group("arena_bots"))
+
+	for off in offsets:
+		var cand := Vector3(
+			clampf(_home_pos.x + off.x, -13.6, 13.6),
+			_home_pos.y,
+			clampf(_home_pos.z + off.z, -9.6, 9.6)
+		)
+		var blocked: bool = false
+		for u in units:
+			if u != self and u is Node3D and is_instance_valid(u) and (u as Node3D).visible:
+				if (u as Node3D).global_position.distance_to(cand) < 1.35:
+					blocked = true
+					break
+		if not blocked:
+			return cand
+	return _home_pos
+
+
+func _respawn_at_home() -> void:
+	global_position = _find_safe_home_pos()
+	_patrol_check_pos = global_position
+	_patrol_leg_timer = 0.0
+	_patrol_stuck_timer = 0.0
+	_zone_seek_pause_timer = 0.0
+	velocity = Vector3.ZERO
+	_move_vel = Vector2.ZERO
+	_knockback_vel = Vector3.ZERO
+	_hp = _max_hp
+	_has_los = false
+	_target_ref = null
+	_fire_timer = 0.85
+	_last_attacker_is_player = false
+	var previous_state: int = _state
+	_state = BotState.PATROL
+	_brain.reset()
+	_on_state_changed(previous_state, _state)
+	_visible_target = null
+	_target_memory_timer = 0.0
+	_event_memory_timer = 0.0
+	_stuck_time = 0.0
+	_navigation_path.clear()
+	_update_hp_bar()
+
+	if _collision_shape != null:
+		_collision_shape.set_deferred("disabled", false)
+	if _visual_root != null:
+		_visual_root.visible = true
+	if _team_ring != null:
+		_team_ring.visible = true
+	if _hp_bar_pivot != null:
+		_hp_bar_pivot.visible = true
+
+
+func _update_hp_bar() -> void:
+	if _hp_bar_fill == null:
+		return
+	var ratio: float = clampf(_hp / maxf(_max_hp, 1.0), 0.0, 1.0)
+	_hp_bar_fill.scale.x = maxf(ratio, 0.001)
+	_hp_bar_fill.position.x = -(1.0 - ratio) * 0.55

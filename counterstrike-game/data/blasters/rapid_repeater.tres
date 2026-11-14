@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EnergyBlasterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/energy_blaster_data.gd" id="1_blaster"]
+
+[resource]
+script = ExtResource("1_blaster")
+blaster_id = &"rapid_repeater"
+display_name = "یوزی صداخفه‌کن"
+category = 1
+energy_damage = 14.0
+pulse_cooldown = 0.11
+projectile_speed = 33.0
+energy_cell_capacity = 34
+recharge_seconds = 1.15
+spread_still_deg = 2.0
+spread_moving_deg = 4.8
+pellets_per_shot = 1
+projectile_color = Color(0.984314, 0.572549, 0.235294, 1)
+model_scene_path = "res://assets/kenney/weapon/uziLongSilencer.glb"
+model_scale = 1.18
+shoot_sfx_path = "res://assets/audio/sfx_gun_uzi.wav"
+icon_path = "res://assets/ui/icon_weapon_uzi.png"
+bolt_scale = Vector3(0.68, 0.68, 1.35)
+arena_credit_cost = 0

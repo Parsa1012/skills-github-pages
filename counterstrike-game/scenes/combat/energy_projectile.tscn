@@ -1,0 +1,33 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/energy_projectile.gd" id="1_proj"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_outer"]
+radius = 0.085
+height = 0.68
+radial_segments = 8
+rings = 3
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_core"]
+shading_mode = 0
+albedo_color = Color(1.45, 1.48, 1.52, 1)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_core"]
+radius = 0.042
+height = 0.50
+radial_segments = 6
+rings = 2
+
+[node name="EnergyProjectile" type="Node3D"]
+script = ExtResource("1_proj")
+
+[node name="BoltMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0)
+cast_shadow = 0
+mesh = SubResource("CapsuleMesh_outer")
+
+[node name="CoreMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0)
+cast_shadow = 0
+mesh = SubResource("CapsuleMesh_core")
+surface_material_override/0 = SubResource("StandardMaterial3D_core")

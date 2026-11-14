@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/test/ci_runtime_qa.gd" id="1_qa"]
+
+[node name="CIRuntimeQA" type="Node"]
+script = ExtResource("1_qa")

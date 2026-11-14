@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EnergyBlasterData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/energy_blaster_data.gd" id="1_blaster"]
+
+[resource]
+script = ExtResource("1_blaster")
+blaster_id = &"plasma_scatter"
+display_name = "شاتگان M870"
+category = 1
+energy_damage = 13.0
+pulse_cooldown = 0.46
+projectile_speed = 26.0
+energy_cell_capacity = 10
+recharge_seconds = 1.2
+spread_still_deg = 6.2
+spread_moving_deg = 8.6
+pellets_per_shot = 4
+projectile_color = Color(0.96, 0.34, 0.28, 1)
+model_scene_path = "res://assets/kenney/weapon/shotgun.glb"
+model_scale = 1.38
+shoot_sfx_path = "res://assets/audio/sfx_gun_shotgun.wav"
+icon_path = "res://assets/ui/icon_weapon_shotgun.png"
+bolt_scale = Vector3(1.15, 1.15, 0.9)
+arena_credit_cost = 0

@@ -1,0 +1,32 @@
+# Godot 4 generated cache and import artifacts
+.godot/
+
+# Godot 4 mono/C# (unused, kept as safeguard)
+.mono/
+data_*/
+
+# Android & Desktop build outputs (Rule 6: never commit APKs or heavy build artifacts)
+builds/
+build/
+export/
+exports/
+dist/
+*.apk
+*.aab
+*.apks
+*.ipa
+*.exe
+*.pck
+*.zip
+
+# Android signing keys and local keystore configs
+*.keystore
+*.jks
+*.p12
+export_credentials.cfg
+
+# OS / Editor temporary files
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
