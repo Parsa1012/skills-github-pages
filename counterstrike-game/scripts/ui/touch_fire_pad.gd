@@ -64,4 +64,5 @@ func _draw() -> void:
 
 	var font: Font = get_theme_default_font()
 	if font != null and not label_text.is_empty():
-		draw_string(font, center + Vector2(-42.0, 6.0), label_text, HORIZONTAL_ALIGNMENT_CENTER, 84.0, 18, Color(0.98, 0.99, 1.0, 0.95), TextServer.JUSTIFICATION_NONE, TextServer.DIRECTION_RTL)
+		var font_size: int = 22 if SaveManager.large_text_enabled else 18
+		draw_string(font, center + Vector2(-48.0, float(font_size) * 0.34), label_text, HORIZONTAL_ALIGNMENT_CENTER, 96.0, font_size, Color(0.98, 0.99, 1.0, 0.95), TextServer.JUSTIFICATION_NONE, TextServer.DIRECTION_RTL)

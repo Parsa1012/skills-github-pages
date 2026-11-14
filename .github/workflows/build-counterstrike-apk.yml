@@ -116,9 +116,13 @@ jobs:
             -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Import Godot project resources and verify headless scenes
+      - name: Import Godot project resources and verify rendered scenes
         run: |
           set -euo pipefail
+          if ! command -v xvfb-run >/dev/null 2>&1; then
+            echo "ERROR: xvfb-run is required to exercise the GL Compatibility renderer in CI."
+            exit 1
+          fi
           emit_error_log() {
             local log_file="$1"
             local label="$2"
@@ -151,7 +155,7 @@ jobs:
           cat /tmp/godot-editor.log
 
           echo "=== Step 3: Smoke test boot -> main_menu ==="
-          if ! godot4 --headless --verbose --path "${PROJECT_DIR}" --quit-after 30 >/tmp/godot-smoke-boot.log 2>&1; then
+          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot4 --rendering-method gl_compatibility --verbose --path "${PROJECT_DIR}" --quit-after 30 >/tmp/godot-smoke-boot.log 2>&1; then
             cat /tmp/godot-smoke-boot.log
             emit_error_log /tmp/godot-smoke-boot.log "Godot boot smoke test failed"
             exit 1
@@ -159,7 +163,7 @@ jobs:
           cat /tmp/godot-smoke-boot.log
 
           echo "=== Step 4: Smoke test arena_sector_01.tscn ==="
-          if ! godot4 --headless --verbose --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
+          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot4 --rendering-method gl_compatibility --verbose --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
             cat /tmp/godot-smoke-arena.log
             emit_error_log /tmp/godot-smoke-arena.log "Godot arena_sector_01 smoke test failed"
             exit 1
@@ -167,7 +171,7 @@ jobs:
           cat /tmp/godot-smoke-arena.log
 
           echo "=== Step 5: Smoke test arena_sector_02.tscn ==="
-          if ! godot4 --headless --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_02.tscn --quit-after 20 >/tmp/godot-smoke-arena2.log 2>&1; then
+          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot4 --rendering-method gl_compatibility --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_02.tscn --quit-after 20 >/tmp/godot-smoke-arena2.log 2>&1; then
             cat /tmp/godot-smoke-arena2.log
             emit_error_log /tmp/godot-smoke-arena2.log "Godot arena_sector_02 smoke test failed"
             exit 1
@@ -176,7 +180,7 @@ jobs:
 
           echo "=== Step 6: End-to-End Runtime QA Suite ==="
           QA_EXIT=0
-          godot4 --headless --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn --quit-after 600 >/tmp/godot-qa.log 2>&1 || QA_EXIT=$?
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot4 --rendering-method gl_compatibility --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn --quit-after 600 >/tmp/godot-qa.log 2>&1 || QA_EXIT=$?
           cat /tmp/godot-qa.log
 
           # Surface errors first (with stack context) then warnings as CI annotations
@@ -211,8 +215,8 @@ jobs:
             exit 1
           fi
 
-          if grep -E "SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log; then
-            echo "::error title=Godot script or resource error::$(grep -E 'SCRIPT ERROR|Parse Error|Failed to load resource|ERROR: Cannot open file|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log | head -n 5 | tr '\n' ' ')"
+          if grep -E "ERROR:|SCRIPT ERROR|Parse Error|Failed to load resource|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL" /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log; then
+            echo "::error title=Godot runtime or resource error::$(grep -E 'ERROR:|SCRIPT ERROR|Parse Error|Failed to load resource|Invalid assignment|Invalid type|Invalid call|Nonexistent function|QA_FAIL' /tmp/godot-import.log /tmp/godot-editor.log /tmp/godot-smoke-boot.log /tmp/godot-smoke-arena.log /tmp/godot-smoke-arena2.log /tmp/godot-qa.log | head -n 8 | tr '\n' ' ')"
             exit 1
           fi
 
@@ -321,3 +325,12 @@ jobs:
           path: ${{ env.PROJECT_DIR }}/builds/${{ env.APK_FILENAME }}
           retention-days: 30
           if-no-files-found: error
+
+      - name: Upload Godot diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: counterstrike-godot-diagnostics-${{ github.run_id }}
+          path: /tmp/godot-*.log
+          if-no-files-found: warn
+          retention-days: 5

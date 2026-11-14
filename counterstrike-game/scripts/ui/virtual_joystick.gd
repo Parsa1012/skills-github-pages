@@ -161,5 +161,6 @@ func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	if font != null and not stick_title.is_empty():
 		var text_col := Color(0.95, 0.97, 1.0, 0.80 if not is_active else 0.40)
-		var label_pos := _base_center + Vector2(-56.0, max_radius + 16.0)
-		draw_string(font, label_pos, stick_title, HORIZONTAL_ALIGNMENT_CENTER, 112.0, 14, text_col, TextServer.JUSTIFICATION_NONE, TextServer.DIRECTION_RTL)
+		var font_size: int = 17 if SaveManager.large_text_enabled else 14
+		var label_pos := _base_center + Vector2(-64.0, max_radius + float(font_size) + 2.0)
+		draw_string(font, label_pos, stick_title, HORIZONTAL_ALIGNMENT_CENTER, 128.0, font_size, text_col, TextServer.JUSTIFICATION_NONE, TextServer.DIRECTION_RTL)

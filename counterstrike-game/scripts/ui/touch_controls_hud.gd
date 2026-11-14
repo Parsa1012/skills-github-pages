@@ -440,7 +440,7 @@ func _on_kill_feed_event(killer_fa: String, victim_fa: String, killer_team: int)
 		return
 	var row := Label.new()
 	row.text = "%s ← %s" % [killer_fa, victim_fa]
-	row.add_theme_font_size_override("font_size", 12)
+	row.add_theme_font_size_override("font_size", roundi(12.0 * (1.22 if SaveManager.large_text_enabled else 1.0)))
 	row.add_theme_color_override(
 		"font_color",
 		Color(0.219608, 0.741176, 0.972549, 1.0) if killer_team == 0 else Color(0.984314, 0.45098, 0.086275, 1.0)

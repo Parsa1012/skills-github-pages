@@ -195,6 +195,7 @@ func _process(_delta: float) -> void:
 			]:
 				_assert(ResourceLoader.exists(res_p), "Missing Phase 12 resource: %s" % res_p)
 
+			GameManager.set_large_text_enabled(true)
 			GameManager.go_to_selected_arena()
 			_step = 1
 			_wait_frames = 5
@@ -287,9 +288,20 @@ func _process(_delta: float) -> void:
 			if hud != null:
 				var fps_badge: Control = hud.get_node_or_null("TopSafeMargin/TopHudBar/FpsBadge") as Control
 				_assert(fps_badge != null and fps_badge.visible, "HUD FpsBadge missing or hidden when show_fps==true")
+				var hud_score: Label = hud.get_node_or_null("TopSafeMargin/TopHudBar/ScoreBadge/ScoreLabel") as Label
+				_assert(hud_score != null and hud_score.get_theme_font_size("font_size") >= 17, "Large-text accessibility was not applied in gameplay HUD")
 				_assert(hud.get_node_or_null("TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/WeaponIconRect") is TextureRect, "HUD WeaponIconRect missing")
 				_assert(hud.get_node_or_null("PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseFps") != null, "HUD BtnPauseFps missing")
 				_assert(hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/CenterGap/TacticalRadar") != null, "TacticalRadar missing")
+				var action_row: HBoxContainer = hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow") as HBoxContainer
+				if action_row != null:
+					var required_width: float = float(maxi(0, action_row.get_child_count() - 1)) * float(action_row.get_theme_constant("separation"))
+					for action in action_row.get_children():
+						if action is Control:
+							var touch_control := action as Control
+							required_width += touch_control.custom_minimum_size.x
+							_assert(touch_control.custom_minimum_size.y >= 48.0, "Touch action target below 48 px: %s" % touch_control.name)
+					_assert(action_row.size.x + 0.5 >= required_width, "Touch action buttons overflow their row (%0.1f > %0.1f)" % [required_width, action_row.size.x])
 
 				GameManager.set_match_paused(true)
 				_assert(tree.paused, "SceneTree should be paused")
@@ -387,6 +399,9 @@ func _process(_delta: float) -> void:
 			_assert(menu != null and menu.name == "MainMenu", "Failed to return to MainMenu from ArenaSector02")
 			var pools_dict: Variant = PoolManager.get("_pools")
 			_assert(pools_dict is Dictionary and (pools_dict as Dictionary).is_empty(), "PoolManager was not cleared on arena exit")
+			GameManager.reset_settings_to_defaults()
+			menu.call("_refresh_ui")
+			_assert(not SaveManager.large_text_enabled, "Accessibility setting did not reset after gameplay QA")
 			_step = 99
 		_:
 			if _failures.is_empty():

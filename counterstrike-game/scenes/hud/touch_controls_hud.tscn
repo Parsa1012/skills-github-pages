@@ -437,34 +437,34 @@ anchor_right = 1.0
 offset_left = -364.0
 offset_top = 8.0
 offset_right = -10.0
-offset_bottom = 52.0
+offset_bottom = 60.0
 grow_horizontal = 0
 mouse_filter = 2
 theme_override_constants/separation = 7
 
 [node name="BtnBomb" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(84, 52)
+custom_minimum_size = Vector2(76, 52)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "بمب"
 accent_color = Color(0.984314, 0.74902, 0.141176, 1)
 
 [node name="BtnDash" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(84, 52)
+custom_minimum_size = Vector2(76, 52)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "جهش"
 accent_color = Color(0.0627451, 0.72549, 0.505882, 1)
 
 [node name="BtnRecharge" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(88, 52)
+custom_minimum_size = Vector2(82, 52)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "شارژ"
 accent_color = Color(0.984314, 0.572549, 0.235294, 1)
 
 [node name="BtnSwitchBlaster" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(104, 52)
+custom_minimum_size = Vector2(98, 52)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "تغییر سلاح"

@@ -64,7 +64,8 @@ func _draw() -> void:
 		var y_rise: float = 34.0 * (1.0 - pow(1.0 - t, 2.0))
 		var x_drift: float = float(p["drift_x"]) * t
 		var pos := Vector2(screen_pos.x + x_drift - 65.0, screen_pos.y - y_rise)
-		var fsize: int = maxi(14, int(round(17.0 * pop_scale)))
+		var accessibility_scale: float = 1.12 if SaveManager.large_text_enabled else 1.0
+		var fsize: int = maxi(14, int(round(17.0 * pop_scale * accessibility_scale)))
 		var col: Color = p["color"]
 		var shadow := Color(0.03, 0.04, 0.08, alpha * 0.88)
 		var fg := Color(col.r, col.g, col.b, alpha)
