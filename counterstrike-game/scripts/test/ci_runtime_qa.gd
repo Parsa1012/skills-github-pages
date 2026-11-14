@@ -68,7 +68,7 @@ func _run_movement_camera_qa(player: PlayerController, hud: Node, arena: Node) -
 	_assert(action_grid != null and action_grid.columns == 4, "Action controls grid missing/default layout is incorrect")
 	_assert(game_camera != null and game_camera.projection == Camera3D.PROJECTION_ORTHOGONAL, "Gameplay camera is not orthographic")
 
-	var original_viewport_size: Vector2 = tree.get_viewport().get_visible_rect().size
+	var original_viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var safe_pad := {"left": 16.0, "right": 16.0, "top": 12.0, "bottom": 12.0}
 	for viewport_size in [Vector2(720.0, 1280.0), Vector2(800.0, 600.0), Vector2(1280.0, 720.0), Vector2(1920.0, 1080.0)]:
 		hud.call("_apply_responsive_touch_layout", viewport_size, safe_pad)
@@ -88,8 +88,8 @@ func _run_movement_camera_qa(player: PlayerController, hud: Node, arena: Node) -
 			_assert(extents.x <= half_bounds.x + 0.1 and extents.y <= half_bounds.y + 0.1, "Camera view escapes map bounds at viewport %s" % str(viewport_size))
 			var edge_focus: Vector3 = camera_rig._clamp_focus(Vector3(100.0, 1.0, -100.0))
 			_assert(edge_focus.x <= camera_rig.bounds_max.x - extents.x + 0.1 and edge_focus.z >= camera_rig.bounds_min.y + extents.y - 0.1, "Camera did not clamp to map bounds")
-		if tree.get_viewport() != null:
-			camera_rig.configure_for_viewport(tree.get_viewport().get_visible_rect().size)
+if get_viewport() != null:
+				camera_rig.configure_for_viewport(get_viewport().get_visible_rect().size)
 
 	if movement_stick != null and aim_stick != null:
 		var left_local: Vector2 = movement_stick.size * 0.5
