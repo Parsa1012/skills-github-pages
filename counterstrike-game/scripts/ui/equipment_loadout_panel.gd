@@ -193,7 +193,7 @@ func _show_item(item_id: String) -> void:
 	_stats.text = (
 		"ویژگی‌ها: %s\nرتبه تعادل: %d از ۱۰۰"
 		% [
-			PackedStringArray(stats).join(" • ") if not stats.is_empty() else "تزئینی",
+			" • ".join(PackedStringArray(stats)) if not stats.is_empty() else "تزئینی",
 			item.power_rating
 		]
 	)
