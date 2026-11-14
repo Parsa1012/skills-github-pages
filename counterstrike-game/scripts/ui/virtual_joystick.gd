@@ -1,4 +1,4 @@
-class_name VirtualJoystick
+class_name ArenaVirtualJoystick
 extends Control
 ## جوی‌استیک لمسی چندلمسی مستقل (Multi-Touch) برای موبایل با پشتیبانی از شبیه‌سازی ماوس و ناحیه امن.
 

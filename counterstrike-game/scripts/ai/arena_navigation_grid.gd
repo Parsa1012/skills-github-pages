@@ -159,7 +159,7 @@ func _build_grid(generation: int) -> void:
 				return
 			var cell := Vector2i(x, y)
 			var point: Vector3 = _cell_to_world(cell)
-			var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+			var space: PhysicsDirectSpaceState3D = get_viewport().world_3d.direct_space_state
 			if _cell_is_clear(space, point):
 				_walkable[cell] = true
 			checked += 1

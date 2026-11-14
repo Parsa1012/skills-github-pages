@@ -88,8 +88,8 @@ func _run_movement_camera_qa(player: PlayerController, hud: Node, arena: Node) -
 	_assert(test_brain.update(null, false, false, true, false, 0.05, 0.0) == ArenaBotBrain.State.RECOVER, "Stuck bot did not enter its recovery state")
 	_assert(test_brain.update(null, false, false, false, true, 0.05, 0.0) == ArenaBotBrain.State.WAIT, "Bot did not enter its idle wait state")
 	dummy_target.free()
-	var movement_stick := hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/LeftMoveStick") as VirtualJoystick
-	var aim_stick := hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/RightAimStick") as VirtualJoystick
+	var movement_stick := hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/LeftMoveStick") as ArenaVirtualJoystick
+	var aim_stick := hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/RightAimStick") as ArenaVirtualJoystick
 	var action_grid := hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow") as GridContainer
 	var camera_rig := arena.get_node_or_null("ArenaCameraRig") as ArenaCameraRig
 	var game_camera := camera_rig.get_node_or_null("CameraYawPivot/CameraPitchPivot/Camera3D") as Camera3D if camera_rig != null else null
