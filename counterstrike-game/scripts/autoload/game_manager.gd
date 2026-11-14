@@ -152,6 +152,11 @@ func set_haptics_enabled(enabled: bool) -> void:
 	SaveManager.save_settings()
 
 
+func set_large_text_enabled(enabled: bool) -> void:
+	SaveManager.large_text_enabled = enabled
+	SaveManager.save_settings()
+
+
 func trigger_haptic(duration_ms: int = 20) -> void:
 	if SaveManager.haptics_enabled and DisplayServer.get_name().to_lower() != "headless":
 		Input.vibrate_handheld(duration_ms)

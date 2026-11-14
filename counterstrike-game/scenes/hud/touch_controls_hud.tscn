@@ -171,7 +171,7 @@ mouse_filter = 2
 theme_override_constants/separation = 8
 
 [node name="BtnPause" type="Button" parent="TopSafeMargin/TopHudBar"]
-custom_minimum_size = Vector2(70, 42)
+custom_minimum_size = Vector2(70, 48)
 layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 14
@@ -443,28 +443,28 @@ mouse_filter = 2
 theme_override_constants/separation = 7
 
 [node name="BtnBomb" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(76, 44)
+custom_minimum_size = Vector2(84, 52)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "بمب"
 accent_color = Color(0.984314, 0.74902, 0.141176, 1)
 
 [node name="BtnDash" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(76, 44)
+custom_minimum_size = Vector2(84, 52)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "جهش"
 accent_color = Color(0.0627451, 0.72549, 0.505882, 1)
 
 [node name="BtnRecharge" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(82, 44)
+custom_minimum_size = Vector2(88, 52)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "شارژ"
 accent_color = Color(0.984314, 0.572549, 0.235294, 1)
 
 [node name="BtnSwitchBlaster" type="Control" parent="BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow"]
-custom_minimum_size = Vector2(98, 44)
+custom_minimum_size = Vector2(104, 52)
 layout_mode = 2
 script = ExtResource("4_actionbtn")
 title_text = "تغییر سلاح"
@@ -546,13 +546,13 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
 text = "ادامه نبرد"
 
 [node name="BtnPauseAimMode" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "حالت: دو جوی‌استیک"
 
 [node name="BtnPauseFps" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "نمایش FPS: خاموش"
@@ -562,27 +562,27 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="BtnPauseMusic" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
 text = "موسیقی: روشن"
 
 [node name="BtnPauseSfx" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox/PauseAudioRow"]
-custom_minimum_size = Vector2(0, 42)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
 text = "افکت: روشن"
 
 [node name="BtnPauseRestart" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
 text = "شروع مجدد نبرد"
 
 [node name="BtnPauseMenu" type="Button" parent="PauseOverlay/PauseCard/PauseMargin/PauseVBox"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
 text = "بازگشت به منوی اصلی"
@@ -646,7 +646,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_primary_btn")
 text = "بازی مجدد"
 
 [node name="BtnEndMenu" type="Button" parent="MatchEndOverlay/EndCard/EndMargin/EndVBox"]
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 theme_override_font_sizes/font_size = 15
 text = "بازگشت به منوی اصلی"

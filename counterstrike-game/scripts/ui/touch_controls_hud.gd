@@ -53,6 +53,7 @@ var _damage_alpha: float = 0.0
 var _low_hp_warning: bool = false
 var _low_hp_pulse_time: float = 0.0
 var _weapon_icon_cache: Dictionary = {}
+var _base_font_sizes: Dictionary = {}
 
 
 func _ready() -> void:
@@ -75,6 +76,8 @@ func _ready() -> void:
 	if _hitmarker_label != null:
 		_hitmarker_label.visible = false
 	_preload_weapon_icons()
+	_cache_accessibility_font_sizes(self)
+	_apply_accessibility_text()
 	_refresh_fps_visibility()
 
 	_setup_excluded_controls()
@@ -113,6 +116,26 @@ func _ready() -> void:
 		_btn_switch_blaster.action_triggered.connect(_on_switch_blaster_triggered)
 	if _btn_recharge != null:
 		_btn_recharge.action_triggered.connect(_on_recharge_triggered)
+
+
+func _cache_accessibility_font_sizes(node: Node) -> void:
+	if node is Label or node is Button:
+		var control := node as Control
+		var size: int = control.get_theme_font_size("font_size")
+		if size > 0:
+			_base_font_sizes[control.get_instance_id()] = size
+	for child in node.get_children():
+		_cache_accessibility_font_sizes(child)
+
+
+func _apply_accessibility_text() -> void:
+	for node in find_children("*", "Control", true, false):
+		if not (node is Label or node is Button):
+			continue
+		var control := node as Control
+		var base_size: int = int(_base_font_sizes.get(control.get_instance_id(), 0))
+		if base_size > 0:
+			control.add_theme_font_size_override("font_size", roundi(float(base_size) * (1.22 if SaveManager.large_text_enabled else 1.0)))
 
 
 func _exit_tree() -> void:

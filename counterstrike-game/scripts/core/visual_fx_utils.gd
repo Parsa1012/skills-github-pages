@@ -5,6 +5,7 @@ extends Object
 
 static func clear_caches() -> void:
 	_box_mesh_cache.clear()
+	_helmet_sphere_mesh = null
 
 
 static func make_unshaded_hdr_material(base_color: Color, alpha: float = 1.0, hdr_boost: float = 1.35) -> StandardMaterial3D:
@@ -113,6 +114,25 @@ static func _apply_skin_pbr_recursive(node: Node, tex: Texture2D) -> void:
 
 
 static var _box_mesh_cache: Dictionary = {}
+static var _helmet_sphere_mesh: SphereMesh = null
+
+
+static func _add_helmet_dome(parent: Node3D, pos: Vector3, size: Vector3, mat: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = "KevlarHelmetDome"
+	if _helmet_sphere_mesh == null:
+		_helmet_sphere_mesh = SphereMesh.new()
+		_helmet_sphere_mesh.radius = 0.5
+		_helmet_sphere_mesh.height = 1.0
+		_helmet_sphere_mesh.radial_segments = 16
+		_helmet_sphere_mesh.rings = 8
+	mi.mesh = _helmet_sphere_mesh
+	mi.position = pos
+	mi.scale = size
+	mi.material_override = mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(mi)
+	return mi
 
 
 static func _add_box_gear(parent: Node3D, gear_name: String, box_size: Vector3, pos: Vector3, mat: Material, cast_shadows: bool = false) -> MeshInstance3D:
@@ -170,7 +190,7 @@ static func equip_military_soldier(
 	# ۲. کلاه‌خود نظامی کولار + عینک تاکتیکی روی استخوان head (مقیاس داخلی head برابر 0.1 است)
 	var head_node: Node3D = soldier_root.find_child("head", true, false) as Node3D
 	if head_node != null:
-		_add_box_gear(head_node, "KevlarHelmetDome", Vector3(9.2, 4.1, 9.4), Vector3(0.0, 6.45, -0.15), helmet_mat, false)
+		_add_helmet_dome(head_node, Vector3(0.0, 6.4, -0.15), Vector3(9.2, 5.0, 9.4), helmet_mat)
 		_add_box_gear(head_node, "KevlarHelmetBrim", Vector3(9.4, 1.1, 2.0), Vector3(0.0, 5.15, 4.15), helmet_mat, false)
 		_add_box_gear(head_node, "HelmetRailLeft", Vector3(0.9, 2.8, 4.6), Vector3(4.55, 4.7, -0.3), vest_mat, false)
 		_add_box_gear(head_node, "HelmetRailRight", Vector3(0.9, 2.8, 4.6), Vector3(-4.55, 4.7, -0.3), vest_mat, false)
@@ -183,8 +203,9 @@ static func equip_military_soldier(
 	var torso_node: Node3D = soldier_root.find_child("torso", true, false) as Node3D
 	if torso_node != null:
 		_add_box_gear(torso_node, "PlateCarrierVest", Vector3(0.90, 0.64, 0.70), Vector3(0.0, 0.82, 0.0), vest_mat, false)
-		_add_box_gear(torso_node, "MagPouchesFront", Vector3(0.68, 0.26, 0.14), Vector3(0.0, 0.68, 0.37), pouch_mat, false)
-		_add_box_gear(torso_node, "TeamPatchFront", Vector3(0.24, 0.10, 0.06), Vector3(0.20, 0.98, 0.36), strap_mat, false)
+		_add_box_gear(torso_node, "FrontArmorPlate", Vector3(0.56, 0.39, 0.08), Vector3(0.0, 0.87, 0.385), helmet_mat, false)
+		_add_box_gear(torso_node, "MagPouchesFront", Vector3(0.68, 0.26, 0.14), Vector3(0.0, 0.68, 0.40), pouch_mat, false)
+		_add_box_gear(torso_node, "TeamPatchFront", Vector3(0.24, 0.10, 0.06), Vector3(0.20, 1.02, 0.40), strap_mat, false)
 		_add_box_gear(torso_node, "TacticalBackpack", Vector3(0.62, 0.56, 0.25), Vector3(0.0, 0.80, -0.40), pouch_mat, false)
 
 		if not weapon_scene_path.is_empty() and ResourceLoader.exists(weapon_scene_path):

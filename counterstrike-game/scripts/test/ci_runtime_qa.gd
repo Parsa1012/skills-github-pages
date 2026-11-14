@@ -1,5 +1,5 @@
 extends Node
-## تست خودکار End-to-End برای بررسی کامل نسخه ۰.۱۱ «کانتر آرنا» در Godot 4.3.
+## تست خودکار End-to-End برای بررسی کامل نسخه ۰.۱۲ «کانتر آرنا» در Godot 4.3.
 
 var _failures: Array[String] = []
 var _step: int = -1
@@ -18,7 +18,7 @@ func _ready() -> void:
 
 
 func _start_qa() -> void:
-	print("[QA] Starting automated runtime QA (Phase 11 - Counter Arena)...")
+	print("[QA] Starting automated runtime QA (Phase 12 - Counter Arena)...")
 	if get_parent() != get_tree().root:
 		reparent(get_tree().root)
 	get_tree().current_scene = null
@@ -70,6 +70,13 @@ func _process(_delta: float) -> void:
 			_assert(tree.root.theme != null, "Persian theme not applied on root viewport")
 			_assert(menu.get_node_or_null("WarBackdrop") is TextureRect, "WarBackdrop missing in MainMenu")
 			_assert(menu.get_node_or_null("LobbyViewportContainer") == null, "Heavy 3D SubViewport should be removed from MainMenu")
+			_assert(menu.find_child("BtnLargeText", true, false) is Button, "Accessible large-text control missing")
+			var arsenal_tab: Button = menu.find_child("BtnTabArsenal", true, false) as Button
+			var map_tab: Button = menu.find_child("BtnTabArena", true, false) as Button
+			_assert(arsenal_tab != null and arsenal_tab.icon != null and map_tab != null and map_tab.icon != null, "Weapon/map section icons missing")
+			var alpha_map: Button = menu.find_child("BtnMapSector01", true, false) as Button
+			var bravo_map: Button = menu.find_child("BtnMapSector02", true, false) as Button
+			_assert(alpha_map != null and alpha_map.icon != null and bravo_map != null and bravo_map.icon != null, "Arena selection map icons missing")
 			var logo_rect: TextureRect = menu.find_child("LogoRect", true, false) as TextureRect
 			_assert(logo_rect != null and logo_rect.texture != null, "Game logo missing in MainMenu")
 
@@ -89,7 +96,7 @@ func _process(_delta: float) -> void:
 			menu.call("_on_select_map", "sector_01")
 			_assert(SaveManager.selected_map_id == "sector_01", "Failed to select sector_01")
 
-			# Test Phase 11 settings & defaults (60 FPS default)
+			# Test Phase 12 settings & defaults (60 FPS default)
 			_assert(SaveManager.target_fps == 60, "Expected default target_fps == 60, got %d" % SaveManager.target_fps)
 			GameManager.set_target_fps(45)
 			_assert(SaveManager.target_fps == 45, "Failed to set target_fps == 45")
@@ -102,10 +109,17 @@ func _process(_delta: float) -> void:
 			_assert(not SaveManager.camera_shake_enabled, "Failed to toggle camera_shake_enabled")
 			GameManager.set_haptics_enabled(false)
 			_assert(not SaveManager.haptics_enabled, "Failed to toggle haptics_enabled")
+			var cta_for_accessibility: Button = menu.find_child("BtnEnterArena", true, false) as Button
+			var normal_cta_font: int = cta_for_accessibility.get_theme_font_size("font_size") if cta_for_accessibility != null else 0
+			GameManager.set_large_text_enabled(true)
+			menu.call("_refresh_ui")
+			_assert(SaveManager.large_text_enabled, "Failed to enable accessible large text")
+			_assert(cta_for_accessibility != null and cta_for_accessibility.get_theme_font_size("font_size") > normal_cta_font, "Accessible text size did not scale menu typography")
 
 			var prev_xp_keep: int = SaveManager.career_xp
 			GameManager.reset_settings_to_defaults()
-			_assert(SaveManager.target_fps == 60 and SaveManager.shadows_enabled and SaveManager.camera_shake_enabled and SaveManager.career_xp == prev_xp_keep, "Reset settings failed or altered career XP")
+			menu.call("_refresh_ui")
+			_assert(SaveManager.target_fps == 60 and SaveManager.shadows_enabled and SaveManager.camera_shake_enabled and not SaveManager.large_text_enabled and SaveManager.career_xp == prev_xp_keep, "Reset settings failed or altered accessibility/career settings")
 			GameManager.set_show_fps(true)
 
 			GameManager.set_aim_fire_mode("fire_button")
@@ -141,6 +155,13 @@ func _process(_delta: float) -> void:
 			for res_p in [
 				"res://assets/ui/menu_war_backdrop.jpg",
 				"res://assets/ui/game_logo.png",
+				"res://assets/ui/launcher_icon.png",
+				"res://assets/ui/launcher_adaptive_foreground.png",
+				"res://assets/ui/launcher_adaptive_background.png",
+				"res://assets/ui/map_sector_alpha.png",
+				"res://assets/ui/map_sector_bravo.png",
+				"res://assets/ui/icon_nav_arsenal.png",
+				"res://assets/ui/icon_nav_arena.png",
 				"res://assets/ui/icon_weapon_m4.png",
 				"res://assets/ui/icon_weapon_uzi.png",
 				"res://assets/ui/icon_weapon_shotgun.png",
@@ -172,7 +193,7 @@ func _process(_delta: float) -> void:
 				"res://scenes/items/explosive_crate.tscn",
 				"res://scripts/core/visual_fx_utils.gd"
 			]:
-				_assert(ResourceLoader.exists(res_p), "Missing Phase 11 resource: %s" % res_p)
+				_assert(ResourceLoader.exists(res_p), "Missing Phase 12 resource: %s" % res_p)
 
 			GameManager.go_to_selected_arena()
 			_step = 1
@@ -369,7 +390,7 @@ func _process(_delta: float) -> void:
 			_step = 99
 		_:
 			if _failures.is_empty():
-				print("[QA_PASS] All Phase 11 automated runtime checks passed cleanly across War Menu, Military Soldiers, 60 FPS Optimization, Sector 01 & Sector 02!")
+				print("[QA_PASS] All Phase 12 automated runtime checks passed cleanly across War Menu, Military Soldiers, 60 FPS Optimization, Sector 01 & Sector 02!")
 				tree.quit(0)
 			else:
 				print("[QA_FAIL] Total failures: %d" % _failures.size())

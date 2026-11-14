@@ -22,6 +22,7 @@ var joystick_sensitivity: float = 1.0 # 0.85 | 1.0 | 1.25
 var camera_preset: String = "classic" # "classic" | "tactical" | "close"
 var camera_shake_enabled: bool = true
 var haptics_enabled: bool = true
+var large_text_enabled: bool = false
 
 var selected_mode_id: String = "zone_control" # "zone_control" | "team_score_rush" | "zone_blitz"
 var selected_map_id: String = "sector_01" # "sector_01" | "sector_02"
@@ -67,6 +68,7 @@ func load_settings() -> void:
 	joystick_sensitivity = clampf(float(config.get_value("controls", "joystick_sensitivity", 1.0)), 0.85, 1.35)
 	camera_shake_enabled = bool(config.get_value("controls", "camera_shake_enabled", true))
 	haptics_enabled = bool(config.get_value("controls", "haptics_enabled", true))
+	large_text_enabled = bool(config.get_value("accessibility", "large_text_enabled", false))
 
 	var loaded_cam: String = str(config.get_value("camera", "camera_preset", "classic"))
 	camera_preset = loaded_cam if loaded_cam in ["classic", "tactical", "close"] else "classic"
@@ -108,6 +110,7 @@ func save_settings() -> void:
 	config.set_value("controls", "joystick_sensitivity", joystick_sensitivity)
 	config.set_value("controls", "camera_shake_enabled", camera_shake_enabled)
 	config.set_value("controls", "haptics_enabled", haptics_enabled)
+	config.set_value("accessibility", "large_text_enabled", large_text_enabled)
 	config.set_value("camera", "camera_preset", camera_preset)
 	config.set_value("match", "selected_mode_id", selected_mode_id)
 	config.set_value("match", "selected_map_id", selected_map_id)
@@ -138,6 +141,7 @@ func reset_settings_keep_career() -> void:
 	camera_preset = "classic"
 	camera_shake_enabled = true
 	haptics_enabled = true
+	large_text_enabled = false
 	bot_difficulty = "balanced"
 	master_volume = 0.85
 	music_volume = 0.72

@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
 [ext_resource type="FontFile" path="res://assets/fonts/Vazirmatn-Bold.ttf" id="2_bold"]
@@ -8,6 +8,10 @@
 [ext_resource type="Texture2D" path="res://assets/ui/icon_weapon_uzi.png" id="6_uzi"]
 [ext_resource type="Texture2D" path="res://assets/ui/icon_weapon_shotgun.png" id="7_shotgun"]
 [ext_resource type="Texture2D" path="res://assets/ui/icon_weapon_sniper.png" id="8_sniper"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_nav_arsenal.png" id="9_nav_arsenal"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_nav_arena.png" id="10_nav_arena"]
+[ext_resource type="Texture2D" path="res://assets/ui/map_sector_alpha.png" id="11_map_alpha"]
+[ext_resource type="Texture2D" path="res://assets/ui/map_sector_bravo.png" id="12_map_bravo"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
 content_margin_left = 14.0
@@ -255,7 +259,7 @@ text = "کانتر آرنا"
 layout_mode = 2
 theme_override_colors/font_color = Color(0.84, 0.89, 0.96, 0.9)
 theme_override_font_sizes/font_size = 11
-text = "عملیات تاکتیکی آفلاین • نسخه ۰.۱۱"
+text = "عملیات تاکتیکی آفلاین • نسخه ۰.۱۲"
 
 [node name="BrandSpacerR" type="Control" parent="SafeMargin/MainLayout/TopHeader"]
 layout_mode = 2
@@ -308,6 +312,9 @@ toggle_mode = true
 theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 15
 text = "۲. زرادخانه سلاح"
+icon = ExtResource("9_nav_arsenal")
+icon_max_width = 32
+tooltip_text = "انتخاب و مقایسه سلاح‌های آغازین"
 
 [node name="BtnTabArena" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
 custom_minimum_size = Vector2(0, 48)
@@ -316,6 +323,9 @@ toggle_mode = true
 theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 15
 text = "۳. نقشه و حالت"
+icon = ExtResource("10_nav_arena")
+icon_max_width = 32
+tooltip_text = "انتخاب نقشه، حالت نبرد و سطح دشواری"
 
 [node name="BtnTabSettings" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
 custom_minimum_size = Vector2(0, 48)
@@ -787,6 +797,10 @@ toggle_mode = true
 theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 14
 text = "پایگاه نظامی آلفا (بتنی و متقارن)"
+icon = ExtResource("11_map_alpha")
+icon_max_width = 46
+expand_icon = true
+tooltip_text = "نقشه متقارن با مسیرهای میانی و سنگرهای بتنی"
 
 [node name="BtnMapSector02" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/MapRow"]
 custom_minimum_size = Vector2(0, 52)
@@ -796,6 +810,10 @@ toggle_mode = true
 theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 14
 text = "پایگاه کویری براوو (کمین و انبار)"
+icon = ExtResource("12_map_bravo")
+icon_max_width = 46
+expand_icon = true
+tooltip_text = "نقشه کویری با انبارها، پوشش‌های شکسته و مسیرهای کمین"
 
 [node name="ModeLabel" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArena"]
 layout_mode = 2
@@ -897,21 +915,21 @@ layout_mode = 2
 text = "نرخ فریم هدف:"
 
 [node name="BtnFps30" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "30 FPS"
 
 [node name="BtnFps45" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "45 FPS"
 
 [node name="BtnFps60" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FpsRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
@@ -927,21 +945,21 @@ layout_mode = 2
 text = "کیفیت گرافیک:"
 
 [node name="BtnQualLow" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "پایین (سریع)"
 
 [node name="BtnQualMed" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "متوسط (متعادل)"
 
 [node name="BtnQualHigh" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/QualityRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
@@ -952,20 +970,20 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="BtnRenderScale" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/RenderToggleRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "وضوح رندر: ۸۵٪"
 
 [node name="BtnShadows" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/RenderToggleRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "سایه‌ها: روشن"
 
 [node name="BtnShowFps" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/RenderToggleRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
@@ -983,19 +1001,19 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="BtnAimMode" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "نشانه: دو جوی‌استیک"
 
 [node name="BtnSensitivity" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "حساسیت: معمولی"
 
 [node name="BtnCamPreset" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "نمای نبرد: استاندارد"
@@ -1005,18 +1023,44 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="BtnCameraShake" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FeelRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "لرزش دوربین: روشن"
 
 [node name="BtnHaptics" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FeelRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "ویبره لمسی: روشن"
+
+[node name="AccessibilityHeading" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.290196, 0.870588, 0.501961, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 16
+text = "دسترسی‌پذیری و خوانایی"
+
+[node name="AccessibilityRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnLargeText" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AccessibilityRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "متن درشت: خاموش"
+tooltip_text = "اندازه نوشته‌های منو را افزایش می‌دهد؛ تنظیم در دستگاه ذخیره می‌شود."
+
+[node name="AccessibilityHint" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AccessibilityRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+autowrap_mode = 2
+text = "دکمه‌ها برای لمس راحت بزرگ‌تر شده‌اند. لرزش و ویبره هم جداگانه قابل خاموش‌کردن است."
 
 [node name="AudioHeading" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
 layout_mode = 2
@@ -1030,21 +1074,21 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="BtnMusicToggle" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "موسیقی: روشن"
 
 [node name="BtnSfxToggle" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 toggle_mode = true
 text = "افکت صوتی: روشن"
 
 [node name="BtnMasterVol" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "بلندی کل: ۸۵٪"
@@ -1054,19 +1098,19 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="BtnMusicVol" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "صدای موسیقی: ۷۲٪"
 
 [node name="BtnSfxVol" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "صدای شلیک: ۹۰٪"
 
 [node name="BtnResetSettings" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow"]
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "بازگردانی به پیش‌فرض"
@@ -1181,4 +1225,5 @@ text = "شروع نبرد"
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow/BtnMusicVol" to="." method="_on_music_vol_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow/BtnSfxVol" to="." method="_on_sfx_vol_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow/BtnResetSettings" to="." method="_on_reset_settings_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AccessibilityRow/BtnLargeText" to="." method="_on_large_text_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/BottomLaunchDock/BtnEnterArena" to="." method="_on_enter_arena_pressed"]

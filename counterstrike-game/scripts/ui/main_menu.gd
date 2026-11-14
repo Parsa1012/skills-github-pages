@@ -100,6 +100,7 @@ var _tab_tween: Tween = null
 var _cta_pulse_time: float = 0.0
 var _weapon_cache: Dictionary = {}
 var _icon_cache: Dictionary = {}
+var _base_font_sizes: Dictionary = {}
 
 
 func _ready() -> void:
@@ -109,6 +110,8 @@ func _ready() -> void:
 	GameManager.current_state = GameManager.AppState.MAIN_MENU
 	AudioManager.play_menu_music()
 	_preload_weapons()
+	_cache_base_font_sizes(self)
+	_apply_large_text()
 	_apply_safe_area_margins()
 	_show_tab(0, false)
 	_refresh_ui()
@@ -172,6 +175,7 @@ func _show_tab(tab_idx: int, animate: bool = true) -> void:
 
 
 func _refresh_ui() -> void:
+	_apply_large_text()
 	var rank: Dictionary = SaveManager.get_rank_info()
 	var win_pct: int = int(round((float(SaveManager.total_wins) / float(SaveManager.total_matches)) * 100.0)) if SaveManager.total_matches > 0 else 0
 	if _rank_num_label != null:
@@ -325,6 +329,10 @@ func _refresh_ui() -> void:
 	if _haptics_btn != null:
 		_haptics_btn.button_pressed = SaveManager.haptics_enabled
 		_haptics_btn.text = "ویبره لمسی: روشن" if SaveManager.haptics_enabled else "ویبره لمسی: خاموش"
+	var large_text_btn: Button = get_node_or_null("SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AccessibilityRow/BtnLargeText") as Button
+	if large_text_btn != null:
+		large_text_btn.button_pressed = SaveManager.large_text_enabled
+		large_text_btn.text = "متن درشت: روشن" if SaveManager.large_text_enabled else "متن درشت: خاموش"
 
 	if _music_toggle_btn != null:
 		_music_toggle_btn.button_pressed = SaveManager.music_enabled
@@ -625,6 +633,32 @@ func _on_sfx_vol_pressed() -> void:
 func _on_reset_settings_pressed() -> void:
 	GameManager.reset_settings_to_defaults()
 	AudioManager.play_ui_pop()
+	_refresh_ui()
+
+
+func _cache_base_font_sizes(node: Node) -> void:
+	if node is Label or node is Button:
+		var control := node as Control
+		var font_size: int = control.get_theme_font_size("font_size")
+		if font_size > 0:
+			_base_font_sizes[control.get_instance_id()] = font_size
+	for child in node.get_children():
+		_cache_base_font_sizes(child)
+
+
+func _apply_large_text() -> void:
+	for node in find_children("*", "Control", true, false):
+		if not (node is Label or node is Button):
+			continue
+		var control := node as Control
+		var base_size: int = int(_base_font_sizes.get(control.get_instance_id(), 0))
+		if base_size > 0:
+			control.add_theme_font_size_override("font_size", roundi(float(base_size) * (1.22 if SaveManager.large_text_enabled else 1.0)))
+
+
+func _on_large_text_pressed() -> void:
+	GameManager.set_large_text_enabled(not SaveManager.large_text_enabled)
+	AudioManager.play_ui_click()
 	_refresh_ui()
 
 

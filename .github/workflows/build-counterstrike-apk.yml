@@ -302,6 +302,9 @@ jobs:
           unzip -l "${OUT_APK}" | grep -qE 'assets/assets/kenney/blocky_characters/character-j\.glb|character-j\.glb'
           unzip -l "${OUT_APK}" | grep -qE 'assets/assets/kenney/weapon/machinegun\.glb|machinegun\.glb'
           unzip -l "${OUT_APK}" | grep -qE 'assets/assets/ui/menu_war_backdrop\.jpg|menu_war_backdrop\.jpg'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/ui/launcher_icon\.png|launcher_icon\.png'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/ui/map_sector_alpha\.png|map_sector_alpha\.png'
+          unzip -l "${OUT_APK}" | grep -qE 'assets/assets/ui/map_sector_bravo\.png|map_sector_bravo\.png'
           unzip -l "${OUT_APK}" | grep -qE 'Vazirmatn-Regular\.ttf|Vazirmatn-Regular\.ttf-.*\.fontdata'
           if unzip -l "${OUT_APK}" | grep -qE 'main_menu\.mp3|ui_click\.mp3|ui_menu\.mp3|ui_pop\.mp3'; then
             echo "ERROR: Prohibited previous-project MP3 files found in APK!"
