@@ -10,7 +10,7 @@ on:
       - ".github/workflows/build-counterstrike-apk.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   GODOT_VERSION: "4.7.2-stable"
@@ -317,6 +317,19 @@ jobs:
 
           echo "=== APK Signature Verification ==="
           "${ANDROID_HOME}/build-tools/35.0.0/apksigner" verify --verbose "${OUT_APK}"
+
+      - name: Publish downloadable APK release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          APK="${GITHUB_WORKSPACE}/${PROJECT_DIR}/builds/${APK_FILENAME}"
+          TAG="android-debug-${GITHUB_SHA:0:12}"
+          gh release create "${TAG}" "${APK}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "Counterstrike Arena Android Debug ${GITHUB_SHA:0:12}" \
+            --notes "Godot ${GODOT_VERSION} Android debug APK for arm64-v8a. This is an unsigned-for-production debug build signed with an ephemeral CI debug key."
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v6
