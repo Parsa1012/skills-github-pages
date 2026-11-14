@@ -84,6 +84,9 @@ func _build_player_pools() -> void:
 
 
 func _load_bundled_audio() -> void:
+	# Avoid loading/caching audio resources on silent runners or devices without an output driver.
+	if _is_dummy_audio_driver():
+		return
 	if ResourceLoader.exists(UI_TAP_PATH):
 		_ui_tap_sfx = ResourceLoader.load(UI_TAP_PATH)
 	if ResourceLoader.exists(UI_SWITCH_PATH):
@@ -244,7 +247,7 @@ func play_ui_pop(pitch_scale: float = 1.0) -> void:
 
 
 func play_sfx_path(resource_path: String, pitch_scale: float = 1.0, volume_offset_db: float = 0.0) -> void:
-	if not SaveManager.sfx_enabled or resource_path.is_empty():
+	if _is_dummy_audio_driver() or not SaveManager.sfx_enabled or resource_path.is_empty():
 		return
 	var stream: AudioStream = _sfx_cache.get(resource_path, null) as AudioStream
 	if stream == null and ResourceLoader.exists(resource_path):
@@ -291,4 +294,12 @@ func _on_music_finished() -> void:
 
 
 func _is_dummy_audio_driver() -> bool:
-	return DisplayServer.get_name().to_lower() == "headless"
+	if DisplayServer.get_name().to_lower() == "headless":
+		return true
+	var args: PackedStringArray = OS.get_cmdline_args()
+	for i in args.size():
+		if args[i] == "--audio-driver" and i + 1 < args.size() and args[i + 1].to_lower() == "dummy":
+			return true
+		if args[i].begins_with("--audio-driver=") and args[i].get_slice("=", 1).to_lower() == "dummy":
+			return true
+	return false

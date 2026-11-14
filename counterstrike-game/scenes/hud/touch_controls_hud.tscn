@@ -173,7 +173,7 @@ theme_override_constants/separation = 8
 [node name="BtnPause" type="Button" parent="TopSafeMargin/TopHudBar"]
 custom_minimum_size = Vector2(70, 48)
 layout_mode = 2
-focus_mode = 0
+focus_mode = 2
 theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 text = "مکث"

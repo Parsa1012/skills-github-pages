@@ -291,6 +291,8 @@ func _process(_delta: float) -> void:
 				var hud_score: Label = hud.get_node_or_null("TopSafeMargin/TopHudBar/ScoreBadge/ScoreLabel") as Label
 				_assert(hud_score != null and hud_score.get_theme_font_size("font_size") >= 17, "Large-text accessibility was not applied in gameplay HUD")
 				_assert(hud.get_node_or_null("TopSafeMargin/TopHudBar/StatsBadge/StatsHBox/WeaponIconRect") is TextureRect, "HUD WeaponIconRect missing")
+				var pause_button: Button = hud.get_node_or_null("TopSafeMargin/TopHudBar/BtnPause") as Button
+				_assert(pause_button != null and pause_button.focus_mode == Control.FOCUS_ALL, "Pause button is not keyboard/focus accessible")
 				_assert(hud.get_node_or_null("PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseFps") != null, "HUD BtnPauseFps missing")
 				_assert(hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/CenterGap/TacticalRadar") != null, "TacticalRadar missing")
 				var action_row: HBoxContainer = hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow") as HBoxContainer
