@@ -60,15 +60,24 @@ func _reset_to_rest() -> void:
 	_knob_offset = Vector2.ZERO
 
 
+func _effective_radius() -> float:
+	var available_radius: float = minf(size.x, size.y) * 0.28
+	return clampf(minf(max_radius, available_radius), 36.0, max_radius)
+
+
+func _effective_knob_radius() -> float:
+	return minf(knob_radius, _effective_radius() * 0.42)
+
+
 func _get_rest_center() -> Vector2:
-	var pad: float = max_radius + 20.0
+	var pad: float = _effective_radius() + _effective_knob_radius() + 10.0
 	var cx: float = clampf(size.x * 0.5, pad, maxf(pad, size.x - pad))
 	var cy: float = clampf(size.y * 0.60, pad, maxf(pad, size.y - pad))
 	return Vector2(cx, cy)
 
 
 func _clamp_base_center(local_pos: Vector2) -> Vector2:
-	var pad: float = max_radius + 12.0
+	var pad: float = _effective_radius() + _effective_knob_radius() + 6.0
 	var max_x: float = maxf(pad, size.x - pad)
 	var max_y: float = maxf(pad, size.y - pad)
 	return Vector2(
@@ -114,7 +123,7 @@ func _input(event: InputEvent) -> void:
 func _update_stick_from_local(local_pos: Vector2) -> void:
 	var delta: Vector2 = local_pos - _base_center
 	var dist: float = delta.length()
-	var effective_radius: float = maxf(max_radius, 16.0)
+	var effective_radius: float = maxf(_effective_radius(), 16.0)
 
 	if dist > effective_radius:
 		_knob_offset = delta.normalized() * effective_radius
@@ -137,15 +146,17 @@ func _update_stick_from_local(local_pos: Vector2) -> void:
 func _draw() -> void:
 	var alpha_mult: float = 0.95 if is_active else 0.45
 	var active_col: Color = fire_accent_color if is_fire_engaged else accent_color
+	var draw_radius: float = _effective_radius()
+	var draw_knob_radius: float = _effective_knob_radius()
 
 	var bg_col := Color(0.05, 0.08, 0.14, 0.46 * alpha_mult)
-	draw_circle(_base_center, max_radius, bg_col)
+	draw_circle(_base_center, draw_radius, bg_col)
 
 	var ring_col := Color(active_col.r, active_col.g, active_col.b, 0.85 * alpha_mult)
-	draw_arc(_base_center, max_radius, 0.0, TAU, 40, ring_col, 3.0, true)
+	draw_arc(_base_center, draw_radius, 0.0, TAU, 40, ring_col, 3.0, true)
 
 	if enable_fire_threshold:
-		var fire_ring_r: float = max_radius * fire_threshold_ratio
+		var fire_ring_r: float = draw_radius * fire_threshold_ratio
 		var fire_ring_col := Color(fire_accent_color.r, fire_accent_color.g, fire_accent_color.b, (0.80 if is_fire_engaged else 0.35) * alpha_mult)
 		draw_arc(_base_center, fire_ring_r, 0.0, TAU, 32, fire_ring_col, 2.0, true)
 
@@ -155,8 +166,8 @@ func _draw() -> void:
 
 	var knob_pos: Vector2 = _base_center + _knob_offset
 	var knob_fill := Color(active_col.r, active_col.g, active_col.b, 0.88 * alpha_mult)
-	draw_circle(knob_pos, knob_radius, knob_fill)
-	draw_arc(knob_pos, knob_radius, 0.0, TAU, 28, Color(0.97, 0.98, 1.0, 0.90 * alpha_mult), 2.5, true)
+	draw_circle(knob_pos, draw_knob_radius, knob_fill)
+	draw_arc(knob_pos, draw_knob_radius, 0.0, TAU, 28, Color(0.97, 0.98, 1.0, 0.90 * alpha_mult), 2.5, true)
 
 	var font: Font = get_theme_default_font()
 	if font != null and not stick_title.is_empty():

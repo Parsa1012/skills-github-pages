@@ -499,7 +499,7 @@ touch_hud_path = NodePath("../TouchControlsHUD")
 
 [node name="ArenaCameraRig" parent="." instance=ExtResource("2_cam")]
 target_path = NodePath("../PlayerCharacter")
-bounds_min = Vector2(-11.5, -6.5)
-bounds_max = Vector2(11.5, 6.5)
+bounds_min = Vector2(-15.5, -10.5)
+bounds_max = Vector2(15.5, 10.5)
 
 [node name="TouchControlsHUD" parent="." instance=ExtResource("4_hud")]

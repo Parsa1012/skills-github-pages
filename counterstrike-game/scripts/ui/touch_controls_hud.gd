@@ -262,6 +262,61 @@ func _apply_safe_area_margins() -> void:
 		_bottom_safe_margin.add_theme_constant_override("margin_right", int(pad["right"]))
 		_bottom_safe_margin.add_theme_constant_override("margin_top", 8)
 		_bottom_safe_margin.add_theme_constant_override("margin_bottom", int(pad["bottom"]))
+	_apply_responsive_touch_layout(vp_size, pad)
+
+
+func _apply_responsive_touch_layout(viewport_size: Vector2, safe_pad: Dictionary) -> void:
+	var left_stick := get_node_or_null("BottomSafeMargin/TouchControlsRow/LeftMoveStick") as Control
+	var center_gap := get_node_or_null("BottomSafeMargin/TouchControlsRow/CenterGap") as Control
+	var right_zone := get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay") as Control
+	var action_grid := get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow") as GridContainer
+	if left_stick == null or center_gap == null or right_zone == null or action_grid == null:
+		return
+
+	var spacing: float = 40.0
+	var available_width: float = maxf(280.0, viewport_size.x - float(safe_pad["left"]) - float(safe_pad["right"]) - spacing)
+	var compact: bool = viewport_size.x < 900.0
+	var left_width: float = minf(340.0, maxf(120.0, available_width * 0.34))
+	var right_width: float = minf(360.0, maxf(140.0, available_width * 0.40))
+	var center_width: float = maxf(0.0, available_width - left_width - right_width)
+	left_stick.custom_minimum_size.x = left_width
+	right_zone.custom_minimum_size.x = right_width
+	center_gap.custom_minimum_size.x = center_width
+
+	if compact:
+		action_grid.columns = 2
+		action_grid.custom_minimum_size = Vector2(maxf(120.0, right_width - 16.0), 106.0)
+		action_grid.offset_left = -right_width + 8.0
+		action_grid.offset_right = -8.0
+		action_grid.offset_top = 8.0
+		action_grid.offset_bottom = 114.0
+		var action_width: float = maxf(56.0, (right_width - 28.0) * 0.5)
+		for action in action_grid.get_children():
+			if action is TouchActionButton:
+				(action as Control).custom_minimum_size = Vector2(action_width, 48.0)
+		if _btn_bomb != null:
+			_btn_bomb.title_text = "بمب"
+		if _btn_dash != null:
+			_btn_dash.title_text = "شتاب"
+		if _btn_switch_blaster != null:
+			_btn_switch_blaster.title_text = "سلاح"
+		if _btn_recharge != null:
+			_btn_recharge.title_text = "شارژ"
+	else:
+		action_grid.columns = 4
+		action_grid.custom_minimum_size = Vector2(354.0, 52.0)
+		action_grid.offset_left = -364.0
+		action_grid.offset_right = -10.0
+		action_grid.offset_top = 8.0
+		action_grid.offset_bottom = 60.0
+		var base_sizes: Array[Vector2] = [Vector2(76.0, 52.0), Vector2(76.0, 52.0), Vector2(82.0, 52.0), Vector2(98.0, 52.0)]
+		for i in mini(action_grid.get_child_count(), base_sizes.size()):
+			var action := action_grid.get_child(i) as Control
+			action.custom_minimum_size = base_sizes[i]
+		if _btn_dash != null:
+			_btn_dash.title_text = "جهش"
+		if _btn_switch_blaster != null:
+			_btn_switch_blaster.title_text = "تغییر سلاح"
 
 
 func _apply_aim_fire_mode() -> void:

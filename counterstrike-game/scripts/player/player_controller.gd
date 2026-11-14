@@ -426,6 +426,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y = -0.1
 
 	move_and_slide()
+	_resolve_horizontal_slide_velocity()
 
 	var actual_horiz_speed: float = Vector3(velocity.x, 0.0, velocity.z).length()
 	_update_facing_and_aim(move_world, aim_world, move_2d.length(), aim_2d.length(), fire_active, delta)
@@ -434,6 +435,22 @@ func _physics_process(delta: float) -> void:
 
 	if fire_active and not _recharging and _fire_cooldown <= 0.0:
 		_try_fire(actual_horiz_speed)
+
+
+func _resolve_horizontal_slide_velocity() -> void:
+	if _dash_timer > 0.0 or get_slide_collision_count() == 0:
+		return
+	var horizontal_velocity := Vector3(_move_vel.x, 0.0, _move_vel.z)
+	for i in get_slide_collision_count():
+		var collision: KinematicCollision3D = get_slide_collision(i)
+		var collision_normal: Vector3 = collision.get_normal()
+		if absf(collision_normal.y) > 0.7:
+			continue
+		var normal := Vector3(collision_normal.x, 0.0, collision_normal.z)
+		if normal.length_squared() > 0.01:
+			horizontal_velocity = horizontal_velocity.slide(normal.normalized())
+	_move_vel.x = horizontal_velocity.x
+	_move_vel.z = horizontal_velocity.z
 
 
 func _update_footsteps(horiz_speed: float, delta: float) -> void:
@@ -808,13 +825,14 @@ func _update_soldier_animation(horiz_speed: float, delta: float) -> void:
 	if _anim_player == null:
 		return
 
-	if horiz_speed > 4.4 and _anim_player.has_animation("sprint"):
-		if _anim_player.current_animation != "sprint":
-			_anim_player.play("sprint", 0.12)
+	var run_animation: StringName = &"run" if _anim_player.has_animation("run") else &"sprint"
+	if horiz_speed > 4.4 and _anim_player.has_animation(run_animation):
+		if _anim_player.current_animation != run_animation:
+			_anim_player.play(run_animation, 0.16)
 		_anim_player.speed_scale = clampf(horiz_speed / run_speed, 0.8, 1.35)
 	elif horiz_speed > 0.35 and _anim_player.has_animation("walk"):
 		if _anim_player.current_animation != "walk":
-			_anim_player.play("walk", 0.12)
+			_anim_player.play("walk", 0.16)
 		_anim_player.speed_scale = clampf(horiz_speed / walk_speed, 0.65, 1.3)
 	elif _anim_player.has_animation("idle"):
 		if _anim_player.current_animation != "idle":

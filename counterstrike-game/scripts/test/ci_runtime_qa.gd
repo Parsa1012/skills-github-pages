@@ -49,6 +49,145 @@ func _on_crate_exploded(_world_pos: Vector3) -> void:
 	_crate_exploded_seen = true
 
 
+func _make_touch(control: Control, touch_id: int, local_position: Vector2, pressed: bool) -> InputEventScreenTouch:
+	var event := InputEventScreenTouch.new()
+	event.index = touch_id
+	event.pressed = pressed
+	event.position = control.get_global_transform_with_canvas() * local_position
+	return event
+
+
+func _run_movement_camera_qa(player: PlayerController, hud: Node, arena: Node) -> void:
+	var tree := get_tree()
+	var movement_stick := hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/LeftMoveStick") as VirtualJoystick
+	var aim_stick := hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/RightAimStick") as VirtualJoystick
+	var action_grid := hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow") as GridContainer
+	var camera_rig := arena.get_node_or_null("ArenaCameraRig") as ArenaCameraRig
+	var game_camera := camera_rig.get_node_or_null("CameraYawPivot/CameraPitchPivot/Camera3D") as Camera3D if camera_rig != null else null
+	_assert(movement_stick != null and aim_stick != null, "Movement/aim joysticks missing")
+	_assert(action_grid != null and action_grid.columns == 4, "Action controls grid missing/default layout is incorrect")
+	_assert(game_camera != null and game_camera.projection == Camera3D.PROJECTION_ORTHOGONAL, "Gameplay camera is not orthographic")
+
+	var original_viewport_size: Vector2 = tree.get_viewport().get_visible_rect().size
+	var safe_pad := {"left": 16.0, "right": 16.0, "top": 12.0, "bottom": 12.0}
+	for viewport_size in [Vector2(720.0, 1280.0), Vector2(800.0, 600.0), Vector2(1280.0, 720.0), Vector2(1920.0, 1080.0)]:
+		hud.call("_apply_responsive_touch_layout", viewport_size, safe_pad)
+		if action_grid != null:
+			_assert(action_grid.columns == (2 if viewport_size.x < 900.0 else 4), "Touch action layout failed responsive width %s" % str(viewport_size))
+			for action in action_grid.get_children():
+				_assert((action as Control).custom_minimum_size.y >= 48.0, "Responsive touch target fell below 48px")
+	hud.call("_apply_responsive_touch_layout", original_viewport_size, safe_pad)
+	await tree.process_frame
+
+	if camera_rig != null:
+		for viewport_size in [Vector2(1280.0, 720.0), Vector2(1920.0, 1080.0), Vector2(720.0, 1280.0), Vector2(800.0, 600.0)]:
+			camera_rig.configure_for_viewport(viewport_size)
+			var extents: Vector2 = camera_rig.get_camera_ground_extents()
+			var half_bounds: Vector2 = (camera_rig.bounds_max - camera_rig.bounds_min) * 0.5
+			_assert(camera_rig.get_orthographic_size() > 0.0, "Orthographic size invalid at viewport %s" % str(viewport_size))
+			_assert(extents.x <= half_bounds.x + 0.1 and extents.y <= half_bounds.y + 0.1, "Camera view escapes map bounds at viewport %s" % str(viewport_size))
+			var edge_focus: Vector3 = camera_rig._clamp_focus(Vector3(100.0, 1.0, -100.0))
+			_assert(edge_focus.x <= camera_rig.bounds_max.x - extents.x + 0.1 and edge_focus.z >= camera_rig.bounds_min.y + extents.y - 0.1, "Camera did not clamp to map bounds")
+		if tree.get_viewport() != null:
+			camera_rig.configure_for_viewport(tree.get_viewport().get_visible_rect().size)
+
+	if movement_stick != null and aim_stick != null:
+		var left_local: Vector2 = movement_stick.size * 0.5
+		var right_local: Vector2 = aim_stick.size * 0.5
+		movement_stick._input(_make_touch(movement_stick, 1, left_local, true))
+		aim_stick._input(_make_touch(aim_stick, 2, right_local, true))
+		var drag := InputEventScreenDrag.new()
+		drag.index = 1
+		drag.position = movement_stick.get_global_transform_with_canvas() * (left_local + Vector2(36.0, 0.0))
+		movement_stick._input(drag)
+		_assert(movement_stick.is_active and movement_stick.output_vector.x > 0.2, "Touch joystick did not respond to drag input")
+		_assert(aim_stick.is_active, "A second finger could not independently engage the aim joystick")
+		movement_stick._input(_make_touch(movement_stick, 1, left_local, false))
+		_assert(aim_stick.is_active, "Releasing the movement finger incorrectly released the aim finger")
+		aim_stick._input(_make_touch(aim_stick, 2, right_local, false))
+		var action_button := action_grid.get_child(0) as Control if action_grid != null else null
+		if action_button != null:
+			var action_center: Vector2 = action_button.get_global_rect().get_center()
+			var action_touch := InputEventScreenTouch.new()
+			action_touch.index = 3
+			action_touch.pressed = true
+			action_touch.position = action_center
+			aim_stick._input(action_touch)
+			_assert(not aim_stick.is_active, "Aim joystick captured a touch belonging to an action button")
+			aim_stick._input(_make_touch(aim_stick, 3, right_local, false))
+
+	var bots: Array[Node] = tree.get_nodes_in_group("arena_bots")
+	var bot_physics_states: Array[bool] = []
+	for bot in bots:
+		bot_physics_states.append(bot.is_physics_processing())
+		bot.set_physics_process(false)
+	var original_position: Vector3 = player.global_position
+	var movement_origin := Vector3(0.0, 0.02, 5.2)
+	var directions: Array[Vector2] = [
+		Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN,
+		Vector2(1.0, 1.0).normalized(), Vector2(-1.0, 1.0).normalized(),
+		Vector2(1.0, -1.0).normalized(), Vector2(-1.0, -1.0).normalized()
+	]
+	for direction in directions:
+		player.global_position = movement_origin
+		player.velocity = Vector3.ZERO
+		player._move_vel = Vector3.ZERO
+		player._knockback_vel = Vector3.ZERO
+		movement_stick.output_vector = direction
+		await tree.physics_frame
+		var start_xz := Vector2(player.global_position.x, player.global_position.z)
+		for _frame in 12:
+			await tree.physics_frame
+		var displacement := Vector2(player.global_position.x, player.global_position.z) - start_xz
+		var expected := Vector2(direction.x, direction.y)
+		_assert(displacement.dot(expected) > 0.25, "Player failed movement direction %s (moved %s)" % [str(direction), str(displacement)])
+		_assert(displacement.length() < 3.5, "Diagonal/cardinal movement exceeded expected speed cap")
+	movement_stick.output_vector = Vector2(0.65, 0.0)
+	for _frame in 20:
+		await tree.physics_frame
+	_assert(player._anim_player != null and player._anim_player.current_animation in ["run", "sprint"], "Running animation state did not activate")
+	movement_stick.output_vector = Vector2.ZERO
+	for _frame in 20:
+		await tree.physics_frame
+	_assert(player._anim_player != null and player._anim_player.current_animation == "idle", "Idle animation state did not restore after releasing movement")
+
+	var wall_tests: Array[Dictionary] = [
+		{"origin": Vector3(-13.2, 0.02, 0.0), "input": Vector2.LEFT, "axis": 0, "min": -14.95, "max": -13.2},
+		{"origin": Vector3(13.2, 0.02, 0.0), "input": Vector2.RIGHT, "axis": 0, "min": 13.2, "max": 14.95},
+		{"origin": Vector3(0.0, 0.02, -9.0), "input": Vector2.UP, "axis": 1, "min": -10.95, "max": -9.0},
+		{"origin": Vector3(0.0, 0.02, 9.0), "input": Vector2.DOWN, "axis": 1, "min": 9.0, "max": 10.95}
+	]
+	for test_case in wall_tests:
+		player.global_position = test_case["origin"]
+		player.velocity = Vector3.ZERO
+		player._move_vel = Vector3.ZERO
+		player._knockback_vel = Vector3.ZERO
+		movement_stick.output_vector = test_case["input"]
+		for _frame in 30:
+			await tree.physics_frame
+		var final_axis: float = player.global_position.x if int(test_case["axis"]) == 0 else player.global_position.z
+		_assert(final_axis >= float(test_case["min"]) and final_axis <= float(test_case["max"]), "Perimeter wall collision failed at %s (final %.2f)" % [str(test_case["origin"]), final_axis])
+
+	player.global_position = Vector3(3.0, 0.02, 3.8)
+	player.velocity = Vector3.ZERO
+	player._move_vel = Vector3.ZERO
+	player._knockback_vel = Vector3.ZERO
+	movement_stick.output_vector = Vector2.RIGHT
+	for _frame in 45:
+		await tree.physics_frame
+	_assert(player.global_position.x < 6.0 and player.global_position.x > 4.0, "Player did not collide with the EastS concrete barricade (x=%.2f)" % player.global_position.x)
+
+	movement_stick.output_vector = Vector2.ZERO
+	player.global_position = original_position
+	player.velocity = Vector3.ZERO
+	player._move_vel = Vector3.ZERO
+	player._knockback_vel = Vector3.ZERO
+	for i in mini(bots.size(), bot_physics_states.size()):
+		bots[i].set_physics_process(bot_physics_states[i])
+	_step = 2
+	_wait_frames = 35
+
+
 func _assert(cond: bool, msg: String) -> void:
 	if not cond:
 		_failures.append(msg)
@@ -295,9 +434,9 @@ func _process(_delta: float) -> void:
 				_assert(pause_button != null and pause_button.focus_mode == Control.FOCUS_ALL, "Pause button is not keyboard/focus accessible")
 				_assert(hud.get_node_or_null("PauseOverlay/PauseCard/PauseMargin/PauseVBox/BtnPauseFps") != null, "HUD BtnPauseFps missing")
 				_assert(hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/CenterGap/TacticalRadar") != null, "TacticalRadar missing")
-				var action_row: HBoxContainer = hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow") as HBoxContainer
+				var action_row: GridContainer = hud.get_node_or_null("BottomSafeMargin/TouchControlsRow/RightZoneOverlay/ActionPadRow") as GridContainer
 				if action_row != null:
-					var required_width: float = float(maxi(0, action_row.get_child_count() - 1)) * float(action_row.get_theme_constant("separation"))
+					var required_width: float = 0.0
 					for action in action_row.get_children():
 						if action is Control:
 							var touch_control := action as Control
@@ -310,8 +449,10 @@ func _process(_delta: float) -> void:
 				GameManager.set_match_paused(false)
 				_assert(not tree.paused, "SceneTree should resume cleanly")
 
-			_step = 2
-			_wait_frames = 35
+			_step = 97
+			call_deferred("_run_movement_camera_qa", player, hud, arena)
+		97:
+			pass
 		2:
 			var arena: Node = tree.current_scene
 			var player: PlayerController = arena.get_node_or_null("PlayerCharacter") as PlayerController

@@ -13,6 +13,8 @@ transform = Transform3D(1, 0, 0, 0, 0.5373, 0.843391, 0, -0.843391, 0.5373, 0, 0
 [node name="Camera3D" type="Camera3D" parent="CameraYawPivot/CameraPitchPivot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 19.5)
 current = true
+projection = 1
+size = 19.5
 fov = 44.0
 near = 0.5
 far = 120.0

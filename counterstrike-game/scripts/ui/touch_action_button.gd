@@ -71,7 +71,8 @@ func _draw() -> void:
 	var label_str: String = _override_text if not _override_text.is_empty() else title_text
 	var font: Font = get_theme_default_font()
 	if font != null and not label_str.is_empty():
-		var font_size: int = 17 if SaveManager.large_text_enabled else 14
+		var compact_font_size: int = 12 if size.x < 72.0 else 14
+		var font_size: int = 17 if SaveManager.large_text_enabled else compact_font_size
 		var text_y: float = size.y * 0.5 + float(font_size) * 0.36
 		var text_col := Color(0.85, 0.90, 0.96, 0.72) if _cooldown_ratio > 0.001 else Color(0.97, 0.98, 1.0, 0.96)
 		draw_string(font, Vector2(0.0, text_y), label_str, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, text_col, TextServer.JUSTIFICATION_NONE, TextServer.DIRECTION_RTL)
