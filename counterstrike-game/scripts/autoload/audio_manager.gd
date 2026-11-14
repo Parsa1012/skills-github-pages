@@ -294,7 +294,7 @@ func _on_music_finished() -> void:
 
 
 func _is_dummy_audio_driver() -> bool:
-	if DisplayServer.get_name().to_lower() == "headless":
+	if DisplayServer.get_name().to_lower() == "headless" or OS.get_environment("ARENA_CI_SILENT_AUDIO") == "1":
 		return true
 	var args: PackedStringArray = OS.get_cmdline_args()
 	for i in args.size():
