@@ -142,7 +142,7 @@ func _run_movement_camera_qa(player: PlayerController, hud: Node, arena: Node) -
 		var expected := Vector2(direction.x, direction.y)
 		_assert(displacement.dot(expected) > 0.25, "Player failed movement direction %s (moved %s)" % [str(direction), str(displacement)])
 		_assert(displacement.length() < 3.5, "Diagonal/cardinal movement exceeded expected speed cap")
-	player.global_position = Vector3.ZERO
+	player.global_position = movement_origin
 	player.velocity = Vector3.ZERO
 	player._move_vel = Vector3.ZERO
 	player._knockback_vel = Vector3.ZERO
