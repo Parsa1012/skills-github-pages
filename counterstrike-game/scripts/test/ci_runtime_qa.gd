@@ -61,6 +61,13 @@ func _test_main_menu_responsive_layout(menu: Node) -> void:
 		if navigation != null:
 			var expected_parent: Node = menu.get_node("SafeMargin/MainLayout") if (viewport_size.x < 850.0 or viewport_size.y < 520.0) else menu.get_node("SafeMargin/MainLayout/ContentSplit")
 			_assert(navigation.get_parent() == expected_parent, "Menu navigation did not adapt to viewport %s" % str(viewport_size))
+		var weapon_grid := menu.find_child("WeaponCardsRow", true, false) as GridContainer
+		if weapon_grid != null:
+			var expected_columns: int = 2 if (viewport_size.x < 760.0 or viewport_size.y < 520.0) else 4
+			_assert(weapon_grid.columns == expected_columns, "Arsenal cards did not reflow for viewport %s" % str(viewport_size))
+			for weapon_button_name in ["BtnWeaponM4", "BtnWeaponUzi", "BtnWeaponShotgun", "BtnWeaponSniper"]:
+				var weapon_button := menu.find_child(weapon_button_name, true, false) as Button
+				_assert(weapon_button != null and weapon_button.custom_minimum_size.y >= 48.0, "Weapon choice %s is missing or too small" % weapon_button_name)
 	menu.call("_apply_safe_area_margins", original_size)
 
 
@@ -474,10 +481,14 @@ func _process(_delta: float) -> void:
 				_assert(pages is Array and (pages[tab_idx] as Control).visible, "MainMenu tab %d failed to activate" % tab_idx)
 			menu.call("_show_tab", 0, false)
 
-			menu.call("_on_select_weapon", "rapid_repeater")
-			_assert(SaveManager.starting_blaster_id == "rapid_repeater", "Arsenal select rapid_repeater failed")
-			menu.call("_on_select_weapon", "pulse_blaster")
-			_assert(SaveManager.starting_blaster_id == "pulse_blaster", "Arsenal select pulse_blaster failed")
+			var previous_weapon_id: String = SaveManager.starting_blaster_id
+			for weapon_id in ["pulse_blaster", "rapid_repeater", "plasma_scatter", "arc_railgun"]:
+				menu.call("_on_select_weapon", weapon_id)
+				_assert(SaveManager.starting_blaster_id == weapon_id, "Arsenal select %s failed" % weapon_id)
+				var home_icon: TextureRect = menu.find_child("HomeWeaponIcon", true, false) as TextureRect
+				var arsenal_icon: TextureRect = menu.find_child("PreviewIcon", true, false) as TextureRect
+				_assert(home_icon != null and arsenal_icon != null and home_icon.texture == arsenal_icon.texture and home_icon.texture != null, "Selected weapon preview is inconsistent for %s" % weapon_id)
+			menu.call("_on_select_weapon", previous_weapon_id)
 
 			menu.call("_on_select_map", "sector_02")
 			_assert(SaveManager.selected_map_id == "sector_02", "Failed to select sector_02")

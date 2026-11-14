@@ -63,7 +63,9 @@ var _compact_nav_attached: bool = false
 @onready var _btn_uzi: Button = $SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponUzi
 @onready var _btn_shotgun: Button = $SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponShotgun
 @onready var _btn_sniper: Button = $SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow/BtnWeaponSniper
+@onready var _weapon_cards_grid: GridContainer = $SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow
 @onready var _arsenal_preview_icon: TextureRect = $SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/PreviewIcon
+@onready var _arsenal_inspector_row: HBoxContainer = $SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox
 @onready var _weapon_desc_label: Label = $SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/WeaponDescLabel
 @onready var _damage_bar: ProgressBar = $SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/DmgRow/DamageBar
 @onready var _damage_val: Label = $SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponInspectorCard/HBox/StatsVBox/DmgRow/DamageVal
@@ -288,6 +290,17 @@ func _apply_safe_area_margins(viewport_size_override: Vector2 = Vector2.ZERO) ->
 		_home_weapon_card.visible = viewport_size.x >= 620.0
 	if _home_tip_card != null:
 		_home_tip_card.visible = viewport_size.x >= 620.0 and viewport_size.y >= 420.0
+
+	# Keep all four equipment choices legible on phone-sized viewports instead of
+	# compressing them into four narrow cards. The inspector icon yields space to
+	# weapon statistics on narrow screens without hiding any controls.
+	if _weapon_cards_grid != null:
+		_weapon_cards_grid.columns = 2 if viewport_size.x < 760.0 or viewport_size.y < 520.0 else 4
+	if _arsenal_preview_icon != null:
+		var preview_edge: float = 72.0 if viewport_size.x < 480.0 else (96.0 if viewport_size.x < 760.0 else 140.0)
+		_arsenal_preview_icon.custom_minimum_size = Vector2(preview_edge, preview_edge)
+	if _arsenal_inspector_row != null:
+		_arsenal_inspector_row.add_theme_constant_override("separation", 8 if viewport_size.x < 480.0 else 16)
 
 
 func _set_compact_navigation(compact: bool) -> void:

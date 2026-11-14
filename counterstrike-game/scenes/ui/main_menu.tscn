@@ -499,9 +499,11 @@ theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 19
 text = "زرادخانه سلاح‌های نظامی"
 
-[node name="WeaponCardsRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal"]
+[node name="WeaponCardsRow" type="GridContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal"]
 layout_mode = 2
-theme_override_constants/separation = 8
+columns = 4
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
 
 [node name="BtnWeaponM4" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal/WeaponCardsRow"]
 custom_minimum_size = Vector2(0, 108)
