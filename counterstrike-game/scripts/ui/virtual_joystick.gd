@@ -28,6 +28,9 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_reset_to_rest()
 	resized.connect(_on_resized)
+	if not SaveManager.settings_changed.is_connected(_on_settings_changed):
+		SaveManager.settings_changed.connect(_on_settings_changed)
+	_apply_saved_size()
 
 
 func _notification(what: int) -> void:
@@ -35,6 +38,17 @@ func _notification(what: int) -> void:
 		reset_stick()
 	elif what == NOTIFICATION_WM_WINDOW_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		reset_stick()
+
+
+func _on_settings_changed() -> void:
+	_apply_saved_size()
+
+
+func _apply_saved_size() -> void:
+	var ratio: float = clampf(SaveManager.joystick_size, 0.8, 1.25)
+	max_radius = 74.0 * ratio
+	knob_radius = 28.0 * ratio
+	queue_redraw()
 
 
 func _on_resized() -> void:

@@ -24,7 +24,8 @@ const DIFF_ORDER: Array[String] = ["easy", "normal", "hard"]
 	$SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabArsenal,
 	$SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabArena,
 	$SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabSettings,
-	$SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabProfile
+	$SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabProfile,
+	$SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabAbout
 ]
 @onready var _quick_status_label: Label = $SafeMargin/MainLayout/ContentSplit/NavRail/QuickStatusCard/QuickStatusLabel
 
@@ -33,7 +34,8 @@ const DIFF_ORDER: Array[String] = ["easy", "normal", "hard"]
 	$SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal,
 	$SafeMargin/MainLayout/ContentSplit/PageStage/PageArena,
 	$SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings,
-	$SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile
+	$SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile,
+	$SafeMargin/MainLayout/ContentSplit/PageStage/PageAbout
 ]
 
 @onready var _home_weapon_icon: TextureRect = $SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard/VBox/HomeWeaponIcon
@@ -86,6 +88,9 @@ const DIFF_ORDER: Array[String] = ["easy", "normal", "hard"]
 @onready var _master_vol_btn: Button = $SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow/BtnMasterVol
 @onready var _music_vol_btn: Button = $SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow/BtnMusicVol
 @onready var _sfx_vol_btn: Button = $SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow/BtnSfxVol
+
+@onready var _joystick_size_btn: Button = $SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/JoystickSizeRow/BtnJoystickSize
+@onready var _ui_scale_btn: Button = $SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/JoystickSizeRow/BtnUIScale
 
 @onready var _profile_rank_label: Label = $SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile/RankProgressCard/VBox/ProfileRankLabel
 @onready var _profile_xp_bar: ProgressBar = $SafeMargin/MainLayout/ContentSplit/PageStage/PageProfile/RankProgressCard/VBox/ProfileXpBar
@@ -396,6 +401,11 @@ func _refresh_ui() -> void:
 		elif SaveManager.camera_preset == "close":
 			cam_txt = "نزدیک اکشن"
 		_cam_preset_btn.text = "نمای نبرد: %s" % cam_txt
+	if _joystick_size_btn != null:
+		var size_text: String = "کوچک" if SaveManager.joystick_size < 0.95 else ("بزرگ" if SaveManager.joystick_size > 1.1 else "معمولی")
+		_joystick_size_btn.text = "اندازه جوی‌استیک: %s" % size_text
+	if _ui_scale_btn != null:
+		_ui_scale_btn.text = "مقیاس رابط: %d٪" % int(round(SaveManager.ui_scale * 100.0))
 
 	if _shake_btn != null:
 		_shake_btn.button_pressed = SaveManager.camera_shake_enabled
@@ -623,6 +633,32 @@ func _on_sensitivity_pressed() -> void:
 	_refresh_ui()
 
 
+func _on_joystick_size_pressed() -> void:
+	var next_size: float = 1.0
+	if SaveManager.joystick_size < 0.9:
+		next_size = 1.0
+	elif SaveManager.joystick_size < 1.1:
+		next_size = 1.2
+	else:
+		next_size = 0.85
+	GameManager.set_joystick_size(next_size)
+	AudioManager.play_ui_click()
+	_refresh_ui()
+
+
+func _on_ui_scale_pressed() -> void:
+	var next_scale: float = 1.0
+	if SaveManager.ui_scale < 0.92:
+		next_scale = 1.0
+	elif SaveManager.ui_scale < 1.08:
+		next_scale = 1.15
+	else:
+		next_scale = 0.9
+	GameManager.set_ui_scale(next_scale)
+	AudioManager.play_ui_click()
+	_refresh_ui()
+
+
 func _on_cam_preset_pressed() -> void:
 	AudioManager.play_ui_click()
 	var presets: Array[String] = ["classic", "tactical", "close"]
@@ -727,7 +763,7 @@ func _apply_large_text() -> void:
 		var control := node as Control
 		var base_size: int = int(_base_font_sizes.get(control.get_instance_id(), 0))
 		if base_size > 0:
-			control.add_theme_font_size_override("font_size", roundi(float(base_size) * (1.22 if SaveManager.large_text_enabled else 1.0)))
+			control.add_theme_font_size_override("font_size", roundi(float(base_size) * SaveManager.ui_scale * (1.22 if SaveManager.large_text_enabled else 1.0)))
 
 
 func _on_large_text_pressed() -> void:

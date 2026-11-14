@@ -195,6 +195,16 @@ func set_joystick_sensitivity(sens: float) -> void:
 	SaveManager.save_settings()
 
 
+func set_joystick_size(value: float) -> void:
+	SaveManager.joystick_size = clampf(value, 0.8, 1.25)
+	SaveManager.save_settings()
+
+
+func set_ui_scale(value: float) -> void:
+	SaveManager.ui_scale = clampf(value, 0.85, 1.2)
+	SaveManager.save_settings()
+
+
 func set_camera_preset(preset: String) -> void:
 	if preset in ["classic", "tactical", "close"]:
 		SaveManager.camera_preset = preset

@@ -79,6 +79,8 @@ func _ready() -> void:
 	_preload_weapon_icons()
 	_cache_accessibility_font_sizes(self)
 	_apply_accessibility_text()
+	if not SaveManager.settings_changed.is_connected(_on_saved_settings_changed):
+		SaveManager.settings_changed.connect(_on_saved_settings_changed)
 	_refresh_fps_visibility()
 
 	_setup_excluded_controls()
@@ -137,10 +139,18 @@ func _apply_accessibility_text() -> void:
 		var control := node as Control
 		var base_size: int = int(_base_font_sizes.get(control.get_instance_id(), 0))
 		if base_size > 0:
-			control.add_theme_font_size_override("font_size", roundi(float(base_size) * (1.22 if SaveManager.large_text_enabled else 1.0)))
+			control.add_theme_font_size_override("font_size", roundi(float(base_size) * SaveManager.ui_scale * (1.22 if SaveManager.large_text_enabled else 1.0)))
+
+
+func _on_saved_settings_changed() -> void:
+	_apply_accessibility_text()
+	_refresh_fps_visibility()
+	_refresh_pause_audio_buttons()
 
 
 func _exit_tree() -> void:
+	if SaveManager.settings_changed.is_connected(_on_saved_settings_changed):
+		SaveManager.settings_changed.disconnect(_on_saved_settings_changed)
 	if get_viewport() != null and get_viewport().size_changed.is_connected(_apply_safe_area_margins):
 		get_viewport().size_changed.disconnect(_apply_safe_area_margins)
 	if EventBus.aim_fire_mode_changed.is_connected(_on_aim_fire_mode_changed):

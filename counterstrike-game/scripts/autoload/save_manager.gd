@@ -1,4 +1,6 @@
 extends Node
+
+signal settings_changed
 ## ذخیره آفلاین و ایمن تنظیمات گرافیک، کنترل، صدا و کارنامه نبرد بازیکن.
 
 const SETTINGS_PATH: String = "user://arena_settings.cfg"
@@ -19,6 +21,8 @@ var show_fps: bool = false
 
 var aim_fire_mode: String = "twin_stick" # "twin_stick" | "fire_button"
 var joystick_sensitivity: float = 1.0 # 0.85 | 1.0 | 1.25
+var joystick_size: float = 1.0
+var ui_scale: float = 1.0
 var camera_preset: String = "classic" # "classic" | "tactical" | "close"
 var camera_shake_enabled: bool = true
 var haptics_enabled: bool = true
@@ -69,6 +73,8 @@ func load_settings() -> void:
 	var loaded_aim_mode: String = str(config.get_value("controls", "aim_fire_mode", "twin_stick"))
 	aim_fire_mode = loaded_aim_mode if loaded_aim_mode in ["twin_stick", "fire_button"] else "twin_stick"
 	joystick_sensitivity = clampf(float(config.get_value("controls", "joystick_sensitivity", 1.0)), 0.85, 1.35)
+	joystick_size = clampf(float(config.get_value("controls", "joystick_size", 1.0)), 0.8, 1.25)
+	ui_scale = clampf(float(config.get_value("accessibility", "ui_scale", 1.0)), 0.85, 1.2)
 	camera_shake_enabled = bool(config.get_value("controls", "camera_shake_enabled", true))
 	haptics_enabled = bool(config.get_value("controls", "haptics_enabled", true))
 	large_text_enabled = bool(config.get_value("accessibility", "large_text_enabled", false))
@@ -122,9 +128,11 @@ func save_settings() -> void:
 	config.set_value("performance", "show_fps", show_fps)
 	config.set_value("controls", "aim_fire_mode", aim_fire_mode)
 	config.set_value("controls", "joystick_sensitivity", joystick_sensitivity)
+	config.set_value("controls", "joystick_size", joystick_size)
 	config.set_value("controls", "camera_shake_enabled", camera_shake_enabled)
 	config.set_value("controls", "haptics_enabled", haptics_enabled)
 	config.set_value("accessibility", "large_text_enabled", large_text_enabled)
+	config.set_value("accessibility", "ui_scale", ui_scale)
 	config.set_value("camera", "camera_preset", camera_preset)
 	config.set_value("match", "selected_mode_id", selected_mode_id)
 	config.set_value("match", "selected_map_id", selected_map_id)
@@ -144,7 +152,9 @@ func save_settings() -> void:
 	config.set_value("career", "total_eliminations", total_eliminations)
 	config.set_value("career", "best_match_eliminations", best_match_eliminations)
 	config.set_value("career", "career_xp", career_xp)
-	config.save(SETTINGS_PATH)
+	var save_error: Error = config.save(SETTINGS_PATH)
+	if save_error == OK:
+		settings_changed.emit()
 
 
 func reset_settings_keep_career() -> void:
@@ -155,6 +165,8 @@ func reset_settings_keep_career() -> void:
 	show_fps = false
 	aim_fire_mode = "twin_stick"
 	joystick_sensitivity = 1.0
+	joystick_size = 1.0
+	ui_scale = 1.0
 	camera_preset = "classic"
 	camera_shake_enabled = true
 	haptics_enabled = true
@@ -179,6 +191,11 @@ func apply_defaults() -> void:
 	total_eliminations = 0
 	best_match_eliminations = 0
 	career_xp = 0
+	match_round_duration_sec = 0
+	match_round_count = 1
+	equipped_gear = {"CORE": "field_vest", "MOBILITY": "dash_spring", "UTILITY": "pulse_beacon"}
+	bot_difficulty = "normal"
+	save_settings()
 
 
 func get_rank_info() -> Dictionary:

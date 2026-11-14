@@ -303,7 +303,7 @@ toggle_mode = true
 button_pressed = true
 theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 15
-text = "۱. اتاق عملیات"
+text = "۱. بازی و عملیات"
 
 [node name="BtnTabArsenal" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
 custom_minimum_size = Vector2(0, 48)
@@ -311,7 +311,7 @@ layout_mode = 2
 toggle_mode = true
 theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 15
-text = "۲. زرادخانه سلاح"
+text = "۲. تجهیزات"
 icon = ExtResource("9_nav_arsenal")
 icon_max_width = 32
 tooltip_text = "انتخاب و مقایسه سلاح‌های آغازین"
@@ -322,7 +322,7 @@ layout_mode = 2
 toggle_mode = true
 theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 15
-text = "۳. نقشه و حالت"
+text = "۳. حالت‌های بازی"
 icon = ExtResource("10_nav_arena")
 icon_max_width = 32
 tooltip_text = "انتخاب نقشه، حالت نبرد و سطح دشواری"
@@ -341,7 +341,15 @@ layout_mode = 2
 toggle_mode = true
 theme_override_fonts/font = ExtResource("2_bold")
 theme_override_font_sizes/font_size = 15
-text = "۵. پرونده سرباز"
+text = "۵. آمار و کارنامه"
+
+[node name="BtnTabAbout" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+toggle_mode = true
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 15
+text = "۶. درباره بازی"
 
 [node name="QuickStatusCard" type="PanelContainer" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
 layout_mode = 2
@@ -1115,6 +1123,22 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "بازگردانی به پیش‌فرض"
 
+[node name="JoystickSizeRow" type="HBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BtnJoystickSize" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/JoystickSizeRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "اندازه جوی‌استیک: معمولی"
+
+[node name="BtnUIScale" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/JoystickSizeRow"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "مقیاس رابط: ۱۰۰٪"
+
 [node name="PageProfile" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage"]
 visible = false
 layout_mode = 2
@@ -1182,6 +1206,30 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_cta_hover")
 theme_override_styles/normal = SubResource("StyleBoxFlat_cta")
 text = "شروع نبرد"
 
+[node name="PageAbout" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit/PageStage"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="AboutTitle" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageAbout"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.74902, 0.141176, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 24
+text = "درباره Counter Arena Mobile"
+
+[node name="AboutInfo" type="Label" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageAbout"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+autowrap_mode = 2
+text = "یک بازی اکشن آرکیدی آفلاین برای موبایل. همه نبردها و بات‌ها روی دستگاه اجرا می‌شوند؛ اتصال اینترنت لازم نیست. تجهیزات و درگیری‌ها کاملاً خیالی و مناسب فضای بازی هستند.\n\nنسخه ۰.۱۲ • ذخیره‌سازی محلی • ساخته‌شده با Godot"
+
+[node name="BtnAboutPlay" type="Button" parent="SafeMargin/MainLayout/ContentSplit/PageStage/PageAbout"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bold")
+text = "رفتن به اتاق عملیات"
+
 [connection signal="pressed" from="SafeMargin/MainLayout/TopHeader/QuickAudioBar/BtnQuickMusic" to="." method="_on_btn_music_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/TopHeader/QuickAudioBar/BtnQuickSfx" to="." method="_on_btn_sfx_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabHome" to="." method="_on_tab_pressed" binds= [0]]
@@ -1189,6 +1237,7 @@ text = "شروع نبرد"
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabArena" to="." method="_on_tab_pressed" binds= [2]]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabSettings" to="." method="_on_tab_pressed" binds= [3]]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabProfile" to="." method="_on_tab_pressed" binds= [4]]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/NavRail/BtnTabAbout" to="." method="_on_tab_pressed" binds= [5]]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard/VBox/BtnGoArsenal" to="." method="_on_tab_pressed" binds= [1]]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox/QuickRow/BtnHomeSwitchMap" to="." method="_on_quick_switch_map"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/MissionBriefCard/VBox/QuickRow/BtnHomeSwitchMode" to="." method="_on_quick_switch_mode"]
@@ -1219,6 +1268,8 @@ text = "شروع نبرد"
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/ControlsRow/BtnCamPreset" to="." method="_on_cam_preset_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FeelRow/BtnCameraShake" to="." method="_on_shake_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/FeelRow/BtnHaptics" to="." method="_on_haptics_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/JoystickSizeRow/BtnJoystickSize" to="." method="_on_joystick_size_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/JoystickSizeRow/BtnUIScale" to="." method="_on_ui_scale_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow/BtnMusicToggle" to="." method="_on_btn_music_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow/BtnSfxToggle" to="." method="_on_btn_sfx_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioRow/BtnMasterVol" to="." method="_on_master_vol_pressed"]
@@ -1227,3 +1278,4 @@ text = "شروع نبرد"
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AudioMixRow/BtnResetSettings" to="." method="_on_reset_settings_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageSettings/SettingsVBox/AccessibilityRow/BtnLargeText" to="." method="_on_large_text_pressed"]
 [connection signal="pressed" from="SafeMargin/MainLayout/BottomLaunchDock/BtnEnterArena" to="." method="_on_enter_arena_pressed"]
+[connection signal="pressed" from="SafeMargin/MainLayout/ContentSplit/PageStage/PageAbout/BtnAboutPlay" to="." method="_on_tab_pressed" binds= [0]]
