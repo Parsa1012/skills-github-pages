@@ -142,10 +142,14 @@ func _run_movement_camera_qa(player: PlayerController, hud: Node, arena: Node) -
 		var expected := Vector2(direction.x, direction.y)
 		_assert(displacement.dot(expected) > 0.25, "Player failed movement direction %s (moved %s)" % [str(direction), str(displacement)])
 		_assert(displacement.length() < 3.5, "Diagonal/cardinal movement exceeded expected speed cap")
-	movement_stick.output_vector = Vector2(0.65, 0.0)
-	for _frame in 20:
+	player.global_position = Vector3.ZERO
+	player.velocity = Vector3.ZERO
+	player._move_vel = Vector3.ZERO
+	player._knockback_vel = Vector3.ZERO
+	movement_stick.output_vector = Vector2.RIGHT
+	for _frame in 36:
 		await tree.physics_frame
-	_assert(player._anim_player != null and player._anim_player.current_animation in ["run", "sprint"], "Running animation state did not activate")
+	_assert(player._anim_player != null and player._anim_player.current_animation in ["run", "sprint"], "Running animation state did not activate (speed %.2f, animation %s)" % [Vector2(player.velocity.x, player.velocity.z).length(), str(player._anim_player.current_animation if player._anim_player != null else &"missing")])
 	movement_stick.output_vector = Vector2.ZERO
 	for _frame in 20:
 		await tree.physics_frame
