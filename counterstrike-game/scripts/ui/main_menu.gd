@@ -10,8 +10,23 @@ const WEAPON_PATHS: Dictionary = {
 
 const MODE_ORDER: Array[String] = ["zone_control", "team_score_rush", "zone_blitz"]
 const DIFF_ORDER: Array[String] = ["easy", "normal", "hard"]
+const LAUNCH_DOCK_HEIGHT: float = 58.0
+const COMPACT_NAV_LABELS: Array[String] = ["بازی", "تجهیزات", "حالت‌ها", "تنظیمات", "آمار", "درباره"]
+const FULL_NAV_LABELS: Array[String] = ["۱. بازی و عملیات", "۲. تجهیزات", "۳. حالت‌های بازی", "۴. تنظیمات کامل", "۵. آمار و کارنامه", "۶. درباره بازی"]
 
 @onready var _safe_margin: MarginContainer = $SafeMargin
+@onready var _main_layout: VBoxContainer = $SafeMargin/MainLayout
+@onready var _content_split: HBoxContainer = $SafeMargin/MainLayout/ContentSplit
+@onready var _nav_rail: HFlowContainer = $SafeMargin/MainLayout/ContentSplit/NavRail
+@onready var _quick_status_card: Control = $SafeMargin/MainLayout/ContentSplit/NavRail/QuickStatusCard
+@onready var _rank_card: Control = $SafeMargin/MainLayout/TopHeader/RankHeroCard
+@onready var _quick_audio_bar: Control = $SafeMargin/MainLayout/TopHeader/QuickAudioBar
+@onready var _launch_dock: HBoxContainer = $SafeMargin/MainLayout/BottomLaunchDock
+@onready var _ticket_card: Control = $SafeMargin/MainLayout/BottomLaunchDock/TicketCard
+@onready var _home_weapon_card: Control = $SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/HomeCardsRow/WeaponBriefCard
+@onready var _home_tip_card: Control = $SafeMargin/MainLayout/ContentSplit/PageStage/PageHome/TipCard
+
+var _compact_nav_attached: bool = false
 
 @onready var _rank_num_label: Label = $SafeMargin/MainLayout/TopHeader/RankHeroCard/RankHBox/RankCrest/RankNumLabel
 @onready var _rank_title_header_label: Label = $SafeMargin/MainLayout/TopHeader/RankHeroCard/RankHBox/RankTextVBox/RankTitleLabel
@@ -115,6 +130,7 @@ func _ready() -> void:
 		_safe_margin.layout_direction = Control.LAYOUT_DIRECTION_RTL
 	GameManager.current_state = GameManager.AppState.MAIN_MENU
 	AudioManager.play_menu_music()
+	_attach_launch_dock()
 	_preload_weapons()
 	_build_equipment_entry()
 	_build_match_rules_controls()
@@ -222,14 +238,81 @@ func _preload_weapons() -> void:
 						_icon_cache[wid] = tex
 
 
-func _apply_safe_area_margins() -> void:
+func _attach_launch_dock() -> void:
+	if _launch_dock == null or _launch_dock.get_parent() == self:
+		return
+	var current_parent: Node = _launch_dock.get_parent()
+	if current_parent != null:
+		current_parent.remove_child(_launch_dock)
+	add_child(_launch_dock)
+	_launch_dock.layout_mode = 1
+	_launch_dock.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_launch_dock.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_launch_dock.mouse_filter = Control.MOUSE_FILTER_STOP
+	_launch_dock.custom_minimum_size.y = LAUNCH_DOCK_HEIGHT
+	move_child(_launch_dock, get_child_count() - 1)
+
+
+func _apply_safe_area_margins(viewport_size_override: Vector2 = Vector2.ZERO) -> void:
 	if _safe_margin == null:
 		return
-	var pad: Dictionary = GameManager.get_safe_area_padding(get_viewport_rect().size)
+	var viewport_size: Vector2 = viewport_size_override
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		viewport_size = get_viewport_rect().size
+	var pad: Dictionary = GameManager.get_safe_area_padding(viewport_size)
+	var compact: bool = viewport_size.x < 850.0 or viewport_size.y < 520.0
+	_set_compact_navigation(compact)
+
 	_safe_margin.add_theme_constant_override("margin_left", int(pad["left"]))
 	_safe_margin.add_theme_constant_override("margin_right", int(pad["right"]))
 	_safe_margin.add_theme_constant_override("margin_top", int(pad["top"]))
-	_safe_margin.add_theme_constant_override("margin_bottom", int(pad["bottom"]))
+	_safe_margin.add_theme_constant_override(
+		"margin_bottom", int(pad["bottom"]) + int(LAUNCH_DOCK_HEIGHT) + 20
+	)
+	if _launch_dock != null:
+		var safe_bottom: float = maxf(8.0, float(pad["bottom"]))
+		_launch_dock.offset_left = float(pad["left"])
+		_launch_dock.offset_right = -float(pad["right"])
+		_launch_dock.offset_top = -(LAUNCH_DOCK_HEIGHT + safe_bottom + 8.0)
+		_launch_dock.offset_bottom = -(safe_bottom + 8.0)
+	if _ticket_card != null:
+		_ticket_card.visible = viewport_size.x >= 900.0
+	if _enter_arena_btn != null:
+		_enter_arena_btn.custom_minimum_size = Vector2(260.0, 54.0) if viewport_size.x >= 900.0 else Vector2(0.0, 54.0)
+		_enter_arena_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if _rank_card != null:
+		_rank_card.visible = viewport_size.x >= 640.0
+	if _quick_audio_bar != null:
+		_quick_audio_bar.visible = viewport_size.x >= 900.0
+	if _home_weapon_card != null:
+		_home_weapon_card.visible = viewport_size.x >= 620.0
+	if _home_tip_card != null:
+		_home_tip_card.visible = viewport_size.x >= 620.0 and viewport_size.y >= 420.0
+
+
+func _set_compact_navigation(compact: bool) -> void:
+	if _nav_rail == null or _main_layout == null or _content_split == null:
+		return
+	if compact and not _compact_nav_attached:
+		_content_split.remove_child(_nav_rail)
+		_main_layout.add_child(_nav_rail)
+		_main_layout.move_child(_nav_rail, 1)
+		_compact_nav_attached = true
+	elif not compact and _compact_nav_attached:
+		_main_layout.remove_child(_nav_rail)
+		_content_split.add_child(_nav_rail)
+		_content_split.move_child(_nav_rail, 0)
+		_compact_nav_attached = false
+
+	_nav_rail.custom_minimum_size = Vector2.ZERO if compact else Vector2(215.0, 0.0)
+	_nav_rail.size_flags_horizontal = Control.SIZE_EXPAND_FILL if compact else Control.SIZE_FILL
+	_nav_rail.size_flags_vertical = Control.SIZE_SHRINK_BEGIN if compact else Control.SIZE_EXPAND_FILL
+	_nav_rail.layout_direction = Control.LAYOUT_DIRECTION_RTL
+	_quick_status_card.visible = not compact
+	for idx in _tab_btns.size():
+		var tab: Button = _tab_btns[idx]
+		tab.custom_minimum_size = Vector2(0.0, 38.0 if compact else 48.0)
+		tab.text = COMPACT_NAV_LABELS[idx] if compact else FULL_NAV_LABELS[idx]
 
 
 func _show_tab(tab_idx: int, animate: bool = true) -> void:

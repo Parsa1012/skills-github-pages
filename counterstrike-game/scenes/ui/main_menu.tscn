@@ -291,10 +291,11 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="NavRail" type="VBoxContainer" parent="SafeMargin/MainLayout/ContentSplit"]
+[node name="NavRail" type="HFlowContainer" parent="SafeMargin/MainLayout/ContentSplit"]
 custom_minimum_size = Vector2(215, 0)
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 8
 
 [node name="BtnTabHome" type="Button" parent="SafeMargin/MainLayout/ContentSplit/NavRail"]
 custom_minimum_size = Vector2(0, 48)

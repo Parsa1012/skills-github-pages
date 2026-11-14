@@ -49,6 +49,21 @@ func _on_crate_exploded(_world_pos: Vector3) -> void:
 	_crate_exploded_seen = true
 
 
+func _test_main_menu_responsive_layout(menu: Node) -> void:
+	var original_size: Vector2 = get_viewport().get_visible_rect().size
+	var dock: Control = menu.get_node_or_null("BottomLaunchDock") as Control
+	var launch_button: Button = menu.find_child("BtnEnterArena", true, false) as Button
+	var navigation: Control = menu.find_child("NavRail", true, false) as Control
+	for viewport_size in [Vector2(360.0, 640.0), Vector2(640.0, 360.0), Vector2(720.0, 1280.0), Vector2(1280.0, 720.0)]:
+		menu.call("_apply_safe_area_margins", viewport_size)
+		_assert(dock != null and dock.get_parent() == menu and dock.visible, "Launch dock left the viewport-safe overlay at %s" % str(viewport_size))
+		_assert(launch_button != null and launch_button.visible and launch_button.custom_minimum_size.y >= 48.0, "Start-match tap target is missing or too small at %s" % str(viewport_size))
+		if navigation != null:
+			var expected_parent: Node = menu.get_node("SafeMargin/MainLayout") if (viewport_size.x < 850.0 or viewport_size.y < 520.0) else menu.get_node("SafeMargin/MainLayout/ContentSplit")
+			_assert(navigation.get_parent() == expected_parent, "Menu navigation did not adapt to viewport %s" % str(viewport_size))
+	menu.call("_apply_safe_area_margins", original_size)
+
+
 func _test_audio_manager() -> void:
 	_assert(ResourceLoader.exists(AudioManager.MENU_BGM_PATH), "Menu music asset missing")
 	_assert(ResourceLoader.exists(AudioManager.ARENA_BGM_PATH), "Arena background music asset missing")
@@ -404,6 +419,7 @@ func _process(_delta: float) -> void:
 			var menu: Node = tree.current_scene
 			_assert(menu != null and menu.name == "MainMenu", "Expected MainMenu, got %s" % str(menu))
 			_assert(tree.root.theme != null, "Persian theme not applied on root viewport")
+			_test_main_menu_responsive_layout(menu)
 			_test_audio_manager()
 			_assert(menu.get_node_or_null("WarBackdrop") is TextureRect, "WarBackdrop missing in MainMenu")
 			_assert(menu.get_node_or_null("LobbyViewportContainer") == null, "Heavy 3D SubViewport should be removed from MainMenu")
