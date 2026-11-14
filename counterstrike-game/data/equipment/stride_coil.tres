@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ArenaEquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_equipment_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+equipment_id = &"stride_coil"
+display_name = "کویل گام"
+description = "کویل تحرک خیالی، سرعت حرکت را به‌اندازه‌ای محدود افزایش می‌دهد."
+slot = 1
+icon_path = "res://assets/ui/equipment/stride_coil.svg"
+unlock_xp = 250
+move_speed_ratio = 0.06
+power_rating = 50

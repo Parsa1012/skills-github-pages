@@ -54,6 +54,7 @@ var _low_hp_warning: bool = false
 var _low_hp_pulse_time: float = 0.0
 var _weapon_icon_cache: Dictionary = {}
 var _base_font_sizes: Dictionary = {}
+var _round_summary: String = ""
 
 
 func _ready() -> void:
@@ -107,6 +108,7 @@ func _ready() -> void:
 	EventBus.hud_toast_requested.connect(_show_toast)
 	EventBus.match_paused_changed.connect(_on_match_paused_changed)
 	EventBus.match_ended.connect(_on_match_ended)
+	EventBus.match_state_changed.connect(_on_match_state_changed)
 
 	if _btn_bomb != null:
 		_btn_bomb.action_triggered.connect(_on_bomb_triggered)
@@ -177,6 +179,8 @@ func _exit_tree() -> void:
 		EventBus.match_paused_changed.disconnect(_on_match_paused_changed)
 	if EventBus.match_ended.is_connected(_on_match_ended):
 		EventBus.match_ended.disconnect(_on_match_ended)
+	if EventBus.match_state_changed.is_connected(_on_match_state_changed):
+		EventBus.match_state_changed.disconnect(_on_match_state_changed)
 
 
 func _notification(what: int) -> void:
@@ -393,13 +397,16 @@ func _on_match_ended(winning_team: int, blue_score: int, orange_score: int, play
 
 	if _end_detail_label != null:
 		_end_detail_label.text = (
-			"امتیاز نهایی: آبی %d  —  %d نارنجی  |  حذف تیم آبی: %d\n"
-			+ "تجربه کسب‌شده: +%d XP  •  رتبه %d (%s)\n"
-			+ "کارنامه کل: %d پیروزی از %d نبرد"
+			"امتیاز کل: آبی %d — %d نارنجی  |  حذف تیم آبی: %d\n"
+			+ "برد دورها: آبی %d — %d نارنجی\n"
+			+ "تجربه: +%d XP  •  رتبه %d (%s)\n"
+			+ "کارنامه: %d پیروزی از %d نبرد"
 		) % [
 			blue_score,
 			orange_score,
 			player_eliminations,
+			GameManager.blue_round_wins,
+			GameManager.orange_round_wins,
 			xp_gained,
 			int(rank["level"]),
 			str(rank["title_fa"]),
@@ -642,8 +649,17 @@ func _show_toast(message_fa: String, accent_color: Color) -> void:
 	_toast_timer = 2.2
 
 
+func _on_match_state_changed(state_name: String, round_index: int, blue_wins: int, orange_wins: int) -> void:
+	var total_rounds := int(GameManager.total_rounds)
+	_round_summary = "د%d/%d • %d-%d • %s" % [round_index, total_rounds, blue_wins, orange_wins, state_name]
+	_on_score_updated(GameManager.round_blue_score, GameManager.round_orange_score)
+
+
 func _on_score_updated(blue_score: int, orange_score: int) -> void:
-	_update_score_badge(blue_score, orange_score)
+	if _score_label != null and not _round_summary.is_empty():
+		_score_label.text = "%s\nآبی %d — %d نارنجی" % [_round_summary, blue_score, orange_score]
+	else:
+		_update_score_badge(blue_score, orange_score)
 
 
 func _update_score_badge(blue_score: int, orange_score: int) -> void:

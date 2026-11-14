@@ -17,6 +17,27 @@ const MODE_ZONE_BLITZ_PATH: String = "res://data/modes/zone_blitz.tres"
 
 var current_state: AppState = AppState.BOOT
 
+enum MatchPhase { IDLE, LIVE_ROUND, ROUND_BREAK, COMPLETE }
+var match_phase: MatchPhase = MatchPhase.IDLE
+var round_index: int = 0
+var total_rounds: int = 1
+var rounds_to_win: int = 1
+var blue_round_wins: int = 0
+var orange_round_wins: int = 0
+var round_blue_score: int = 0
+var round_orange_score: int = 0
+var total_blue_score: int = 0
+var total_orange_score: int = 0
+var round_target_score: int = 25
+var round_duration_sec: float = 120.0
+var round_time_remaining: float = 0.0
+var round_break_remaining: float = 0.0
+var match_mode_id: String = "zone_control"
+var _match_result_recorded: bool = false
+var _last_match_winner: int = -1
+var match_player_eliminations: int = 0
+var last_match_xp: int = 0
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -269,12 +290,14 @@ func set_match_paused(paused: bool) -> void:
 
 
 func go_to_main_menu() -> void:
+	reset_match_state()
 	current_state = AppState.MAIN_MENU
 	AudioManager.stop_all_music()
 	change_scene(MAIN_MENU_SCENE)
 
 
 func go_to_selected_arena() -> void:
+	reset_match_state()
 	current_state = AppState.ARENA_PLAY
 	var scene_path: String = ARENA_SECTOR_02_SCENE if SaveManager.selected_map_id == "sector_02" else ARENA_SECTOR_01_SCENE
 	change_scene(scene_path)
@@ -287,6 +310,205 @@ func change_scene(scene_path: String) -> void:
 	var err: Error = get_tree().change_scene_to_file(scene_path)
 	if err != OK:
 		push_error("Failed to load scene: %s (Error %d)" % [scene_path, err])
+
+
+func _process(delta: float) -> void:
+	if get_tree() == null or get_tree().paused:
+		return
+	if match_phase == MatchPhase.LIVE_ROUND:
+		round_time_remaining = maxf(0.0, round_time_remaining - delta)
+		var seconds_left := int(ceil(round_time_remaining))
+		if seconds_left != _last_timer_second:
+			_last_timer_second = seconds_left
+			EventBus.match_timer_updated.emit(seconds_left)
+		if round_time_remaining <= 0.0:
+			EventBus.round_time_expired.emit()
+	elif match_phase == MatchPhase.ROUND_BREAK:
+		round_break_remaining = maxf(0.0, round_break_remaining - delta)
+		if round_break_remaining <= 0.0:
+			EventBus.next_round_requested.emit()
+
+
+var _last_timer_second: int = -1
+
+
+func configure_match_rules(duration_seconds: int, round_count: int) -> void:
+	SaveManager.match_round_duration_sec = duration_seconds if duration_seconds in [0, 60, 90, 120, 180, 240] else 0
+	SaveManager.match_round_count = round_count if round_count in [1, 3, 5] else 1
+	SaveManager.save_settings()
+
+
+func start_offline_match(mode_id: String, target_score: int, default_duration: float, configured_rounds: int = -1) -> void:
+	match_phase = MatchPhase.LIVE_ROUND
+	match_mode_id = mode_id
+	round_target_score = maxi(1, target_score)
+	round_duration_sec = float(SaveManager.match_round_duration_sec) if SaveManager.match_round_duration_sec > 0 else maxf(15.0, default_duration)
+	total_rounds = configured_rounds if configured_rounds in [1, 3, 5] else SaveManager.match_round_count
+	rounds_to_win = int(ceil(float(total_rounds) * 0.5))
+	round_index = 1
+	blue_round_wins = 0
+	orange_round_wins = 0
+	round_blue_score = 0
+	round_orange_score = 0
+	total_blue_score = 0
+	total_orange_score = 0
+	round_time_remaining = round_duration_sec
+	round_break_remaining = 0.0
+	_match_result_recorded = false
+	_last_match_winner = -1
+	match_player_eliminations = 0
+	last_match_xp = 0
+	_last_timer_second = -1
+	current_state = AppState.ARENA_PLAY
+	EventBus.match_started.emit(mode_id, round_target_score)
+	EventBus.score_updated.emit(0, 0)
+	EventBus.match_timer_updated.emit(int(ceil(round_time_remaining)))
+	EventBus.round_started.emit(round_index)
+	_emit_match_state()
+
+
+func award_round_points(team_id: int, points: int) -> void:
+	if match_phase != MatchPhase.LIVE_ROUND or points <= 0:
+		return
+	if team_id == 0:
+		round_blue_score += points
+		total_blue_score += points
+	elif team_id == 1:
+		round_orange_score += points
+		total_orange_score += points
+	else:
+		return
+	EventBus.score_updated.emit(round_blue_score, round_orange_score)
+
+
+func complete_current_round(winning_team: int, reason: String = "score") -> bool:
+	if match_phase != MatchPhase.LIVE_ROUND:
+		return match_phase == MatchPhase.COMPLETE
+	if winning_team == -1:
+		if round_blue_score > round_orange_score:
+			winning_team = 0
+		elif round_orange_score > round_blue_score:
+			winning_team = 1
+	if winning_team == 0:
+		blue_round_wins += 1
+	elif winning_team == 1:
+		orange_round_wins += 1
+	EventBus.round_ended.emit(winning_team, reason)
+	var match_complete := blue_round_wins >= rounds_to_win or orange_round_wins >= rounds_to_win or round_index >= total_rounds
+	if match_complete:
+		var final_winner: int = 0 if blue_round_wins > orange_round_wins else (1 if orange_round_wins > blue_round_wins else -1)
+		_finish_offline_match(final_winner)
+		return true
+	match_phase = MatchPhase.ROUND_BREAK
+	round_break_remaining = 2.0
+	_emit_match_state()
+	return false
+
+
+func start_next_round() -> bool:
+	if match_phase != MatchPhase.ROUND_BREAK or round_index >= total_rounds:
+		return false
+	round_index += 1
+	round_blue_score = 0
+	round_orange_score = 0
+	round_time_remaining = round_duration_sec
+	round_break_remaining = 0.0
+	match_phase = MatchPhase.LIVE_ROUND
+	_last_timer_second = -1
+	EventBus.score_updated.emit(0, 0)
+	EventBus.match_timer_updated.emit(int(ceil(round_time_remaining)))
+	EventBus.round_started.emit(round_index)
+	_emit_match_state()
+	return true
+
+
+func record_player_elimination() -> void:
+	if match_phase == MatchPhase.LIVE_ROUND:
+		match_player_eliminations += 1
+
+
+func _finish_offline_match(winning_team: int) -> void:
+	if match_phase == MatchPhase.COMPLETE:
+		return
+	match_phase = MatchPhase.COMPLETE
+	_last_match_winner = winning_team
+	if not _match_result_recorded:
+		_match_result_recorded = true
+		last_match_xp = record_match_result(winning_team == 0, match_player_eliminations)
+	get_tree().paused = true
+	AudioManager.stop_all_music()
+	AudioManager.play_match_end_sfx(winning_team == 0)
+	EventBus.match_ended.emit(winning_team, total_blue_score, total_orange_score, match_player_eliminations)
+	_emit_match_state()
+
+
+func is_match_live() -> bool:
+	return match_phase == MatchPhase.LIVE_ROUND
+
+
+func is_match_complete() -> bool:
+	return match_phase == MatchPhase.COMPLETE
+
+
+func get_match_snapshot() -> Dictionary:
+	return {
+		"phase": MatchPhase.keys()[match_phase],
+		"mode_id": match_mode_id,
+		"round_index": round_index,
+		"total_rounds": total_rounds,
+		"rounds_to_win": rounds_to_win,
+		"blue_round_wins": blue_round_wins,
+		"orange_round_wins": orange_round_wins,
+		"blue_score": round_blue_score,
+		"orange_score": round_orange_score,
+		"blue_total": total_blue_score,
+		"orange_total": total_orange_score,
+		"time_remaining": round_time_remaining,
+		"winner": _last_match_winner
+	}
+
+
+func _emit_match_state() -> void:
+	EventBus.match_state_changed.emit(MatchPhase.keys()[match_phase], round_index, blue_round_wins, orange_round_wins)
+
+
+func assign_match_teams(player: Node, bot_roster: Array[Node]) -> void:
+	if player != null and player.get("team_id") != null:
+		player.set("team_id", 0)
+	for actor in bot_roster:
+		if actor == null or actor.get("team_id") == null:
+			continue
+		var team_id := int(actor.get("team_id"))
+		actor.set("team_id", 0 if team_id == 0 else 1)
+
+
+func reset_match_state() -> void:
+	match_phase = MatchPhase.IDLE
+	round_index = 0
+	total_rounds = 1
+	rounds_to_win = 1
+	blue_round_wins = 0
+	orange_round_wins = 0
+	round_blue_score = 0
+	round_orange_score = 0
+	total_blue_score = 0
+	total_orange_score = 0
+	round_time_remaining = 0.0
+	round_break_remaining = 0.0
+	_match_result_recorded = false
+	_last_match_winner = -1
+	match_player_eliminations = 0
+	last_match_xp = 0
+	match_mode_id = "none"
+	round_target_score = 0
+	round_duration_sec = 0.0
+	_last_timer_second = -1
+	current_state = AppState.MAIN_MENU
+	if get_tree() != null:
+		get_tree().paused = false
+	EventBus.score_updated.emit(0, 0)
+	EventBus.match_timer_updated.emit(0)
+	_emit_match_state()
 
 
 func get_safe_area_padding(viewport_size: Vector2) -> Dictionary:

@@ -17,6 +17,8 @@ run/main_scene="res://scenes/main/boot.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 config/icon="res://assets/ui/launcher_icon.png"
 run/max_fps=60
+physics/common/physics_ticks_per_second=60
+physics/common/max_physics_steps_per_frame=8
 
 [layer_names]
 
@@ -42,6 +44,7 @@ SaveManager="*res://scripts/autoload/save_manager.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 PoolManager="*res://scripts/autoload/pool_manager.gd"
 GameManager="*res://scripts/autoload/game_manager.gd"
+EquipmentManager="*res://scripts/autoload/equipment_manager.gd"
 
 [display]
 

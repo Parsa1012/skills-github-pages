@@ -163,6 +163,8 @@ material_override = ExtResource("24_floor_mat")
 mesh = SubResource("BoxMesh_floor")
 
 [node name="WallNorth" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -11.5)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/WallNorth"]
@@ -173,6 +175,8 @@ mesh = SubResource("BoxMesh_wall_ns")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="WallSouth" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 11.5)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/WallSouth"]
@@ -183,6 +187,8 @@ mesh = SubResource("BoxMesh_wall_ns")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="WallWest" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 0.9, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/WallWest"]
@@ -193,6 +199,8 @@ mesh = SubResource("BoxMesh_wall_ew")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="WallEast" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.5, 0.9, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/WallEast"]
@@ -203,6 +211,8 @@ mesh = SubResource("BoxMesh_wall_ew")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
 [node name="CenterDeck" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CenterDeck"]
@@ -213,6 +223,8 @@ mesh = SubResource("BoxMesh_deck")
 surface_material_override/0 = SubResource("StandardMaterial3D_deck")
 
 [node name="WestRamp" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(0.988686, -0.15, 0, 0.15, 0.988686, 0, 0, 0, 1, -3.95, 0.06, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/WestRamp"]
@@ -223,6 +235,8 @@ mesh = SubResource("BoxMesh_ramp")
 surface_material_override/0 = SubResource("StandardMaterial3D_deck")
 
 [node name="EastRamp" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(0.988686, 0.15, 0, -0.15, 0.988686, 0, 0, 0, 1, 3.95, 0.06, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/EastRamp"]
@@ -233,6 +247,8 @@ mesh = SubResource("BoxMesh_ramp")
 surface_material_override/0 = SubResource("StandardMaterial3D_deck")
 
 [node name="ConcreteBarrier_WestN" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -7.8, 0, -3.8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/ConcreteBarrier_WestN"]
@@ -243,6 +259,8 @@ shape = SubResource("BoxShape3D_wall_low")
 transform = Transform3D(4.5, 0, 0, 0, 3.4, 0, 0, 0, 3.8, 0, 0, 0)
 
 [node name="ConcreteBarrier_WestS" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -7.8, 0, 3.8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/ConcreteBarrier_WestS"]
@@ -253,6 +271,8 @@ shape = SubResource("BoxShape3D_wall_low")
 transform = Transform3D(4.5, 0, 0, 0, 3.4, 0, 0, 0, 3.8, 0, 0, 0)
 
 [node name="FortifiedBarricade_EastN" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 6.2, 0, -3.8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/FortifiedBarricade_EastN"]
@@ -266,6 +286,8 @@ transform = Transform3D(4.4, 0, 0, 0, 4.15, 0, 0, 0, 4.4, 0, 0, 0)
 transform = Transform3D(3.2, 0, 0, 0, 2.8, 0, 0, 0, 3.2, 0, 0, 0.18)
 
 [node name="FortifiedBarricade_EastS" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 6.2, 0, 3.8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/FortifiedBarricade_EastS"]
@@ -279,6 +301,8 @@ transform = Transform3D(4.4, 0, 0, 0, 4.15, 0, 0, 0, 4.4, 0, 0, 0)
 transform = Transform3D(3.2, 0, 0, 0, 2.8, 0, 0, 0, 3.2, 0, 0, -0.18)
 
 [node name="CrateStack_NW" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.4, 0, -6.2)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CrateStack_NW"]
@@ -292,6 +316,8 @@ transform = Transform3D(4.8, 0, 0, 0, 4.8, 0, 0, 0, 4.8, 0, 0, 0)
 transform = Transform3D(3.6, 0, 0, 0, 3.2, 0, 0, 0, 3.6, 0, 1.2, 0)
 
 [node name="CrateSingle_NE" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.4, 0, -6.2)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CrateSingle_NE"]
@@ -302,6 +328,8 @@ shape = SubResource("BoxShape3D_column_damaged")
 transform = Transform3D(4.8, 0, 0, 0, 4.8, 0, 0, 0, 4.8, 0, 0, 0)
 
 [node name="CrateSingle_SW" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.4, 0, 6.2)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CrateSingle_SW"]
@@ -312,6 +340,8 @@ shape = SubResource("BoxShape3D_column_damaged")
 transform = Transform3D(4.8, 0, 0, 0, 4.8, 0, 0, 0, 4.8, 0, 0, 0)
 
 [node name="CrateStack_SE" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.4, 0, 6.2)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CrateStack_SE"]
@@ -325,6 +355,8 @@ transform = Transform3D(4.8, 0, 0, 0, 4.8, 0, 0, 0, 4.8, 0, 0, 0)
 transform = Transform3D(3.6, 0, 0, 0, 3.2, 0, 0, 0, 3.6, 0, 1.2, 0)
 
 [node name="CenterSupplyCluster" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.36, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/CenterSupplyCluster"]
@@ -338,6 +370,8 @@ transform = Transform3D(2.0, 0, 0, 0, 1.2, 0, 0, 0, 2.0, 0, 0, 0)
 transform = Transform3D(5.2, 0, 0, 0, 4.8, 0, 0, 0, 5.2, 0, 0.16, 0)
 
 [node name="SupplyCrate_West" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.5, 0, -7.8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/SupplyCrate_West"]
@@ -348,6 +382,8 @@ shape = SubResource("BoxShape3D_bricks")
 transform = Transform3D(4.6, 0, 0, 0, 4.6, 0, 0, 0, 4.6, 0, 0, 0)
 
 [node name="SupplyCrate_East" type="StaticBody3D" parent="ArenaEnvironment"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 0, 7.8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ArenaEnvironment/SupplyCrate_East"]
@@ -463,6 +499,8 @@ mesh = SubResource("CylinderMesh_zone")
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, -1.8)
 
 [node name="ZoneFlagBody" type="StaticBody3D" parent="ZoneA_North"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -1.8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneA_North/ZoneFlagBody"]
@@ -486,6 +524,8 @@ mesh = SubResource("CylinderMesh_zone")
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 1.8)
 
 [node name="ZoneFlagBody" type="StaticBody3D" parent="ZoneB_South"]
+collision_layer = 1
+collision_mask = 0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 1.8)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="ZoneB_South/ZoneFlagBody"]

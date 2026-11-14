@@ -221,6 +221,66 @@ func _run_movement_camera_qa(player: PlayerController, hud: Node, arena: Node) -
 	_wait_frames = 35
 
 
+func _run_equipment_match_qa(tree: SceneTree) -> void:
+	var old_xp := SaveManager.career_xp
+	var old_gear: Dictionary = SaveManager.equipped_gear.duplicate(true)
+	var old_matches := SaveManager.total_matches
+	var old_wins := SaveManager.total_wins
+	var old_elims := SaveManager.total_eliminations
+	var old_best := SaveManager.best_match_eliminations
+	var old_career_xp := SaveManager.career_xp
+	var items := EquipmentManager.get_all_items()
+	_assert(items.size() >= 6, "Expected at least six reusable equipment resources")
+	for item in items:
+		_assert(not item.description.is_empty(), "Equipment %s lacks a description" % item.equipment_id)
+		_assert(ResourceLoader.exists(item.icon_path), "Equipment %s icon is missing" % item.equipment_id)
+	var mods := EquipmentManager.get_player_modifiers()
+	_assert(float(mods["health_bonus_ratio"]) <= 0.15, "Equipment health bonus exceeded its balance cap")
+	_assert(float(mods["damage_reduction_ratio"]) <= 0.10, "Equipment resistance exceeded its balance cap")
+
+	SaveManager.career_xp = 0
+	_assert(not EquipmentManager.is_unlocked("impact_shell"), "XP-gated equipment unlocked too early")
+	_assert(not EquipmentManager.select_equipment("impact_shell"), "Locked equipment was selectable")
+	SaveManager.career_xp = 500
+	_assert(EquipmentManager.is_unlocked("impact_shell"), "XP threshold did not unlock equipment")
+	_assert(EquipmentManager.select_equipment("impact_shell"), "Unlocked equipment selection failed")
+	SaveManager.equipped_gear = old_gear
+	SaveManager.career_xp = old_xp
+	EquipmentManager._reconcile_loadout()
+
+	GameManager.reset_match_state()
+	GameManager.start_offline_match("zone_control", 5, 45.0, 3)
+	GameManager.award_round_points(0, 5)
+	_assert(not GameManager.complete_current_round(0, "qa"), "Three-round match ended after only one round")
+	_assert(GameManager.match_phase == GameManager.MatchPhase.ROUND_BREAK and GameManager.blue_round_wins == 1, "Round win was not recorded consistently")
+	_assert(GameManager.start_next_round(), "Round two did not start")
+	GameManager.award_round_points(1, 5)
+	_assert(not GameManager.complete_current_round(1, "qa"), "Series ended before the final configured round")
+	_assert(GameManager.start_next_round(), "Round three did not start")
+	GameManager.award_round_points(0, 5)
+	_assert(GameManager.complete_current_round(0, "qa"), "Majority round victory did not finish the match")
+	_assert(GameManager.is_match_complete() and GameManager.blue_round_wins == 2, "Match completion or round wins are inconsistent")
+
+	GameManager.reset_match_state()
+	GameManager.start_offline_match("zone_control", 5, 45.0, 1)
+	_assert(GameManager.round_blue_score == 0 and GameManager.round_orange_score == 0, "Restart retained previous scores")
+	GameManager.award_round_points(1, 2)
+	_assert(GameManager.complete_current_round(1, "qa") and GameManager._last_match_winner == 1, "Defeat result was not recorded")
+	GameManager.reset_match_state()
+	GameManager.start_offline_match("zone_control", 5, 45.0, 1)
+	_assert(GameManager.complete_current_round(-1, "qa") and GameManager._last_match_winner == -1, "A tied match did not finish as a draw")
+
+	GameManager.reset_match_state()
+	SaveManager.total_matches = old_matches
+	SaveManager.total_wins = old_wins
+	SaveManager.total_eliminations = old_elims
+	SaveManager.best_match_eliminations = old_best
+	SaveManager.career_xp = old_career_xp
+	SaveManager.equipped_gear = old_gear
+	SaveManager.save_settings()
+	tree.paused = false
+
+
 func _assert(cond: bool, msg: String) -> void:
 	if not cond:
 		_failures.append(msg)
@@ -249,6 +309,41 @@ func _process(_delta: float) -> void:
 			var alpha_map: Button = menu.find_child("BtnMapSector01", true, false) as Button
 			var bravo_map: Button = menu.find_child("BtnMapSector02", true, false) as Button
 			_assert(alpha_map != null and alpha_map.icon != null and bravo_map != null and bravo_map.icon != null, "Arena selection map icons missing")
+			var equipment_entry := menu.find_child("BtnOpenEquipmentLoadout", true, false) as Button
+			var equipment_panel := menu.find_child("EquipmentLoadoutPanel", true, false) as EquipmentLoadoutPanel
+			_assert(equipment_entry != null and equipment_entry.custom_minimum_size.y >= 44.0, "Equipment loadout touchscreen entry is missing or too small")
+			if equipment_entry != null and equipment_panel != null:
+				equipment_entry.pressed.emit()
+				var equipment_items: VBoxContainer = equipment_panel.get("_items_box") as VBoxContainer
+				_assert(equipment_panel.visible and equipment_items != null and equipment_items.get_child_count() >= 2, "Equipment selection overlay failed to open")
+				var prior_gear: Dictionary = SaveManager.equipped_gear.duplicate(true)
+				var prior_xp: int = SaveManager.career_xp
+				SaveManager.career_xp = 500
+				equipment_panel.refresh()
+				equipment_items = equipment_panel.get("_items_box") as VBoxContainer
+				if equipment_items != null and equipment_items.get_child_count() >= 2:
+					(equipment_items.get_child(1) as Button).pressed.emit()
+					_assert(String(equipment_panel.get("_selected_id")) == "impact_shell", "Equipment list could not select its second gear resource")
+					var equip_button: Button = equipment_panel.get("_select_button") as Button
+					if equip_button != null:
+						equip_button.pressed.emit()
+					_assert(String(SaveManager.equipped_gear["CORE"]) == "impact_shell", "Equipment modal did not apply the selected core item")
+				SaveManager.equipped_gear = prior_gear
+				SaveManager.career_xp = prior_xp
+				EquipmentManager._reconcile_loadout()
+				equipment_panel.refresh()
+				equipment_panel.visible = false
+			var duration_button := menu.find_child("BtnRoundDuration", true, false) as Button
+			var round_count_button := menu.find_child("BtnRoundCount", true, false) as Button
+			_assert(duration_button != null and duration_button.custom_minimum_size.y >= 44.0 and round_count_button != null and round_count_button.custom_minimum_size.y >= 44.0, "Match rule touchscreen controls are missing")
+			var prior_duration := SaveManager.match_round_duration_sec
+			var prior_round_count := SaveManager.match_round_count
+			menu.call("_cycle_match_duration")
+			_assert(SaveManager.match_round_duration_sec != prior_duration, "Match duration selector did not change config")
+			menu.call("_cycle_match_round_count")
+			_assert(SaveManager.match_round_count != prior_round_count, "Round count selector did not change config")
+			GameManager.configure_match_rules(prior_duration, prior_round_count)
+			menu.call("_refresh_match_rules_controls")
 			var logo_rect: TextureRect = menu.find_child("LogoRect", true, false) as TextureRect
 			_assert(logo_rect != null and logo_rect.texture != null, "Game logo missing in MainMenu")
 
@@ -368,6 +463,7 @@ func _process(_delta: float) -> void:
 			]:
 				_assert(ResourceLoader.exists(res_p), "Missing Phase 12 resource: %s" % res_p)
 
+			_run_equipment_match_qa(tree)
 			GameManager.set_large_text_enabled(true)
 			GameManager.go_to_selected_arena()
 			_step = 1
@@ -391,6 +487,9 @@ func _process(_delta: float) -> void:
 				return
 
 			_assert(player.is_alive(), "Player should start alive")
+			_assert((player.collision_layer & 2) != 0 and (player.collision_mask & 3) == 3, "Player collision layer/mask must include characters and world")
+			var floor_body := arena.get_node_or_null("ArenaEnvironment/FloorBody") as StaticBody3D
+			_assert(floor_body != null and (floor_body.collision_layer & 1) != 0, "Arena floor must use the World collision layer")
 			_assert(player.blasters.size() == 4, "Expected 4 weapons, got %d" % player.blasters.size())
 			_assert(player.get_node_or_null("VisualRoot/KenneySoldier/MilitaryGearMarker") != null, "Player military gear marker missing")
 			_assert(player.find_child("KevlarHelmetDome", true, false) != null, "Player 3D KevlarHelmetDome missing")
@@ -405,7 +504,7 @@ func _process(_delta: float) -> void:
 			_assert(player.trigger_dash(), "Player initial dash should succeed")
 			_assert(player.is_dashing(), "Expected player.is_dashing() == true right after trigger_dash")
 			player.take_damage(35.0, 1, Vector3(6.0, 0.0, 0.0))
-			_assert(is_equal_approx(player._hp, 100.0), "Dashing player should ignore projectile/hit damage")
+			_assert(is_equal_approx(player._hp, player.max_hp), "Dashing player should ignore projectile/hit damage")
 			player._dash_timer = 0.0
 			player._move_vel = Vector3.ZERO
 			player._knockback_vel = Vector3.ZERO
@@ -415,6 +514,14 @@ func _process(_delta: float) -> void:
 			_assert(crates.size() == 2, "Expected 2 ExplosiveCrates in Sector 01, got %d" % crates.size())
 			var bots: Array[Node] = tree.get_nodes_in_group("arena_bots")
 			_assert(bots.size() == 4, "Expected 4 ArenaBots (1 Blue + 3 Orange), got %d" % bots.size())
+			for b in bots:
+				if b is CharacterBody3D:
+					_assert(((b as CharacterBody3D).collision_layer & 2) != 0 and ((b as CharacterBody3D).collision_mask & 3) == 3, "Bot collision layer/mask must match player/world character collision")
+			var debug_overlay := arena.get_node_or_null("CollisionDebugOverlay") as ArenaCollisionDebugOverlay
+			if debug_overlay != null:
+				debug_overlay.set_enabled(true)
+				_assert(debug_overlay.get_child_count() > 0, "Collision debug overlay did not draw runtime collision shapes")
+				debug_overlay.set_enabled(false)
 			for b in bots:
 				if b is ArenaBot:
 					var ai_debug: Dictionary = (b as ArenaBot).get_ai_debug_info()
@@ -515,10 +622,12 @@ func _process(_delta: float) -> void:
 
 			if player != null:
 				player._hp = player.max_hp
+				var expected_hit_hp: float = player.max_hp - 40.0 * (1.0 - float(player._equipment_modifiers.get("damage_reduction_ratio", 0.0)))
 				player.take_damage(40.0, 1, Vector3(player.global_position.x + 5.0, 0.0, player.global_position.z))
 				_assert(_hit_dir_seen, "Expected player_damaged_direction signal")
-				_assert(is_equal_approx(player._hp, 60.0), "Expected player HP=60 after 40 dmg, got %.1f" % player._hp)
-				_assert(player.apply_pickup(0, 35.0) and is_equal_approx(player._hp, 95.0), "MEDKIT should restore +35 HP to 95")
+				_assert(is_equal_approx(player._hp, expected_hit_hp), "Equipment impact resistance was not applied (HP %.1f expected %.1f)" % [player._hp, expected_hit_hp])
+				var expected_healed_hp: float = minf(player.max_hp, expected_hit_hp + 35.0)
+				_assert(player.apply_pickup(0, 35.0) and is_equal_approx(player._hp, expected_healed_hp), "MEDKIT should restore up to its configured amount")
 				player.take_damage(120.0, 1, Vector3(0.0, 0.0, 6.0))
 				_assert(not player.is_alive(), "Player should die after lethal damage")
 
@@ -541,7 +650,7 @@ func _process(_delta: float) -> void:
 				_zone_progress_before = 0.0
 
 			if player != null:
-				_assert(player.is_alive() and is_equal_approx(player._hp, 100.0), "Player did not respawn cleanly")
+				_assert(player.is_alive() and is_equal_approx(player._hp, player.max_hp), "Player did not respawn to equipment-adjusted health")
 				player.global_position = Vector3(0.0, 0.05, -7.2)
 
 			_step = 4
@@ -552,8 +661,8 @@ func _process(_delta: float) -> void:
 			var zone_a: CaptureZonePad = arena.get_node_or_null("ZoneA_North") as CaptureZonePad
 			_assert(zone_a != null and zone_a._capture_value > _zone_progress_before + 0.1, "ZoneA_North _capture_value did not advance")
 
-			arena._finish_match()
-			_assert(bool(arena.get("_match_over")), "Expected _match_over == true after _finish_match()")
+			arena.call("_complete_round", "qa_transition")
+			_assert(GameManager.is_match_complete() and bool(arena.get("_match_over")), "Match manager failed to complete a one-round match")
 
 			GameManager.set_selected_mode("team_score_rush")
 			GameManager.set_selected_map("sector_02")
@@ -566,6 +675,16 @@ func _process(_delta: float) -> void:
 			if arena2 != null:
 				var player2: PlayerController = arena2.get_node_or_null("PlayerCharacter") as PlayerController
 				_assert(player2 != null and player2.is_alive(), "ArenaSector02 PlayerCharacter missing or dead")
+				if player2 != null:
+					_assert((player2.collision_layer & 2) != 0 and (player2.collision_mask & 3) == 3, "Sector 02 player collision configuration is invalid")
+					var wall_probe := Transform3D(Basis.IDENTITY, Vector3(15.0, 0.02, 0.0))
+					_assert(player2.test_move(wall_probe, Vector3(2.0, 0.0, 0.0)), "Sector 02 perimeter wall failed a physics test_move collision probe")
+				var hud2 := arena2.get_node_or_null("TouchControlsHUD") as Node
+				if hud2 != null:
+					var play_again := hud2.find_child("BtnPlayAgain", true, false) as Button
+					var end_menu := hud2.find_child("BtnEndMenu", true, false) as Button
+					_assert(play_again != null and play_again.pressed.is_connected(Callable(hud2, "_on_btn_restart_pressed")), "Match restart button is not connected to centralized restart flow")
+					_assert(end_menu != null and end_menu.pressed.is_connected(Callable(hud2, "_on_btn_back_menu_pressed")), "Return-to-menu button is not connected")
 				_assert(tree.get_nodes_in_group("arena_bots").size() == 4, "ArenaSector02 expected 4 bots")
 				_assert(tree.get_nodes_in_group("explosive_crates").size() == 2, "ArenaSector02 expected 2 ExplosiveCrates")
 				if player2 != null:

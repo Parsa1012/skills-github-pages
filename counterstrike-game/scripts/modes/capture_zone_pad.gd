@@ -57,6 +57,16 @@ func get_owner_team() -> int:
 	return owner_team
 
 
+func reset_for_new_round() -> void:
+	owner_team = -1
+	_capture_value = 0.0
+	_last_emitted_progress = -1.0
+	if _mat != null:
+		_mat.albedo_color = idle_color
+	if _border_mat != null:
+		_border_mat.albedo_color = idle_color
+
+
 func _physics_process(delta: float) -> void:
 	var blue_alive: int = 0
 	var orange_alive: int = 0

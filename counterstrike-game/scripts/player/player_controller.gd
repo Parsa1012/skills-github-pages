@@ -72,11 +72,25 @@ var _step_timer: float = 0.0
 var _respawn_last_sec: int = -1
 var _move_vel: Vector3 = Vector3.ZERO
 var _knockback_vel: Vector3 = Vector3.ZERO
+var _equipment_modifiers: Dictionary = {}
+
+
+func _get_effective_dash_cooldown() -> float:
+	return DASH_COOLDOWN * (1.0 + float(_equipment_modifiers.get("dash_cooldown_ratio", 0.0)))
+
+
+func _get_effective_bomb_cooldown() -> float:
+	return BOMB_COOLDOWN * (1.0 + float(_equipment_modifiers.get("gadget_cooldown_ratio", 0.0)))
 
 
 func _ready() -> void:
 	add_to_group("player")
 	_spawn_pos = global_position
+	_equipment_modifiers = EquipmentManager.get_player_modifiers()
+	max_hp *= 1.0 + float(_equipment_modifiers.get("health_bonus_ratio", 0.0))
+	var move_bonus: float = 1.0 + float(_equipment_modifiers.get("move_speed_ratio", 0.0))
+	walk_speed *= move_bonus
+	run_speed *= move_bonus
 	_hp = max_hp
 	_gravity = float(ProjectSettings.get_setting("physics/3d/default_gravity", 18.0))
 	if _gravity < 9.8:
@@ -94,8 +108,8 @@ func _ready() -> void:
 	EventBus.player_bomb_requested.connect(trigger_bomb)
 	_emit_stats()
 	EventBus.player_buff_updated.emit(0.0, 0.0)
-	EventBus.player_dash_updated.emit(0.0, DASH_COOLDOWN, true)
-	EventBus.player_bomb_updated.emit(0.0, BOMB_COOLDOWN, true)
+	EventBus.player_dash_updated.emit(0.0, _get_effective_dash_cooldown(), true)
+	EventBus.player_bomb_updated.emit(0.0, _get_effective_bomb_cooldown(), true)
 
 
 func _exit_tree() -> void:
@@ -278,11 +292,11 @@ func trigger_bomb() -> bool:
 		return false
 	var dmg_mult: float = 1.35 if _damage_boost_timer > 0.0 else 1.0
 	(bomb as PulseBomb).launch(spawn_pos, forward_dir, team_id, self, true, dmg_mult)
-	_bomb_cooldown = BOMB_COOLDOWN
+	_bomb_cooldown = _get_effective_bomb_cooldown()
 	_bomb_emit_timer = 0.0
 	AudioManager.play_bomb_throw_sfx()
 	GameManager.trigger_haptic(22)
-	EventBus.player_bomb_updated.emit(_bomb_cooldown, BOMB_COOLDOWN, false)
+	EventBus.player_bomb_updated.emit(_bomb_cooldown, _get_effective_bomb_cooldown(), false)
 	return true
 
 
@@ -298,7 +312,7 @@ func trigger_dash() -> bool:
 		_dash_dir = Vector3(-sin(_facing_yaw), 0.0, -cos(_facing_yaw)).normalized()
 
 	_dash_timer = DASH_DURATION
-	_dash_cooldown = DASH_COOLDOWN
+	_dash_cooldown = _get_effective_dash_cooldown()
 	_dash_emit_timer = 0.0
 	AudioManager.play_dash_sfx()
 	GameManager.trigger_haptic(18)
@@ -307,7 +321,7 @@ func trigger_dash() -> bool:
 	var flash: Node = PoolManager.acquire(ImpactFlash.POOL_ID, proj_parent)
 	if flash is ImpactFlash:
 		(flash as ImpactFlash).trigger(global_position + Vector3(0.0, 0.55, 0.0), Color(0.219608, 0.741176, 0.972549, 1.0), 1.85, 0.14)
-	EventBus.player_dash_updated.emit(_dash_cooldown, DASH_COOLDOWN, false)
+	EventBus.player_dash_updated.emit(_dash_cooldown, _get_effective_dash_cooldown(), false)
 	return true
 
 
@@ -355,20 +369,20 @@ func _physics_process(delta: float) -> void:
 		_dash_emit_timer += delta
 		if _dash_cooldown <= 0.0:
 			_dash_emit_timer = 0.0
-			EventBus.player_dash_updated.emit(0.0, DASH_COOLDOWN, true)
+			EventBus.player_dash_updated.emit(0.0, _get_effective_dash_cooldown(), true)
 		elif _dash_emit_timer >= 0.16:
 			_dash_emit_timer = 0.0
-			EventBus.player_dash_updated.emit(_dash_cooldown, DASH_COOLDOWN, false)
+			EventBus.player_dash_updated.emit(_dash_cooldown, _get_effective_dash_cooldown(), false)
 
 	if _bomb_cooldown > 0.0:
 		_bomb_cooldown = maxf(0.0, _bomb_cooldown - delta)
 		_bomb_emit_timer += delta
 		if _bomb_cooldown <= 0.0:
 			_bomb_emit_timer = 0.0
-			EventBus.player_bomb_updated.emit(0.0, BOMB_COOLDOWN, true)
+			EventBus.player_bomb_updated.emit(0.0, _get_effective_bomb_cooldown(), true)
 		elif _bomb_emit_timer >= 0.22:
 			_bomb_emit_timer = 0.0
-			EventBus.player_bomb_updated.emit(_bomb_cooldown, BOMB_COOLDOWN, false)
+			EventBus.player_bomb_updated.emit(_bomb_cooldown, _get_effective_bomb_cooldown(), false)
 
 	if _dash_timer > 0.0:
 		_dash_timer = maxf(0.0, _dash_timer - delta)
@@ -620,7 +634,7 @@ func take_damage(amount: float, attacker_team: int, attacker_pos: Vector3 = Vect
 		return
 	_time_since_damage = 0.0
 	_hit_flash_timer = 0.14
-	_hp = maxf(_hp - amount, 0.0)
+	_hp = maxf(_hp - amount * (1.0 - float(_equipment_modifiers.get("damage_reduction_ratio", 0.0))), 0.0)
 	AudioManager.play_player_hit_sfx()
 	GameManager.trigger_haptic(26)
 	EventBus.camera_trauma_requested.emit(0.24)
@@ -673,16 +687,33 @@ func _enter_respawn(attacker_team: int) -> void:
 	_emit_stats()
 
 
+func reset_for_new_round() -> void:
+	_respawn_timer = 0.0
+	_respawn()
+
+
 func _find_safe_respawn_pos() -> Vector3:
 	var candidates: Array[Vector3] = [
 		_spawn_pos,
 		_spawn_pos + Vector3(0.0, 0.0, -2.2),
 		_spawn_pos + Vector3(0.0, 0.0, 2.2),
-		_spawn_pos + Vector3(1.8, 0.0, 0.0)
+		_spawn_pos + Vector3(1.8, 0.0, 0.0),
+		_spawn_pos + Vector3(-1.8, 0.0, 0.0),
+		_spawn_pos + Vector3(1.8, 0.0, 2.0),
+		_spawn_pos + Vector3(-1.8, 0.0, 2.0),
+		_spawn_pos + Vector3(1.8, 0.0, -2.0),
+		_spawn_pos + Vector3(-1.8, 0.0, -2.0)
 	]
 	var bots: Array[Node] = get_tree().get_nodes_in_group("arena_bots")
 	for cand in candidates:
 		var blocked: bool = false
+		if _collision_shape != null and _collision_shape.shape != null and get_world_3d() != null:
+			var query := PhysicsShapeQueryParameters3D.new()
+			query.shape = _collision_shape.shape
+			query.transform = Transform3D(Basis.IDENTITY, cand + Vector3(0.0, 0.825, 0.0))
+			query.collision_mask = 1
+			query.exclude = [get_rid()]
+			blocked = not get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 		for bot in bots:
 			if bot is Node3D and (bot as Node3D).visible:
 				if (bot as Node3D).global_position.distance_to(cand) < 1.35:
@@ -706,8 +737,8 @@ func _respawn() -> void:
 	_bomb_cooldown = 0.0
 	_time_since_damage = 10.0
 	_death_hide_timer = 0.0
-	EventBus.player_dash_updated.emit(0.0, DASH_COOLDOWN, true)
-	EventBus.player_bomb_updated.emit(0.0, BOMB_COOLDOWN, true)
+	EventBus.player_dash_updated.emit(0.0, _get_effective_dash_cooldown(), true)
+	EventBus.player_bomb_updated.emit(0.0, _get_effective_bomb_cooldown(), true)
 	var b: EnergyBlasterData = _get_active_blaster()
 	if b != null:
 		_current_energy = b.energy_cell_capacity

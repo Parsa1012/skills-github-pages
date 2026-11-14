@@ -101,6 +101,7 @@ var _cta_pulse_time: float = 0.0
 var _weapon_cache: Dictionary = {}
 var _icon_cache: Dictionary = {}
 var _base_font_sizes: Dictionary = {}
+var _equipment_panel: EquipmentLoadoutPanel = null
 
 
 func _ready() -> void:
@@ -110,6 +111,8 @@ func _ready() -> void:
 	GameManager.current_state = GameManager.AppState.MAIN_MENU
 	AudioManager.play_menu_music()
 	_preload_weapons()
+	_build_equipment_entry()
+	_build_match_rules_controls()
 	_cache_base_font_sizes(self)
 	_apply_large_text()
 	_apply_safe_area_margins()
@@ -128,6 +131,76 @@ func _process(delta: float) -> void:
 	if _enter_arena_btn != null:
 		var pulse: float = 0.94 + 0.06 * sin(_cta_pulse_time * 3.0)
 		_enter_arena_btn.modulate = Color(1.0, pulse, clampf(pulse - 0.03, 0.88, 1.0), 1.0)
+
+
+func _build_equipment_entry() -> void:
+	var arsenal: Control = get_node_or_null("SafeMargin/MainLayout/ContentSplit/PageStage/PageArsenal") as Control
+	if arsenal == null:
+		return
+	var open_button := Button.new()
+	open_button.name = "BtnOpenEquipmentLoadout"
+	open_button.text = "بارگذاری تجهیزات  •  هسته / تحرک / ابزار"
+	open_button.custom_minimum_size = Vector2(0, 48)
+	open_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	open_button.pressed.connect(_open_equipment_loadout)
+	arsenal.add_child(open_button)
+	arsenal.move_child(open_button, 1)
+	_equipment_panel = EquipmentLoadoutPanel.new()
+	_equipment_panel.name = "EquipmentLoadoutPanel"
+	_equipment_panel.visible = false
+	add_child(_equipment_panel)
+
+
+func _open_equipment_loadout() -> void:
+	if _equipment_panel != null:
+		_equipment_panel.open()
+
+
+func _build_match_rules_controls() -> void:
+	var arena: Control = get_node_or_null("SafeMargin/MainLayout/ContentSplit/PageStage/PageArena") as Control
+	if arena == null:
+		return
+	var row := HBoxContainer.new()
+	row.name = "MatchRulesRow"
+	row.add_theme_constant_override("separation", 8)
+	var duration := Button.new()
+	duration.name = "BtnRoundDuration"
+	duration.custom_minimum_size = Vector2(0, 44)
+	duration.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	duration.pressed.connect(_cycle_match_duration)
+	row.add_child(duration)
+	var rounds := Button.new()
+	rounds.name = "BtnRoundCount"
+	rounds.custom_minimum_size = Vector2(0, 44)
+	rounds.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rounds.pressed.connect(_cycle_match_round_count)
+	row.add_child(rounds)
+	arena.add_child(row)
+	arena.move_child(row, 5)
+	_refresh_match_rules_controls()
+
+
+func _refresh_match_rules_controls() -> void:
+	var duration := get_node_or_null("SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/MatchRulesRow/BtnRoundDuration") as Button
+	var rounds := get_node_or_null("SafeMargin/MainLayout/ContentSplit/PageStage/PageArena/MatchRulesRow/BtnRoundCount") as Button
+	if duration != null:
+		duration.text = "مدت دور: حالت بازی" if SaveManager.match_round_duration_sec == 0 else "مدت دور: %d ثانیه" % SaveManager.match_round_duration_sec
+	if rounds != null:
+		rounds.text = "تعداد دورها: %d" % SaveManager.match_round_count
+
+
+func _cycle_match_duration() -> void:
+	var options: Array[int] = [0, 60, 90, 120, 180, 240]
+	var current := options.find(SaveManager.match_round_duration_sec)
+	GameManager.configure_match_rules(options[(current + 1) % options.size()], SaveManager.match_round_count)
+	_refresh_match_rules_controls()
+
+
+func _cycle_match_round_count() -> void:
+	var options: Array[int] = [1, 3, 5]
+	var current := options.find(SaveManager.match_round_count)
+	GameManager.configure_match_rules(SaveManager.match_round_duration_sec, options[(current + 1) % options.size()])
+	_refresh_match_rules_controls()
 
 
 func _preload_weapons() -> void:
@@ -176,6 +249,7 @@ func _show_tab(tab_idx: int, animate: bool = true) -> void:
 
 func _refresh_ui() -> void:
 	_apply_large_text()
+	_refresh_match_rules_controls()
 	var rank: Dictionary = SaveManager.get_rank_info()
 	var win_pct: int = int(round((float(SaveManager.total_wins) / float(SaveManager.total_matches)) * 100.0)) if SaveManager.total_matches > 0 else 0
 	if _rank_num_label != null:

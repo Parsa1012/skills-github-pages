@@ -28,6 +28,9 @@ var selected_mode_id: String = "zone_control" # "zone_control" | "team_score_rus
 var selected_map_id: String = "sector_01" # "sector_01" | "sector_02"
 var starting_blaster_id: String = "pulse_blaster" # "pulse_blaster" | "rapid_repeater" | "plasma_scatter" | "arc_railgun"
 var bot_difficulty: String = "normal" # "easy" | "normal" | "hard"
+var match_round_duration_sec: int = 0 # 0 follows the selected mode's duration
+var match_round_count: int = 1
+var equipped_gear: Dictionary = {"CORE": "field_vest", "MOBILITY": "dash_spring", "UTILITY": "pulse_beacon"}
 
 var master_volume: float = 0.85
 var music_volume: float = 0.72
@@ -86,6 +89,15 @@ func load_settings() -> void:
 	if loaded_diff == "balanced":
 		loaded_diff = "normal"
 	bot_difficulty = loaded_diff if loaded_diff in ["easy", "normal", "hard"] else "normal"
+	match_round_duration_sec = int(config.get_value("match", "round_duration_sec", 0))
+	if match_round_duration_sec not in [0, 60, 90, 120, 180, 240]:
+		match_round_duration_sec = 0
+	match_round_count = int(config.get_value("match", "round_count", 1))
+	if match_round_count not in [1, 3, 5]:
+		match_round_count = 1
+	equipped_gear = config.get_value("loadout", "equipped_gear", {"CORE": "field_vest", "MOBILITY": "dash_spring", "UTILITY": "pulse_beacon"})
+	if not equipped_gear is Dictionary:
+		equipped_gear = {"CORE": "field_vest", "MOBILITY": "dash_spring", "UTILITY": "pulse_beacon"}
 
 	master_volume = clampf(float(config.get_value("audio", "master_volume", 0.85)), 0.0, 1.0)
 	music_volume = clampf(float(config.get_value("audio", "music_volume", 0.72)), 0.0, 1.0)
@@ -116,7 +128,10 @@ func save_settings() -> void:
 	config.set_value("camera", "camera_preset", camera_preset)
 	config.set_value("match", "selected_mode_id", selected_mode_id)
 	config.set_value("match", "selected_map_id", selected_map_id)
+	config.set_value("match", "round_duration_sec", match_round_duration_sec)
+	config.set_value("match", "round_count", match_round_count)
 	config.set_value("loadout", "starting_blaster_id", starting_blaster_id)
+	config.set_value("loadout", "equipped_gear", equipped_gear)
 	config.set_value("ai", "bot_difficulty", bot_difficulty)
 	config.set_value("audio", "master_volume", master_volume)
 	config.set_value("audio", "music_volume", music_volume)

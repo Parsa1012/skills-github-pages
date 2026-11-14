@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ArenaEquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_equipment_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+equipment_id = &"impact_shell"
+display_name = "پوسته ضربه‌گیر آرکید"
+description = "پوسته واکنشی کاملاً خیالی، شدت برخوردهای آرکیدی را اندکی کم می‌کند."
+slot = 0
+icon_path = "res://assets/ui/equipment/impact_shell.svg"
+unlock_xp = 200
+damage_reduction_ratio = 0.07
+power_rating = 50

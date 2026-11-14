@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ArenaEquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_equipment_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+equipment_id = &"pulse_beacon"
+display_name = "فرستنده پالس"
+description = "گره سیگنال خیالی و بی‌خطر، بازیابی ابزار بازی را اندکی کوتاه می‌کند."
+slot = 2
+icon_path = "res://assets/ui/equipment/pulse_beacon.svg"
+unlock_xp = 0
+gadget_cooldown_ratio = -0.10
+power_rating = 49

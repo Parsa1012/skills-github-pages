@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ArenaEquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_equipment_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+equipment_id = &"echo_puck"
+display_name = "پوک پژواک"
+description = "نشانگر صوتی خیالی با مزیت رزمی ناچیز؛ فقط بازیابی ابزار را به‌شکلی جزئی تغییر می‌دهد."
+slot = 2
+icon_path = "res://assets/ui/equipment/echo_puck.svg"
+unlock_xp = 300
+gadget_cooldown_ratio = -0.04
+dash_cooldown_ratio = 0.02
+power_rating = 48

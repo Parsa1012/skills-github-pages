@@ -898,6 +898,11 @@ func _find_safe_home_pos() -> Vector3:
 	return _home_pos
 
 
+func reset_for_new_round() -> void:
+	_respawn_timer = 0.0
+	_respawn_at_home()
+
+
 func _respawn_at_home() -> void:
 	global_position = _find_safe_home_pos()
 	_patrol_check_pos = global_position

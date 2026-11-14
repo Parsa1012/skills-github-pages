@@ -26,6 +26,18 @@ signal selected_map_changed(map_id: String)
 signal starting_blaster_changed(blaster_id: String)
 
 @warning_ignore("unused_signal")
+signal equipment_loadout_changed(slot_name: String, equipment_id: String)
+
+@warning_ignore("unused_signal")
+signal match_state_changed(state_name: String, round_index: int, blue_round_wins: int, orange_round_wins: int)
+
+@warning_ignore("unused_signal")
+signal round_time_expired()
+
+@warning_ignore("unused_signal")
+signal next_round_requested()
+
+@warning_ignore("unused_signal")
 signal bot_difficulty_changed(difficulty_id: String)
 
 @warning_ignore("unused_signal")

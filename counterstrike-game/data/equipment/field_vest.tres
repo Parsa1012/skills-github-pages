@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ArenaEquipmentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/arena_equipment_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+equipment_id = &"field_vest"
+display_name = "جلیقه میدان نیرو"
+description = "بافت خیالی میدان، مقدار کمی ذخیره جان اضافه می‌کند؛ فقط یک ابزار آرکیدی بازی است."
+slot = 0
+icon_path = "res://assets/ui/equipment/field_vest.svg"
+unlock_xp = 0
+health_bonus_ratio = 0.08
+power_rating = 52
