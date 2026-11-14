@@ -162,13 +162,13 @@ func get_orthographic_size() -> float:
 
 
 func get_camera_world_height() -> float:
-	return get_orthographic_size() / maxf(sinf(deg_to_rad(_active_pitch)), 0.1)
+	return get_orthographic_size() / maxf(sin(deg_to_rad(_active_pitch)), 0.1)
 
 
 func get_camera_ground_extents() -> Vector2:
 	var aspect: float = _viewport_size.x / maxf(_viewport_size.y, 1.0)
 	var size: float = get_orthographic_size()
-	var pitch_sin: float = maxf(sinf(deg_to_rad(_active_pitch)), 0.1)
+	var pitch_sin: float = maxf(sin(deg_to_rad(_active_pitch)), 0.1)
 	var yaw_rad: float = deg_to_rad(_active_yaw)
 	var half_width: float = size * aspect * 0.5
 	var half_height_ground: float = size * 0.5 / pitch_sin
@@ -197,7 +197,7 @@ func _update_orthographic_framing() -> void:
 	if _camera == null:
 		return
 	var aspect: float = _viewport_size.x / maxf(_viewport_size.y, 1.0)
-	var pitch_sin: float = maxf(sinf(deg_to_rad(_active_pitch)), 0.1)
+	var pitch_sin: float = maxf(sin(deg_to_rad(_active_pitch)), 0.1)
 	var yaw_rad: float = deg_to_rad(_active_yaw)
 	var width_per_size: float = aspect * 0.5 * absf(cos(yaw_rad)) + 0.5 / pitch_sin * absf(sin(yaw_rad))
 	var depth_per_size: float = aspect * 0.5 * absf(sin(yaw_rad)) + 0.5 / pitch_sin * absf(cos(yaw_rad))
