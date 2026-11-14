@@ -155,7 +155,7 @@ jobs:
           cat /tmp/godot-editor.log
 
           echo "=== Step 3: Smoke test boot -> main_menu ==="
-          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --audio-driver Dummy --verbose --path "${PROJECT_DIR}" --quit-after 30 >/tmp/godot-smoke-boot.log 2>&1; then
+          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --disable-vsync --audio-driver Dummy --verbose --path "${PROJECT_DIR}" --quit-after 30 >/tmp/godot-smoke-boot.log 2>&1; then
             cat /tmp/godot-smoke-boot.log
             emit_error_log /tmp/godot-smoke-boot.log "Godot boot smoke test failed"
             exit 1
@@ -163,7 +163,7 @@ jobs:
           cat /tmp/godot-smoke-boot.log
 
           echo "=== Step 4: Smoke test arena_sector_01.tscn ==="
-          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --audio-driver Dummy --verbose --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
+          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --disable-vsync --audio-driver Dummy --verbose --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_01.tscn --quit-after 20 >/tmp/godot-smoke-arena.log 2>&1; then
             cat /tmp/godot-smoke-arena.log
             emit_error_log /tmp/godot-smoke-arena.log "Godot arena_sector_01 smoke test failed"
             exit 1
@@ -171,7 +171,7 @@ jobs:
           cat /tmp/godot-smoke-arena.log
 
           echo "=== Step 5: Smoke test arena_sector_02.tscn ==="
-          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --audio-driver Dummy --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_02.tscn --quit-after 20 >/tmp/godot-smoke-arena2.log 2>&1; then
+          if ! xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --disable-vsync --audio-driver Dummy --path "${PROJECT_DIR}" res://scenes/maps/arena_sector_02.tscn --quit-after 20 >/tmp/godot-smoke-arena2.log 2>&1; then
             cat /tmp/godot-smoke-arena2.log
             emit_error_log /tmp/godot-smoke-arena2.log "Godot arena_sector_02 smoke test failed"
             exit 1
@@ -180,7 +180,7 @@ jobs:
 
           echo "=== Step 6: End-to-End Runtime QA Suite ==="
           QA_EXIT=0
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --audio-driver Dummy --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn --quit-after 600 >/tmp/godot-qa.log 2>&1 || QA_EXIT=$?
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ARENA_CI_SILENT_AUDIO=1 godot4 --rendering-method gl_compatibility --disable-vsync --audio-driver Dummy --fixed-fps 30 --path "${PROJECT_DIR}" res://scenes/test/ci_runtime_qa.tscn --quit-after 600 >/tmp/godot-qa.log 2>&1 || QA_EXIT=$?
           cat /tmp/godot-qa.log
 
           # Surface errors first (with stack context) then warnings as CI annotations
