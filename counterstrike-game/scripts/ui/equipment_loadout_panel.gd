@@ -152,8 +152,6 @@ func refresh() -> void:
 		button.custom_minimum_size = Vector2(0, 56)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.icon = load(item.icon_path) as Texture2D if ResourceLoader.exists(item.icon_path) else null
-		button.icon_max_width = 36
-		button.expand_icon = true
 		button.text = (
 			("✓  " if id == _selected_id else "")
 			+ item.display_name
